@@ -17,7 +17,7 @@ class RegisterView(APIView):
                    'errors' : serializer.errors
                })
             serializer.save()
-            return Response({'status' : 200 ,'mesage':'an OTP sent on your number and email http://127.0.0.1:8000/{uuid.uuid4()}/'})
+            return Response({'status' : 200 ,'message':'an OTP sent on your number and email http://127.0.0.1:8000/{uuid.uuid4()}/'})
         except Exception as e:
             print(e)
             
