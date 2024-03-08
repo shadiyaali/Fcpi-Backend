@@ -4,10 +4,10 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
+        fields = ['email', 'password' ,'phone']
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        user = User.objects.create(email=validated_data['email'])
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
