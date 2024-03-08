@@ -3,30 +3,25 @@ from .models import *
 from .serializers import *
 from rest_framework.views import APIView
 from .helpers import *
-import uuid  # Add this import for generating unique UUIDs
+import uuid  
+
 
 class RegisterView(APIView):
     
     def post(self, request):
         try:
             serializer = UserSerializer(data=request.data)
-            
+            print(request.data)
             if not serializer.is_valid():
-                return Response({
-                    'status': 403,
-                    'errors': serializer.errors
-                })
+                return Response({'status': 403, 'errors': serializer.errors})
             
             user = serializer.save()
             
-            # Send OTP to user's email
             email_sent = send_otp_to_email(user.email, user)
             
             if email_sent:
-                
                 return Response({'status': 200, 'message': 'An OTP sent to your email for verification'})
             else:
-               
                 return Response({'status': 500, 'error': 'Failed to send OTP to email. Please try again later.'})
             
         except Exception as e:
