@@ -21,25 +21,14 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
-    def name(self):
+    def username(self):
         return self.first_name + ' ' + self.last_name
 
     def __str__(self):
         return self.email
 
 
-@receiver(post_save, sender=User)
-def send_email_token(sender , instance , created, **kwargs):
-    if created:
-        try:
-            subject = "Your email needs to be verified"
-            message = f'Hi,click on the email to verify email {uuid.uuid4()}'
-            
-            email_from = settings.EMAIL_HOST_USER
-            recipient_list = [instance.email]
-            send_mail(subject , message, email_from ,recipient_list)
-        except Exception as e:
-            print(e)    
+  
  
 
 
