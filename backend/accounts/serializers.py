@@ -6,8 +6,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['email', 'password' ,'phone']
 
-    def create(self, validated_data):
-        user = User.objects.create(email=validated_data['email'])
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
+    # def create(self, validated_data):
+    #     user = User.objects.create(email=validated_data['email'])
+    #     user.set_password(validated_data['password'])
+    #     user.save()
+    #     return user
