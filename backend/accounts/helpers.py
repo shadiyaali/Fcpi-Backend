@@ -9,7 +9,7 @@ def send_otp_to_email(email, user_obj):
     try:
         otp_to_sent = random.randint(1000, 9999)
         cache.set(email, otp_to_sent, timeout=60)
-        user_obj.email = email  # Set the email field of user_obj
+        user_obj.email = email  
         user_obj.otp = otp_to_sent
         user_obj.save()
 

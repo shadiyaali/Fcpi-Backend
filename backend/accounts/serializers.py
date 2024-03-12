@@ -4,10 +4,10 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['email', 'password' ,'phone']
+        fields = ['first_name', 'last_name', 'email', 'password' ,'phone']
 
-    # def create(self, validated_data):
-    #     user = User.objects.create(email=validated_data['email'])
-    #     user.set_password(validated_data['password'])
-    #     user.save()
-    #     return user
+    def create(self, validated_data):
+        user = User.objects.create(email=validated_data['email'])
+        user.set_password(validated_data['password'])
+        # user.save()
+        return user
