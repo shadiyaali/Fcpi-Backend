@@ -17,4 +17,49 @@ class Forum(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     image = models.ImageField(upload_to='forum_images/', null=True, blank=True)
-    # slug = AutoSlugField(populate_from='title', null=True)
+    # slug = AutoSlugField(populate_from='title', null=True) 
+    
+          
+    def __str__(self):
+        return self.title
+
+ 
+
+class Speaker(models.Model):
+    name = models.CharField(max_length=100)
+    qualification = models.CharField(max_length=100)
+    designation = models.CharField(max_length=100)
+    description = models.TextField()
+    photo = models.ImageField(upload_to='speakers/', null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+    
+    
+class Event(models.Model):
+    
+    forum = models.ForeignKey(Forum, related_name='events', on_delete=models.CASCADE) 
+    EVENT_TYPE_CHOICES = (
+        ('single_day', 'Single Day'),
+        ('multi_day', 'Multi Day'),
+    )
+    topic = models.CharField(max_length=100 ,null=True)
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPE_CHOICES)
+    
+    
+    def __str__(self):
+        return self.topic
+
+
+class Schedule(models.Model):
+    event = models.ForeignKey(Event, related_name='schedules', on_delete=models.CASCADE)
+    speaker = models.ForeignKey(Speaker, related_name='schedules', on_delete=models.CASCADE)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    topic = models.CharField(max_length=255, null=True)
+    youtube_url = models.URLField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.event.topic} - {self.start_time.strftime('%Y-%m-%d %H:%M')} to {self.end_time.strftime('%Y-%m-%d %H:%M')}"
+    
+ 

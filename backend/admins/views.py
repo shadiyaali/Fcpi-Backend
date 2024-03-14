@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum
+from.models import Forum,Speaker
  
  
  
@@ -57,6 +57,28 @@ class ForumUpdateView(generics.UpdateAPIView):
 class ForumDeleteView(generics.DestroyAPIView):
     queryset = Forum.objects.all()
     serializer_class = ForumSerializer
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+class SpeakerListCreate(generics.ListCreateAPIView):
+    queryset = Speaker.objects.all()
+    serializer_class = SpeakerSerializer
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+class SpeakerUpdateView(generics.UpdateAPIView):
+    queryset = Speaker.objects.all()
+    serializer_class = SpeakerSerializer
+    
+
+class SpeakerDeleteView(generics.DestroyAPIView):
+    queryset = Speaker.objects.all()
+    serializer_class = SpeakerSerializer
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
