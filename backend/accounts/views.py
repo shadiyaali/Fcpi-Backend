@@ -10,6 +10,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from django.contrib.auth import authenticate 
 from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.http import JsonResponse
+from rest_framework.generics import ListAPIView
+ 
  
 
 class RegisterView(APIView):
@@ -142,4 +148,35 @@ class LoginView(APIView):
             print("Error in LoginView:", e)
             return Response({'status': 500, 'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+ 
+class AddUser(APIView):
+    def post(self, request):
+        try:
+            # Ensure 'userrole' is included in the request data
+            serializer = UserSerializer(data=request.data)
+            print(request.data)
+            if serializer.is_valid():
+                user = serializer.save()
+                return Response({'status': 200, 'message': 'User added '}, status=status.HTTP_200_OK)
+            else:
+                return Response({'status': 400, 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'status': 500, 'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UserRoleCreateView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = UserRoleSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+class UserRoleListView(ListAPIView):
+    queryset = UserRole.objects.all()
+    serializer_class = UserRoleSerializer        
     
+class UserListView(APIView):
+    def get(self, request):
+        users = User.objects.filter(is_staff=False)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
