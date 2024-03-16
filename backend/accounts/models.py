@@ -32,4 +32,21 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    date_of_birth = models.DateField(null=True, blank=True)
+    primary_position = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    primary_pharmacy_degree = models.CharField(max_length=100, null=True, blank=True)
+    secondary_pharmacy_degree = models.CharField(max_length=100, null=True, blank=True)
+    additional_degrees = models.CharField(max_length=100, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    pharmacy_college_name = models.CharField(max_length=100, null=True, blank=True)
+    pharmacy_college_degree = models.CharField(max_length=100, null=True, blank=True)
+
+    def __str__(self):
+        return self.user.email
+    
  
+

@@ -15,6 +15,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.http import JsonResponse
 from rest_framework.generics import ListAPIView
+from rest_framework import generics
  
  
 
@@ -152,7 +153,7 @@ class LoginView(APIView):
 class AddUser(APIView):
     def post(self, request):
         try:
-            # Ensure 'userrole' is included in the request data
+            
             serializer = UserSerializer(data=request.data)
             print(request.data)
             if serializer.is_valid():
@@ -166,10 +167,12 @@ class AddUser(APIView):
 class UserRoleCreateView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = UserRoleSerializer(data=request.data)
+        print(request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 class UserRoleListView(ListAPIView):
     queryset = UserRole.objects.all()
@@ -180,3 +183,14 @@ class UserListView(APIView):
         users = User.objects.filter(is_staff=False)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
+    
+class UserProfileCreateView(generics.CreateAPIView):
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+
+    def create(self, request, *args, **kwargs):
+        print(request.data)  # Log request data
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

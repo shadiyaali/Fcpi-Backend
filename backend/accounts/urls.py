@@ -11,5 +11,6 @@ urlpatterns = [
     path('user-roles/', UserRoleListView.as_view(), name='user_roles_list'),
     path('create-roles/', UserRoleCreateView.as_view(), name='create_roles_create'),
     path('userlist/', UserListView.as_view(), name='user-list'),
+    path('user-profile/', UserProfileCreateView.as_view(), name='user-profile'),
     
 ]
