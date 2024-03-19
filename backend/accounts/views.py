@@ -184,13 +184,47 @@ class UserListView(APIView):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
     
-class UserProfileCreateView(generics.CreateAPIView):
+    
+class UserProfileCreateView(APIView):
+    def post(self, request, *args, **kwargs):
+         
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        
+        
+        try:
+            user = User.objects.get(first_name=first_name, last_name=last_name)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found for the given first name and last name'}, status=status.HTTP_404_NOT_FOUND)
+        
+     
+        request.data['user'] = user.id
+        
+       
+        serializer = UserProfileSerializer(data=request.data)
+        
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+ 
+class updateUser(generics.UpdateAPIView) :
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
-
-    def create(self, request, *args, **kwargs):
-        print(request.data)  # Log request data
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class DeleteUser(generics.DestroyAPIView):
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer   
+    
+class UserprofileListView(APIView):
+      def get(self, request):
+        
+        users = UserProfile.objects.exclude(user__is_superuser=True)
+      
+        serializer = UserProfileSerializer(users, many=True)
+       
+        return Response(serializer.data)
+    

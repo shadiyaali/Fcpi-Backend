@@ -33,7 +33,8 @@ class User(AbstractUser):
         return self.email
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     date_of_birth = models.DateField(null=True, blank=True)
     primary_position = models.CharField(max_length=100, null=True, blank=True)
     state = models.CharField(max_length=100, null=True, blank=True)
@@ -45,8 +46,9 @@ class UserProfile(models.Model):
     pharmacy_college_name = models.CharField(max_length=100, null=True, blank=True)
     pharmacy_college_degree = models.CharField(max_length=100, null=True, blank=True)
 
+ 
+
     def __str__(self):
         return self.user.email
-    
  
 
