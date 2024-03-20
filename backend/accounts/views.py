@@ -16,6 +16,7 @@ from django.views import View
 from django.http import JsonResponse
 from rest_framework.generics import ListAPIView
 from rest_framework import generics
+from django.core.exceptions import ObjectDoesNotExist
  
  
 
@@ -68,11 +69,8 @@ class VerifyOtp(APIView):
                 return Response({'status': 403, 'error': 'OTP expired or not found'})
 
            
-            if otp == str(cached_otp):
-                 
-                cache.delete(email)
-
-              
+            if otp == str(cached_otp):                 
+                cache.delete(email)              
                 try:
                     user_obj = User.objects.get(email__iexact=email)
                     user_obj.is_email_verified = True
@@ -134,11 +132,16 @@ class LoginView(APIView):
             
             print("Attempting login with email:", email ,password)
             
-    
             user = auth.authenticate(request, email=email, password=password)
             
             if user is not None:
                 print("Authentication successful")
+        
+                # Check if user profile exists, if not, create it
+                try:
+                    UserProfile.objects.get(user=user)
+                except ObjectDoesNotExist:
+                    UserProfile.objects.create(user=user)
         
                 return Response({'status': 200, 'message': 'Login successful'}, status=status.HTTP_200_OK)
             else:
@@ -187,29 +190,32 @@ class UserListView(APIView):
     
 class UserProfileCreateView(APIView):
     def post(self, request, *args, **kwargs):
-         
-        first_name = request.data.get('first_name')
-        last_name = request.data.get('last_name')
+        try: 
+            user = request.user
+            
         
+            if UserProfile.objects.filter(user=user).exists():
+              
+                return Response({'error': 'User profile already exists'}, status=status.HTTP_400_BAD_REQUEST)
+             
         
-        try:
-            user = User.objects.get(first_name=first_name, last_name=last_name)
-        except User.DoesNotExist:
-            return Response({'error': 'User not found for the given first name and last name'}, status=status.HTTP_404_NOT_FOUND)
-        
-     
-        request.data['user'] = user.id
-        
+            
+            request.data['user'] = user.id
+            
+   
+            serializer = UserProfileSerializer(data=request.data)
+            
        
-        serializer = UserProfileSerializer(data=request.data)
-        
-        
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+            if serializer.is_valid():
+           
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+           
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+ 
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
  
 class updateUser(generics.UpdateAPIView) :
     queryset = UserProfile.objects.all()

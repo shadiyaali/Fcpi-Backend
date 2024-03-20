@@ -5,7 +5,7 @@ from rest_framework import status
 from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer 
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker
+from.models import Forum,Speaker,Event
  
  
  
@@ -90,9 +90,13 @@ class EventCreateView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        print(request.data)
         if serializer.is_valid():
+            
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
     
+ 

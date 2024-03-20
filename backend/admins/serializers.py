@@ -33,8 +33,6 @@ class ScheduleSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class EventSerializer(serializers.ModelSerializer):
-    schedules = ScheduleSerializer(many=True, read_only=True)
-
     class Meta:
         model = Event
         fields = '__all__'

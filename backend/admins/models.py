@@ -39,19 +39,23 @@ class Speaker(models.Model):
     
     
 class Event(models.Model):
-    
     forum = models.ForeignKey(Forum, related_name='events', on_delete=models.CASCADE) 
     EVENT_TYPE_CHOICES = (
-        ('single_day', 'Single Day'),
-        ('multi_day', 'Multi Day'),
+        ('Single Day', 'Single Day'),
+        ('Multi Day', 'Multi Day'),
     )
-    topic = models.CharField(max_length=100 ,null=True)
     event_type = models.CharField(max_length=20, choices=EVENT_TYPE_CHOICES)
-    speakers = models.ManyToManyField('Speaker', related_name='events', blank=True)
-    
+    event_name = models.CharField(max_length=100,null=True)
+    date = models.DateField(null=True)
+    speakers = models.ManyToManyField(Speaker, related_name='events', blank=True)
+    youtube_link = models.URLField(null=True, blank=True)
+    points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    starting_time = models.TimeField(null=True, blank=True)
+    ending_time = models.TimeField(null=True, blank=True)
+    topics = models.TextField(null=True, blank=True)
     
     def __str__(self):
-        return self.topic
+        return self.event_name
 
 
 class Schedule(models.Model):
