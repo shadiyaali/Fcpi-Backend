@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,Schedule
+from .models import Admin,Forum,Speaker,Event,EventSpeaker 
 
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,12 +27,26 @@ class SpeakerSerializer(serializers.ModelSerializer):
         fields = '__all__'        
         
         
-class ScheduleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Schedule
-        fields = '__all__'
+ 
 
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = '__all__'
+
+class EventSpeakerSerializer(serializers.ModelSerializer):
+    event = EventSerializer()  # Nested serializer for Event
+
+    class Meta:
+        model = EventSpeaker
+        fields = '__all__'
+
+    def create(self, validated_data):
+        event_data = validated_data.pop('event')  # Extract event data
+        event_serializer = EventSerializer(data=event_data)
+        if event_serializer.is_valid():
+            event = event_serializer.save()  # Save the event object
+            event_speaker = EventSpeaker.objects.create(event=event, **validated_data)  # Create EventSpeaker
+            return event_speaker
+        else:
+            raise serializers.ValidationError("Error in event data")

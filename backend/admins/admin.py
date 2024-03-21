@@ -6,4 +6,4 @@ from .models import *
 admin.site.register(Forum)
 admin.site.register(Speaker)
 admin.site.register(Event)
-admin.site.register(Schedule)
+ 

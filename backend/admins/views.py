@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer 
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,EventSpeakerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event
+from.models import Forum,Speaker,Event,EventSpeaker
  
  
  
@@ -90,13 +90,27 @@ class EventCreateView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        print(request.data)
         if serializer.is_valid():
+             
+            selected_speakers = serializer.validated_data.get('speakers', [])
+            
+      
+            if len(selected_speakers) == 1:
+                serializer.validated_data['single_speaker'] = selected_speakers[0]
             
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print(serializer.errors) 
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class EventSpeakerListCreate(APIView):
+    def post(self, request):
+        serializer = EventSpeakerSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
  

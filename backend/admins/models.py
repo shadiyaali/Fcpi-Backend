@@ -44,10 +44,11 @@ class Event(models.Model):
         ('Single Day', 'Single Day'),
         ('Multi Day', 'Multi Day'),
     )
-    event_type = models.CharField(max_length=20, choices=EVENT_TYPE_CHOICES)
-    event_name = models.CharField(max_length=100,null=True)
+ 
+    event_name = models.CharField(max_length=100, null=True)
     date = models.DateField(null=True)
     speakers = models.ManyToManyField(Speaker, related_name='events', blank=True)
+    single_speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='selected_events', default=None)
     youtube_link = models.URLField(null=True, blank=True)
     points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     starting_time = models.TimeField(null=True, blank=True)
@@ -57,16 +58,14 @@ class Event(models.Model):
     def __str__(self):
         return self.event_name
 
-
-class Schedule(models.Model):
-    event = models.ForeignKey(Event, related_name='schedules', on_delete=models.CASCADE)
-    speaker = models.ForeignKey(Speaker, related_name='schedules', on_delete=models.CASCADE)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    topic = models.CharField(max_length=255, null=True)
-    youtube_url = models.URLField(blank=True, null=True)
-    speaker = models.ForeignKey('Speaker', related_name='assigned_schedules', on_delete=models.CASCADE)
+class EventSpeaker(models.Model):
+    days = models.ImageField()
+    events = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='events') 
+    speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='speakers' )
+    date = models.DateField(null=True)
     
-    def __str__(self):
-        return f"{self.event.topic} - {self.start_time.strftime('%Y-%m-%d %H:%M')} to {self.end_time.strftime('%Y-%m-%d %H:%M')}"
+    
+
+   
+
     
