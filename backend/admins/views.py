@@ -2,12 +2,13 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,EventSpeakerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,EventSpeaker
- 
- 
+from.models import Forum,Speaker,Event,SingleEvent
+from datetime import datetime, timedelta
+from rest_framework.exceptions import APIException 
+from rest_framework.exceptions import NotFound
  
 
  
@@ -103,14 +104,71 @@ class EventCreateView(generics.CreateAPIView):
         else:
             print(serializer.errors) 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        
 
-class EventSpeakerListCreate(APIView):
+class SingleEventListCreate(APIView):
     def post(self, request):
-        serializer = EventSpeakerSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
- 
+        data = request.data
+        print("Received data:", data)
+
+        forum_id = data.get('forum')
+        print(forum_id)
+        event_name = data.get('event_name')
+        event_date = data.get('date')
+        starting_time = data.get('starting_time')
+        ending_time = data.get('ending_time')
+        speakers = data.get('speakers', [])
+        days = int(data.get('days', 1))
+        
+        print("Forum ID:", forum_id)
+        
+        schedules = data.get('schedules', [])
+
+        try:
+            event_date = datetime.strptime(event_date, '%Y-%m-%d').date()
+            if starting_time is not None:
+                starting_time = datetime.strptime(starting_time, '%H:%M').time()
+            if ending_time is not None:
+                ending_time = datetime.strptime(ending_time, '%H:%M').time()
+        except ValueError as e:
+            print('Invalid date or time format:', str(e))
+            return Response({'error': 'Invalid date or time format. Please provide date in YYYY-MM-DD format and time in HH:MM format'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            forum = Forum.objects.get(id=forum_id)  # Retrieve the Forum object
+        except Forum.DoesNotExist:
+            print('Forum does not exist')
+            raise NotFound(detail='Forum does not exist')
+
+        print("Event Date (Parsed):", event_date)
+        print("Forum:", forum)
+
+        single_events_created = []
+
+        # Create Event object
+        event = Event.objects.create(
+            forum=forum,
+            event_name=event_name,
+            date=event_date,
+            days=days
+        )
+
+        # Ensure the loop only iterates over the number of schedules
+        for schedule_data in schedules:
+            # Set the current date and time for each schedule
+            schedule_data['date'] = event_date
+            if starting_time is not None:
+                schedule_data['starting_time'] = starting_time
+            if ending_time is not None:
+                schedule_data['ending_time'] = ending_time
+            serializer = SingleEventSerializer(data=schedule_data)
+            if serializer.is_valid():
+                serializer.save(events=event)  # Set events to the created Event object
+                single_events_created.append(serializer.data)
+            else:
+                print("Serializer Errors:", serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        print("Single Events Created:", single_events_created)
+        return Response(single_events_created, status=status.HTTP_201_CREATED)
