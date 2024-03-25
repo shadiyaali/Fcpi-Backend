@@ -49,6 +49,7 @@ class Event(models.Model):
     speakers = models.ManyToManyField(Speaker, related_name='events', blank=True)
     date = models.DateField(null=True) 
     days = models.IntegerField(null=True)
+    banner = models.ImageField(upload_to='event_banners/', null=True, blank=True)
     
     def __str__(self):
         return self.event_name

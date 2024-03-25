@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent
@@ -120,8 +120,10 @@ class SingleEventListCreate(APIView):
         ending_time = data.get('ending_time')
         speakers = data.get('speakers', [])
         days = int(data.get('days', 1))
+        banner = request.FILES.get('banner')
         
         print("Forum ID:", forum_id)
+        print("banner:", banner)
         
         schedules = data.get('schedules', [])
 
@@ -136,7 +138,7 @@ class SingleEventListCreate(APIView):
             return Response({'error': 'Invalid date or time format. Please provide date in YYYY-MM-DD format and time in HH:MM format'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            forum = Forum.objects.get(id=forum_id)  # Retrieve the Forum object
+            forum = Forum.objects.get(id=forum_id) 
         except Forum.DoesNotExist:
             print('Forum does not exist')
             raise NotFound(detail='Forum does not exist')
@@ -146,17 +148,18 @@ class SingleEventListCreate(APIView):
 
         single_events_created = []
 
-        # Create Event object
+        
         event = Event.objects.create(
             forum=forum,
             event_name=event_name,
             date=event_date,
-            days=days
+            days=days,
+            banner = banner
         )
 
-        # Ensure the loop only iterates over the number of schedules
+        
         for schedule_data in schedules:
-            # Set the current date and time for each schedule
+            
             schedule_data['date'] = event_date
             if starting_time is not None:
                 schedule_data['starting_time'] = starting_time
@@ -164,7 +167,7 @@ class SingleEventListCreate(APIView):
                 schedule_data['ending_time'] = ending_time
             serializer = SingleEventSerializer(data=schedule_data)
             if serializer.is_valid():
-                serializer.save(events=event)  # Set events to the created Event object
+                serializer.save(events=event)  
                 single_events_created.append(serializer.data)
             else:
                 print("Serializer Errors:", serializer.errors)
@@ -172,3 +175,23 @@ class SingleEventListCreate(APIView):
 
         print("Single Events Created:", single_events_created)
         return Response(single_events_created, status=status.HTTP_201_CREATED)
+    
+    
+class EventListView(APIView):
+    def get(self, request):
+        events = Event.objects.all()
+        serializer = EventListSerializer(events, many=True)
+        return Response(serializer.data)
+    
+    
+class EditEventAPIView(APIView):
+    def get(self, request, pk):
+        try:
+            event = Event.objects.get(pk=pk)
+            serializer = EventSerializer(event)
+            print(serializer.data) 
+            return Response(serializer.data)
+            
+        except Event.DoesNotExist:
+            print(22222222222222222222222)
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)

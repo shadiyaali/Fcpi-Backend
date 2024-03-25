@@ -12,6 +12,9 @@ urlpatterns = [
     path('speakers/<int:pk>/delete/', SpeakerDeleteView.as_view(), name='speaker-delete'),
     path('eventcreate/', EventCreateView.as_view(), name='event_create'),
     path('eventspeakers/', SingleEventListCreate.as_view() , name='event_speakers'),
+    path('events/', EventListView.as_view(), name='events-list'),
+    path('events/<int:pk>/update', EditEventAPIView.as_view(), name='edit_event'),
+ 
  
 
     

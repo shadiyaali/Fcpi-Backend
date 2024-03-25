@@ -38,3 +38,13 @@ class SingleEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = SingleEvent
         fields = '__all__'
+
+class EventListSerializer(serializers.ModelSerializer):
+    forum_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Event
+        fields = ['id', 'event_name', 'date', 'forum', 'forum_name', 'days' ,'banner']  
+
+    def get_forum_name(self, obj):
+        return obj.forum.title if obj.forum else None
