@@ -86,46 +86,52 @@ class SpeakerDeleteView(generics.DestroyAPIView):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
     
+ 
+
 class EventCreateView(generics.CreateAPIView):
     serializer_class = EventSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        print(request.data)
         if serializer.is_valid():
-             
-            selected_speakers = serializer.validated_data.get('speakers', [])
-            
-      
-            if len(selected_speakers) == 1:
-                serializer.validated_data['single_speaker'] = selected_speakers[0]
-            
-            serializer.save()
+            # Save the event object
+            event = serializer.save()
+
+            # Process selected speakers
+            selected_speaker_ids = request.data.get('speakers', [])
+            selected_speakers = Speaker.objects.filter(pk__in=selected_speaker_ids)
+            event.speakers.set(selected_speakers)
+ 
+            banner_file = request.data.get('banner')
+            if banner_file:
+                event.banner.save(banner_file.name, banner_file, save=True)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            print(serializer.errors) 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        
 
+
+
+
+        
+        
 class SingleEventListCreate(APIView):
     def post(self, request):
         data = request.data
         print("Received data:", data)
 
         forum_id = data.get('forum')
-        print(forum_id)
         event_name = data.get('event_name')
         event_date = data.get('date')
         starting_time = data.get('starting_time')
         ending_time = data.get('ending_time')
         speakers = data.get('speakers', [])
         days = int(data.get('days', 1))
-        banner = request.FILES.get('banner')
-        
-        print("Forum ID:", forum_id)
-        print("banner:", banner)
-        
-        schedules = data.get('schedules', [])
+        banner = request.FILES.get('banner')  
+
+        print("Banner:", banner)
+        print("Speakers:", speakers)
 
         try:
             event_date = datetime.strptime(event_date, '%Y-%m-%d').date()
@@ -146,28 +152,26 @@ class SingleEventListCreate(APIView):
         print("Event Date (Parsed):", event_date)
         print("Forum:", forum)
 
-        single_events_created = []
-
-        
         event = Event.objects.create(
             forum=forum,
             event_name=event_name,
             date=event_date,
             days=days,
-            banner = banner
+            banner=banner,
         )
+        event.speakers.set(speakers)
 
-        
-        for schedule_data in schedules:
-            
+        single_events_created = []
+        for schedule_data in data.get('schedules', []):
             schedule_data['date'] = event_date
+            schedule_data['event'] = event.id   
             if starting_time is not None:
                 schedule_data['starting_time'] = starting_time
             if ending_time is not None:
                 schedule_data['ending_time'] = ending_time
             serializer = SingleEventSerializer(data=schedule_data)
             if serializer.is_valid():
-                serializer.save(events=event)  
+                serializer.save()
                 single_events_created.append(serializer.data)
             else:
                 print("Serializer Errors:", serializer.errors)
@@ -175,23 +179,56 @@ class SingleEventListCreate(APIView):
 
         print("Single Events Created:", single_events_created)
         return Response(single_events_created, status=status.HTTP_201_CREATED)
+
+
+
     
     
 class EventListView(APIView):
     def get(self, request):
         events = Event.objects.all()
         serializer = EventListSerializer(events, many=True)
+        print(serializer.data)
         return Response(serializer.data)
     
     
 class EditEventAPIView(APIView):
     def get(self, request, pk):
         try:
-            event = Event.objects.get(pk=pk)
+            event = Event.objects.prefetch_related('single_events').get(pk=pk)
             serializer = EventSerializer(event)
-            print(serializer.data) 
             return Response(serializer.data)
-            
         except Event.DoesNotExist:
-            print(22222222222222222222222)
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, pk):
+        try:
+            event = Event.objects.get(pk=pk)
+            serializer = EventSerializer(event, data=request.data)
+            print(request.data)
+            if serializer.is_valid():
+                # Save the updated event data
+                serializer.save()
+                return Response(serializer.data)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Event.DoesNotExist:
+            # Return a 404 response if the event with the given pk does not exist
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            # Log any unexpected errors for debugging
+            print(e)
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+        
+class EventDetailView(APIView):
+    def get(self, request, pk):
+        try:
+            event = Event.objects.prefetch_related('single_events').get(pk=pk)
+            serializer = EventSerializer(event)
+            return Response(serializer.data)
+        except Event.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+

@@ -55,14 +55,14 @@ class Event(models.Model):
         return self.event_name
 
 class SingleEvent(models.Model):
-    
-    events = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='events')     
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='single_events')      
     single_speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='selected_events', default=None)
     youtube_link = models.URLField(null=True, blank=True)
     points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     starting_time = models.TimeField(null=True, blank=True)
     ending_time = models.TimeField(null=True, blank=True)
     topics = models.TextField(null=True, blank=True)
+
     
     
 

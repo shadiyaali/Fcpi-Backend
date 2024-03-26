@@ -29,15 +29,26 @@ class SpeakerSerializer(serializers.ModelSerializer):
         
  
 
-class EventSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Event
-        fields = '__all__'
-
+ 
+ 
 class SingleEventSerializer(serializers.ModelSerializer):
+    
+    event = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all())
+
     class Meta:
         model = SingleEvent
-        fields = '__all__'
+        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time', 'ending_time', 'topics']
+
+
+
+
+class EventSerializer(serializers.ModelSerializer):
+    single_events = SingleEventSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Event
+        fields = ['id', 'days', 'forum', 'event_name', 'date', 'speakers', 'banner', 'single_events']
+
 
 class EventListSerializer(serializers.ModelSerializer):
     forum_name = serializers.SerializerMethodField()
