@@ -9,7 +9,7 @@ from.models import Forum,Speaker,Event,SingleEvent
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
- 
+from django.core.exceptions import ObjectDoesNotExist
 
  
  
@@ -116,69 +116,45 @@ class EventCreateView(generics.CreateAPIView):
 
         
         
+ 
+
+ 
 class SingleEventListCreate(APIView):
     def post(self, request):
         data = request.data
-        print("Received data:", data)
-
-        forum_id = data.get('forum')
-        event_name = data.get('event_name')
-        event_date = data.get('date')
-        starting_time = data.get('starting_time')
-        ending_time = data.get('ending_time')
-        speakers = data.get('speakers', [])
-        days = int(data.get('days', 1))
-        banner = request.FILES.get('banner')  
-
-        print("Banner:", banner)
-        print("Speakers:", speakers)
+        print("Request Data:", data)
 
         try:
-            event_date = datetime.strptime(event_date, '%Y-%m-%d').date()
-            if starting_time is not None:
-                starting_time = datetime.strptime(starting_time, '%H:%M').time()
-            if ending_time is not None:
-                ending_time = datetime.strptime(ending_time, '%H:%M').time()
-        except ValueError as e:
-            print('Invalid date or time format:', str(e))
-            return Response({'error': 'Invalid date or time format. Please provide date in YYYY-MM-DD format and time in HH:MM format'}, status=status.HTTP_400_BAD_REQUEST)
+            forum_id = data['forum']
+            forum = Forum.objects.get(id=forum_id)
+        except (KeyError, ObjectDoesNotExist):
+            return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            forum = Forum.objects.get(id=forum_id) 
-        except Forum.DoesNotExist:
-            print('Forum does not exist')
-            raise NotFound(detail='Forum does not exist')
+        event_serializer = EventSerializer(data=data)
+        if event_serializer.is_valid():
+            event = event_serializer.save(forum=forum)
+        else:
+            return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        print("Event Date (Parsed):", event_date)
-        print("Forum:", forum)
-
-        event = Event.objects.create(
-            forum=forum,
-            event_name=event_name,
-            date=event_date,
-            days=days,
-            banner=banner,
-        )
-        event.speakers.set(speakers)
-
-        single_events_created = []
-        for schedule_data in data.get('schedules', []):
-            schedule_data['date'] = event_date
-            schedule_data['event'] = event.id   
-            if starting_time is not None:
-                schedule_data['starting_time'] = starting_time
-            if ending_time is not None:
-                schedule_data['ending_time'] = ending_time
-            serializer = SingleEventSerializer(data=schedule_data)
+        single_events_data = data.get('schedules', [])
+        print("mmmmmmmmmmmm:",single_event_data)
+        for single_event_data in single_events_data:
+            single_event_data['event'] = event.id
+            serializer = SingleEventSerializer(data=single_event_data)
             if serializer.is_valid():
                 serializer.save()
-                single_events_created.append(serializer.data)
             else:
-                print("Serializer Errors:", serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Print single event data inside the loop
+            print("Single Event Data:", single_event_data)
 
-        print("Single Events Created:", single_events_created)
-        return Response(single_events_created, status=status.HTTP_201_CREATED)
+        # Associate speakers with the event
+        speakers_ids = data.get('speakers', [])
+        event.speakers.add(*speakers_ids)
+
+        print("Response Data:", {'message': 'Event and single events created successfully'})
+        return Response({'message': 'Event and single events created successfully'}, status=status.HTTP_201_CREATED)
+
 
 
 
@@ -193,32 +169,37 @@ class EventListView(APIView):
     
     
 class EditEventAPIView(APIView):
-    def get(self, request, pk):
-        try:
-            event = Event.objects.prefetch_related('single_events').get(pk=pk)
-            serializer = EventSerializer(event)
-            return Response(serializer.data)
-        except Event.DoesNotExist:
-            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
-
+    
     def put(self, request, pk):
         try:
+            # Retrieve the event instance by its primary key
             event = Event.objects.get(pk=pk)
-            serializer = EventSerializer(event, data=request.data)
-            print(request.data)
+            
+            # Create a serializer instance with the retrieved event and request data,
+            # allowing partial updates
+            serializer = EventSerializer(event, data=request.data, partial=True)
+
+            print(request.data)  # Print the request data for debugging
+            
+            # Validate the serializer
             if serializer.is_valid():
-                # Save the updated event data
+                # Save the serializer data (update the event)
                 serializer.save()
+                print(serializer.data,'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwww')  # Print the updated data for debugging
+                
+                # Return the updated data
                 return Response(serializer.data)
             else:
+                # If the serializer is not valid, return validation errors
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Event.DoesNotExist:
-            # Return a 404 response if the event with the given pk does not exist
+            # If the event with the given primary key does not exist, return a 404 error
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            # Log any unexpected errors for debugging
+            # Log any unexpected errors for debugging and return a 500 error
             print(e)
             return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
