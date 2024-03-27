@@ -172,7 +172,7 @@ class EditEventAPIView(APIView):
     
     def put(self, request, pk):
         try:
-            # Retrieve the event instance by its primary key
+           
             event = Event.objects.get(pk=pk)
             
             # Create a serializer instance with the retrieved event and request data,
