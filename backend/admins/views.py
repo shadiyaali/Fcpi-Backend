@@ -112,50 +112,106 @@ class EventCreateView(generics.CreateAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
-        
-        
  
 
  
+ 
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from datetime import datetime
+from .models import Event, SingleEvent, Forum
+from django.core.exceptions import ValidationError
+
 class SingleEventListCreate(APIView):
     def post(self, request):
         data = request.data
-        print("Request Data:", data)
+        print("Received data:", data)  # Print received data for debugging
 
+        # Extracting data from the request
+        forum_id = data.get('forum')
+        event_name = data.get('event_name')
+        event_date = data.get('date')
+        speakers = data.getlist('speakers[]', [])
+        days = int(data.get('days', 1))
+        banner = request.FILES.get('banner')
+        
+        # Parse schedules data
+        schedules = []
+        for key, value in data.items():
+            if key.startswith('schedules['):
+                schedule_index = int(key.split('[')[1].split(']')[0])
+                schedule_field = key.split('[')[2].split(']')[0]
+                while len(schedules) <= schedule_index:
+                    schedules.append({})
+                schedules[schedule_index][schedule_field] = value[0] if isinstance(value, list) else value
+
+        print("Schedules:", schedules)  # Print parsed schedules data for debugging
+
+        # Validating the presence of the banner image
+        if not banner:
+            return Response({'error': 'Banner image is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validating the date format
         try:
-            forum_id = data['forum']
+            event_date = datetime.strptime(event_date, '%Y-%m-%d').date()
+        except ValueError as e:
+            print('Invalid date format:', str(e))
+            return Response({'error': 'Invalid date format. Please provide date in YYYY-MM-DD format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Retrieving the forum object
+        try:
             forum = Forum.objects.get(id=forum_id)
-        except (KeyError, ObjectDoesNotExist):
-            return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
+        except Forum.DoesNotExist:
+            print('Forum does not exist')
+            return Response({'error': 'Forum does not exist.'}, status=status.HTTP_404_NOT_FOUND)
 
-        event_serializer = EventSerializer(data=data)
-        if event_serializer.is_valid():
-            event = event_serializer.save(forum=forum)
-        else:
-            return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print("Event Date (Parsed):", event_date)
+        print("Forum:", forum)
 
-        single_events_data = data.get('schedules', [])
-        print("mmmmmmmmmmmm:",single_event_data)
-        for single_event_data in single_events_data:
-            single_event_data['event'] = event.id
-            serializer = SingleEventSerializer(data=single_event_data)
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            # Print single event data inside the loop
-            print("Single Event Data:", single_event_data)
+        # Creating the event object
+        try:
+            event = Event.objects.create(
+                forum=forum,
+                event_name=event_name,
+                date=event_date,
+                days=days,
+                banner=banner,
+            )
 
-        # Associate speakers with the event
-        speakers_ids = data.get('speakers', [])
-        event.speakers.add(*speakers_ids)
+            print("Event created:", event)
 
-        print("Response Data:", {'message': 'Event and single events created successfully'})
-        return Response({'message': 'Event and single events created successfully'}, status=status.HTTP_201_CREATED)
+            # Creating single events for each schedule
+            for schedule_data in schedules:
+                try:
+                    speaker_id = schedule_data.get('single_speaker')
+                    speaker = Speaker.objects.get(id=speaker_id)
+                    single_event = SingleEvent.objects.create(
+                        event=event,
+                        youtube_link=schedule_data.get('youtube_link'),
+                        points=schedule_data.get('points'),
+                        starting_time=schedule_data.get('starting_time'),
+                        ending_time=schedule_data.get('ending_time'),
+                        topics=schedule_data.get('topics'),
+                        single_speaker=speaker, 
+                    )
+                    print("SingleEvent created:", single_event)
+                except KeyError as e:
+                    print(f"KeyError: {e}")
+                    return Response({'error': 'Missing key in schedule data.'}, status=status.HTTP_400_BAD_REQUEST)
+                except ValidationError as e:
+                    print('Validation error:', str(e))
+                    return Response({'error': 'Validation error while creating single event.'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Assigning speakers to the event
+            event.speakers.set(speakers)
 
+        except ValidationError as e:
+            print('Validation error:', str(e))
+            return Response({'error': 'Validation error while creating event.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'message': 'Event created successfully'}, status=status.HTTP_201_CREATED)
 
 
     

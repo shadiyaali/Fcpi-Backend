@@ -37,18 +37,23 @@ class SingleEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SingleEvent
-        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time', 'ending_time', 'topics']
+        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time' 'ending_time', 'topics']
 
 
 
 
 class EventSerializer(serializers.ModelSerializer):
+  
+    speakers = serializers.StringRelatedField(many=True)  
+
+    
     single_events = SingleEventSerializer(many=True, read_only=True)
     banner = serializers.ImageField(required=False)   
 
     class Meta:
         model = Event
         fields = ['id', 'days', 'forum', 'event_name', 'date', 'speakers', 'banner', 'single_events']
+
 
 
 
