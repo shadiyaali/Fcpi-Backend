@@ -52,7 +52,7 @@ class EventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['id', 'days', 'forum', 'event_name', 'date', 'speakers', 'banner', 'single_events']
+        fields = ['id', 'days', 'forum', 'event_name', 'date', 'speakers', 'banner', 'single_events', 'highlights']
 
 
 

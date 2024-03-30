@@ -62,6 +62,7 @@ class SingleEvent(models.Model):
     starting_time = models.TimeField(null=True, blank=True)
     ending_time = models.TimeField(null=True, blank=True)
     topics = models.TextField(null=True, blank=True)
+    highlights = models.TextField(null=True, blank=True)
 
     
     

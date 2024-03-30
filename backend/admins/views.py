@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
 from django.core.exceptions import ObjectDoesNotExist
-
+from django.core.exceptions import ValidationError
  
  
  
@@ -117,17 +117,21 @@ class EventCreateView(generics.CreateAPIView):
  
  
 
+ 
+ 
+
+ 
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from datetime import datetime
-from .models import Event, SingleEvent, Forum
 from django.core.exceptions import ValidationError
+from datetime import datetime
+from .models import Event, SingleEvent, Forum, Speaker
 
 class SingleEventListCreate(APIView):
     def post(self, request):
         data = request.data
-        print("Received data:", data)  # Print received data for debugging
 
         # Extracting data from the request
         forum_id = data.get('forum')
@@ -136,18 +140,17 @@ class SingleEventListCreate(APIView):
         speakers = data.getlist('speakers[]', [])
         days = int(data.get('days', 1))
         banner = request.FILES.get('banner')
-        
+
         # Parse schedules data
         schedules = []
         for key, value in data.items():
             if key.startswith('schedules['):
-                schedule_index = int(key.split('[')[1].split(']')[0])
-                schedule_field = key.split('[')[2].split(']')[0]
+                parts = key.split('[')
+                schedule_index = int(parts[1].rstrip(']'))
+                schedule_field = parts[3].rstrip(']')
                 while len(schedules) <= schedule_index:
                     schedules.append({})
-                schedules[schedule_index][schedule_field] = value[0] if isinstance(value, list) else value
-
-        print("Schedules:", schedules)  # Print parsed schedules data for debugging
+                schedules[schedule_index][schedule_field] = value
 
         # Validating the presence of the banner image
         if not banner:
@@ -167,9 +170,6 @@ class SingleEventListCreate(APIView):
             print('Forum does not exist')
             return Response({'error': 'Forum does not exist.'}, status=status.HTTP_404_NOT_FOUND)
 
-        print("Event Date (Parsed):", event_date)
-        print("Forum:", forum)
-
         # Creating the event object
         try:
             event = Event.objects.create(
@@ -179,8 +179,6 @@ class SingleEventListCreate(APIView):
                 days=days,
                 banner=banner,
             )
-
-            print("Event created:", event)
 
             # Creating single events for each schedule
             for schedule_data in schedules:
@@ -194,9 +192,9 @@ class SingleEventListCreate(APIView):
                         starting_time=schedule_data.get('starting_time'),
                         ending_time=schedule_data.get('ending_time'),
                         topics=schedule_data.get('topics'),
+                        highlights=schedule_data.get('highlights'),
                         single_speaker=speaker, 
                     )
-                    print("SingleEvent created:", single_event)
                 except KeyError as e:
                     print(f"KeyError: {e}")
                     return Response({'error': 'Missing key in schedule data.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -212,6 +210,9 @@ class SingleEventListCreate(APIView):
             return Response({'error': 'Validation error while creating event.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'message': 'Event created successfully'}, status=status.HTTP_201_CREATED)
+
+
+
 
 
     
@@ -267,5 +268,7 @@ class EventDetailView(APIView):
             serializer = EventSerializer(event)
             return Response(serializer.data)
         except Event.DoesNotExist:
+            print('error')
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+            
 
