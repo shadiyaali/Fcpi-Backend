@@ -137,20 +137,22 @@ class SingleEventListCreate(APIView):
         forum_id = data.get('forum')
         event_name = data.get('event_name')
         event_date = data.get('date')
-        speakers = data.getlist('speakers[]', [])
         days = int(data.get('days', 1))
         banner = request.FILES.get('banner')
+        speakers = data.getlist('speakers[]', [])
 
         # Parse schedules data
         schedules = []
-        for key, value in data.items():
-            if key.startswith('schedules['):
-                parts = key.split('[')
-                schedule_index = int(parts[1].rstrip(']'))
-                schedule_field = parts[3].rstrip(']')
-                while len(schedules) <= schedule_index:
-                    schedules.append({})
-                schedules[schedule_index][schedule_field] = value
+        for day_index in range(days):
+            day_schedules = []
+            for key, value in data.items():
+                if key.startswith(f'schedules[{day_index}]'):
+                    schedule_index = int(key.split('[')[2].split(']')[0])
+                    schedule_field = key.split('[')[3].split(']')[0]
+                    while len(day_schedules) <= schedule_index:
+                        day_schedules.append({})
+                    day_schedules[schedule_index][schedule_field] = value
+            schedules.append(day_schedules)
 
         # Validating the presence of the banner image
         if not banner:
@@ -180,27 +182,28 @@ class SingleEventListCreate(APIView):
                 banner=banner,
             )
 
-            # Creating single events for each schedule
-            for schedule_data in schedules:
-                try:
-                    speaker_id = schedule_data.get('single_speaker')
-                    speaker = Speaker.objects.get(id=speaker_id)
-                    single_event = SingleEvent.objects.create(
-                        event=event,
-                        youtube_link=schedule_data.get('youtube_link'),
-                        points=schedule_data.get('points'),
-                        starting_time=schedule_data.get('starting_time'),
-                        ending_time=schedule_data.get('ending_time'),
-                        topics=schedule_data.get('topics'),
-                        highlights=schedule_data.get('highlights'),
-                        single_speaker=speaker, 
-                    )
-                except KeyError as e:
-                    print(f"KeyError: {e}")
-                    return Response({'error': 'Missing key in schedule data.'}, status=status.HTTP_400_BAD_REQUEST)
-                except ValidationError as e:
-                    print('Validation error:', str(e))
-                    return Response({'error': 'Validation error while creating single event.'}, status=status.HTTP_400_BAD_REQUEST)
+            # Creating single events for each schedule and day
+            for day_index, day_schedules in enumerate(schedules):
+                for schedule_data in day_schedules:
+                    try:
+                        speaker_id = schedule_data.get('single_speaker')
+                        speaker = Speaker.objects.get(id=speaker_id)
+                        single_event = SingleEvent.objects.create(
+                            event=event,
+                            youtube_link=schedule_data.get('youtube_link'),
+                            points=schedule_data.get('points'),
+                            starting_time=schedule_data.get('starting_time'),
+                            ending_time=schedule_data.get('ending_time'),
+                            topics=schedule_data.get('topics'),
+                            highlights=schedule_data.get('highlights'),
+                            single_speaker=speaker,
+                        )
+                    except KeyError as e:
+                        print(f"KeyError: {e}")
+                        return Response({'error': 'Missing key in schedule data.'}, status=status.HTTP_400_BAD_REQUEST)
+                    except ValidationError as e:
+                        print('Validation error:', str(e))
+                        return Response({'error': 'Validation error while creating single event.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Assigning speakers to the event
             event.speakers.set(speakers)
@@ -210,6 +213,7 @@ class SingleEventListCreate(APIView):
             return Response({'error': 'Validation error while creating event.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'message': 'Event created successfully'}, status=status.HTTP_201_CREATED)
+
 
 
 
