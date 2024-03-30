@@ -17,6 +17,8 @@ from django.http import JsonResponse
 from rest_framework.generics import ListAPIView
 from rest_framework import generics
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
  
  
 
@@ -132,18 +134,18 @@ class LoginView(APIView):
             
             print("Attempting login with email:", email ,password)
             
-            user = auth.authenticate(request, email=email, password=password)
+            user = authenticate(request, email=email, password=password)
             
             if user is not None:
                 print("Authentication successful")
         
-                # Check if user profile exists, if not, create it
+                 
                 try:
                     UserProfile.objects.get(user=user)
                 except ObjectDoesNotExist:
                     UserProfile.objects.create(user=user)
         
-                return Response({'status': 200, 'message': 'Login successful'}, status=status.HTTP_200_OK)
+                return Response({'status': 200, 'user': {'id': user.id, 'email': user.email}}, status=status.HTTP_200_OK)
             else:
                 print("Authentication failed")
               
@@ -166,6 +168,7 @@ class AddUser(APIView):
                 return Response({'status': 400, 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'status': 500, 'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
 class UserRoleCreateView(APIView):
     def post(self, request, *args, **kwargs):
@@ -176,6 +179,7 @@ class UserRoleCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
         
 class UserRoleListView(ListAPIView):
     queryset = UserRole.objects.all()
@@ -189,32 +193,26 @@ class UserListView(APIView):
     
     
 class UserProfileCreateView(APIView):
+    authentication_classes = [TokenAuthentication]  # Add token authentication
+    permission_classes = [IsAuthenticated]
     def post(self, request, *args, **kwargs):
-        try: 
+        try:
             user = request.user
-            
-        
+
             if UserProfile.objects.filter(user=user).exists():
-              
                 return Response({'error': 'User profile already exists'}, status=status.HTTP_400_BAD_REQUEST)
-             
+
         
-            
             request.data['user'] = user.id
-            
-   
+
             serializer = UserProfileSerializer(data=request.data)
-            
-       
+
             if serializer.is_valid():
-           
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-           
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
- 
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
  
 class updateUser(generics.UpdateAPIView) :
@@ -225,12 +223,24 @@ class DeleteUser(generics.DestroyAPIView):
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer   
     
+    
 class UserprofileListView(APIView):
-      def get(self, request):
-        
-        users = UserProfile.objects.exclude(user__is_superuser=True)
-      
-        serializer = UserProfileSerializer(users, many=True)
-       
+      def get(self, request):        
+        users = UserProfile.objects.exclude(user__is_superuser=True)      
+        serializer = UserProfileSerializer(users, many=True)       
         return Response(serializer.data)
     
+
+class UserProfileView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            user_profile = UserProfile.objects.get(user_id=user_id)
+            serializer = UserProfileSerializer(user_profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'User profile not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
