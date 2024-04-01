@@ -6,7 +6,8 @@ urlpatterns = [
     path('register/', RegisterView.as_view()),
     path('verifyOtp/', VerifyOtp.as_view(), name='verify_otp'),
     path('resendOtp/', ResendOtp.as_view(), name='resend-otp'),
-    path('login/', LoginView.as_view(), name='login'),
+    # path('login/', LoginView.as_view(), name='login'),
+    path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('add_user/', AddUser.as_view(), name='add_user'),
     path('user-roles/', UserRoleListView.as_view(), name='user_roles_list'),
     path('create-roles/', UserRoleCreateView.as_view(), name='create_roles_create'),
@@ -15,6 +16,6 @@ urlpatterns = [
     path('userprofilelist/',  UserprofileListView.as_view(), name='user_profile_list'),
     path('user/<int:pk>/update/', updateUser.as_view(), name='user-update'),
     path('user/<int:pk>/delete/', DeleteUser.as_view(), name='user-delete'),
-    path('userprofile/<int:pk>/', UserProfileView.as_view(), name='user_profile'),
+    path('userprofile/<int:id>/', UserProfileView.as_view(), name='user_profile'),
     
 ]

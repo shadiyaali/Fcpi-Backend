@@ -10,6 +10,7 @@ class UserRole(models.Model):
 
 
 class User(AbstractUser):
+    user_id = models.AutoField(primary_key=True)
     username = None
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=12)

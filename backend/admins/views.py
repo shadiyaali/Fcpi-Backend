@@ -236,28 +236,26 @@ class EditEventAPIView(APIView):
            
             event = Event.objects.get(pk=pk)
             
-            # Create a serializer instance with the retrieved event and request data,
-            # allowing partial updates
+           
             serializer = EventSerializer(event, data=request.data, partial=True)
 
-            print(request.data)  # Print the request data for debugging
-            
-            # Validate the serializer
+            print(request.data)   
+      
             if serializer.is_valid():
-                # Save the serializer data (update the event)
+          
                 serializer.save()
-                print(serializer.data,'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwww')  # Print the updated data for debugging
+                print(serializer.data,'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwww')  
                 
-                # Return the updated data
+ 
                 return Response(serializer.data)
             else:
-                # If the serializer is not valid, return validation errors
+           
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Event.DoesNotExist:
-            # If the event with the given primary key does not exist, return a 404 error
+    
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            # Log any unexpected errors for debugging and return a 500 error
+ 
             print(e)
             return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
