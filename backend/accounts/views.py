@@ -167,33 +167,20 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        print(token, "dddddddddddddddd")
-       
-        token['username'] = user.first_name
-     
-
+        print("rrrrrrrrrrrrrr:",user)
+        token['user_id'] = user.id
+        print("user_id:", user.id)
+        token['username'] = user.first_name  
         return token
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == status.HTTP_200_OK:
-            token = response.data.get('access')
-            if token:
-                print("Token obtained successfully:", token)
-            else:
-                print("No token received in the response.")
-        else:
-            print("Token not obtained. Error occurred.")
-        return response
 
  
 class AddUser(APIView):
     def post(self, request):
-        try:
-            
+        try:            
             serializer = UserSerializer(data=request.data)
             print(request.data)
             if serializer.is_valid():
@@ -228,8 +215,7 @@ class UserListView(APIView):
     
     
 class UserProfileCreateView(APIView):
-    authentication_classes = [TokenAuthentication]  
-    permission_classes = [IsAuthenticated]
+  
     def post(self, request, *args, **kwargs):
         try:
             user = request.user
@@ -267,17 +253,33 @@ class UserprofileListView(APIView):
     
 
 class UserProfileView(APIView):
-   
-    def get(self, request, user_id):
-        print('zzzzzzzzzzzzzzzzzzzzzzzzz:',user_id)
+    def get(self, request):
+        user = request.user
+
         try:
-            user_profile = UserProfile.objects.get(user_id=user_id)
-            print(user_id)
-            serializer = UserProfileSerializer(user_profile)
-            print(user_profile,"nnnnnnnnnnnnnnnnnnnnnnnnnnnnn")
-            print(serializer.data)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            user_profile = UserProfile.objects.get(user=user)
+            profile_serializer = UserProfileSerializer(user_profile)
+            profile_data = profile_serializer.data  
+            print("Profile Data:", profile_data)
+            
+            # Retrieve the user data with full instance
+            user_instance = User.objects.get(pk=user.pk)
+            user_serializer = UserSerializer(user_instance)
+            user_data = user_serializer.data
+            print("User Data:", user_data)
+ 
+            response_data = {
+                'user': user_data,
+                'profile': profile_data
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
         except UserProfile.DoesNotExist:
-            return Response({'error': 'User profile not found'}, status=status.HTTP_404_NOT_FOUND)
+          
+            user_instance = User.objects.get(pk=user.pk)
+            user_serializer = UserSerializer(user_instance)
+            user_data = user_serializer.data
+            print("User Data:", user_data)
+            return Response({'user': user_data}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            print("Error:", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

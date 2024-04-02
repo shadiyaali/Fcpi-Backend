@@ -1,7 +1,13 @@
 from rest_framework import serializers
 from .models import User,UserRole,UserProfile
 
-
+    
+class UserRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserRole
+        fields = ['id', 'name'] 
+        
+        
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -19,13 +25,10 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-    
-class UserRoleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserRole
-        fields = ['id', 'name'] 
-        
+
 class UserProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer(required=False)
+
     class Meta:
         model = UserProfile
-        fields = '__all__'
+        fields = ['id', 'user', 'date_of_birth', 'primary_position', 'state', 'primary_pharmacy_degree', 'secondary_pharmacy_degree', 'additional_degrees', 'city', 'country', 'pharmacy_college_name', 'pharmacy_college_degree']
