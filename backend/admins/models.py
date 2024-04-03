@@ -44,7 +44,11 @@ class Event(models.Model):
         ('Single Day', 'Single Day'),
         ('Multi Day', 'Multi Day'),
     )
- 
+    STATUS_CHOICES = (
+        ('Upcoming', 'Upcoming'),
+        ('Live', 'Live'),
+        ('Completed', 'Completed'),
+    )
     event_name = models.CharField(max_length=100, null=True)    
     speakers = models.ManyToManyField(Speaker, related_name='events', blank=True)
     date = models.DateField(null=True) 

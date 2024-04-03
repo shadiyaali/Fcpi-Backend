@@ -37,7 +37,7 @@ class SingleEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SingleEvent
-        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time' 'ending_time', 'topics']
+        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time' ,'ending_time', 'topics', 'highlights']
 
 
 
@@ -46,14 +46,16 @@ class EventSerializer(serializers.ModelSerializer):
   
     speakers = serializers.StringRelatedField(many=True)  
 
-    
+    forum_name = serializers.SerializerMethodField()
     single_events = SingleEventSerializer(many=True, read_only=True)
     banner = serializers.ImageField(required=False)   
 
     class Meta:
         model = Event
-        fields = ['id', 'days', 'forum', 'event_name', 'date', 'speakers', 'banner', 'single_events', 'highlights']
-
+        fields = ['id', 'days', 'forum', 'event_name', 'forum_name', 'date', 'speakers', 'banner', 'single_events']
+    
+    def get_forum_name(self, obj):
+        return obj.forum.title if obj.forum else None 
 
 
 

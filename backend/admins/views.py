@@ -11,6 +11,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.exceptions import NotFound
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
  
  
  
@@ -112,22 +113,7 @@ class EventCreateView(generics.CreateAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
- 
-
- 
- 
-
- 
- 
-
- 
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.core.exceptions import ValidationError
-from datetime import datetime
-from .models import Event, SingleEvent, Forum, Speaker
+  
 
 class SingleEventListCreate(APIView):
     def post(self, request):
@@ -216,9 +202,6 @@ class SingleEventListCreate(APIView):
 
 
 
-
-
-
     
     
 class EventListView(APIView):
@@ -273,4 +256,56 @@ class EventDetailView(APIView):
             print('error')
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
             
+ 
 
+class EventListView(APIView):
+    def get_event_status(self, event):
+        current_date = datetime.now().date()
+        if event.date > current_date:
+            return "Upcoming"
+        elif event.date == current_date:
+            return "Live"
+        else:
+            return "Completed"
+
+    def get(self, request):
+        
+        events = Event.objects.all()
+
+        live_events = []
+        upcoming_events = []
+        completed_events = []
+
+        for event in events:
+            status = self.get_event_status(event)
+            if status == "Live":
+                live_events.append(event)
+            elif status == "Upcoming":
+                upcoming_events.append(event)
+            else:
+                completed_events.append(event)
+
+        live_events_data = EventSerializer(live_events, many=True).data
+        upcoming_events_data = EventSerializer(upcoming_events, many=True).data
+        completed_events_data = EventSerializer(completed_events, many=True).data
+
+        return Response({
+            'live_events': live_events_data,
+            'upcoming_events': upcoming_events_data,
+            'completed_events': completed_events_data,
+        })
+
+class SingleEventDetailView(APIView):
+    def get(self, request, event_id):
+        try:
+            event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events'), pk=event_id)
+            serializer = EventSerializer(event)
+            # Assuming you want to filter single events by a particular day
+            day = request.GET.get('day')  # Assuming the day is passed as a query parameter
+            if day:
+                single_events = event.single_events.filter(day=day)  # Filter single events by day
+                serializer.data['single_events'] = EventSerializer(single_events, many=True).data
+                
+            return Response(serializer.data)
+        except Event.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)

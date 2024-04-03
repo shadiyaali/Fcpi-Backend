@@ -262,7 +262,7 @@ class UserProfileView(APIView):
             profile_data = profile_serializer.data  
             print("Profile Data:", profile_data)
             
-            # Retrieve the user data with full instance
+         
             user_instance = User.objects.get(pk=user.pk)
             user_serializer = UserSerializer(user_instance)
             user_data = user_serializer.data
