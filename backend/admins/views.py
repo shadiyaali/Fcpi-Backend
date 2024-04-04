@@ -300,12 +300,14 @@ class SingleEventDetailView(APIView):
         try:
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events'), pk=event_id)
             serializer = EventSerializer(event)
-            # Assuming you want to filter single events by a particular day
-            day = request.GET.get('day')  # Assuming the day is passed as a query parameter
+            
+            day = request.GET.get('day')  
             if day:
-                single_events = event.single_events.filter(day=day)  # Filter single events by day
+                single_events = event.single_events.filter(day=day)  
                 serializer.data['single_events'] = EventSerializer(single_events, many=True).data
                 
             return Response(serializer.data)
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+         
+            
