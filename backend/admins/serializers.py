@@ -20,27 +20,35 @@ class ForumSerializer(serializers.ModelSerializer):
         model = Forum
         fields = ['id','title', 'description', 'image']
         
-
-class SpeakerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Speaker
-        fields = '__all__'        
-        
-        
- 
-
- 
- 
 class SingleEventSerializer(serializers.ModelSerializer):
     
     event = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all())
 
     class Meta:
         model = SingleEvent
-        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time' ,'ending_time', 'topics', 'highlights']
+        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time' ,'ending_time', 'topics', 'highlights']        
+
+class SpeakerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Speaker
+        fields = ['id', 'name', 'qualification', 'designation', 'description', 'photo']
+      
+
+
+        
+class EventSpeakerSerializer(serializers.ModelSerializer):
+    speakers = SpeakerSerializer(many=True)  
+    class Meta:
+        model = Event
+        fields = ['id', 'speakers']
+ 
 
 
 
+
+
+
+ 
 
 class EventSerializer(serializers.ModelSerializer):
   

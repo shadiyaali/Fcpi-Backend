@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent
@@ -311,3 +311,9 @@ class SingleEventDetailView(APIView):
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
          
             
+class EventSpeakersView(APIView):
+    def get(self, request, event_id):
+        event = get_object_or_404(Event, pk=event_id)
+        serializer = EventSpeakerSerializer(event)
+        print("vvvvvvvvvvvvvvvvv",serializer.data)
+        return Response(serializer.data)
