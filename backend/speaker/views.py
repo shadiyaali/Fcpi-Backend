@@ -2,33 +2,65 @@ from django.shortcuts import render
 from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status 
+from django.http import JsonResponse
+from django.contrib.auth.hashers import check_password
 
 
 
-# Create your views here.
-class SdminLogin(APIView):
-    def post(self, request):
+class SecondUserLoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
         try:
-            data = request.data
-            email = data.get('email')
-            password = data.get('password')
-            if email is None or password is None:
-                raise ValueError("Email and password must be provided")
-
-            
-            user = authenticate(request, email=email, password=password)
-            if user is not None and user.is_staff and user.is_superuser:
-              
-                login(request, user)
-                return Response({'status': 200, 'message': 'Sdmin login successful'})
+            user = SecondUser.objects.get(username=username)
+            if check_password(password, user.password) and user.status == 'Active':
+                return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
             else:
-                return Response({'status': 400, 'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
-        except ValueError as e:
-            return Response({'status': 400, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            print("An error occurred:", e)
-            return Response({'status': 500, 'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({'error': 'Invalid username, password, or user status'}, status=status.HTTP_400_BAD_REQUEST)
+        except SecondUser.DoesNotExist:
+            return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-    def get(self, request):
-        return Response({'status': 405, 'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+ 
+from .models import SecondUser
+from .serializers import SecondUserSerializer
+
+class SecondUserCreateView(APIView):
+    def post(self, request, *args, **kwargs):
+        
+        serializer = SecondUserSerializer(data=request.data)
+        
+       
+        if serializer.is_valid():
+            
+            serializer.save()
+            print(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SecondUserListView(APIView):
+    def get(self, request, *args, **kwargs):
+        second_users = SecondUser.objects.all()
+        serializer = SecondUserSerializer(second_users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class SecondUserStatusChangeView(APIView):
+    def patch(self, request, pk, *args, **kwargs):
+        try:
+            user = SecondUser.objects.get(pk=pk)
+            new_status = request.data.get('status')
+            if new_status not in ['Active', 'Inactive']:
+                return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user.status = new_status
+            user.save()
+            serializer = SecondUserSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except SecondUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
