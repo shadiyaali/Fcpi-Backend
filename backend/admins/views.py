@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent
@@ -88,117 +88,63 @@ class SpeakerDeleteView(generics.DestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
     
  
-
-class EventCreateView(generics.CreateAPIView):
-    serializer_class = EventSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        print(request.data)
-        if serializer.is_valid():
-            # Save the event object
-            event = serializer.save()
-
-            # Process selected speakers
-            selected_speaker_ids = request.data.get('speakers', [])
-            selected_speakers = Speaker.objects.filter(pk__in=selected_speaker_ids)
-            event.speakers.set(selected_speakers)
  
-            banner_file = request.data.get('banner')
-            if banner_file:
-                event.banner.save(banner_file.name, banner_file, save=True)
+ 
+ 
+from django.db import transaction
+ 
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-  
-
-class SingleEventListCreate(APIView):
+class EventListCreate(APIView):
+    @transaction.atomic
     def post(self, request):
-        data = request.data
+     
+        event_data = {
+            'event_name': request.data.get('event_name'),
+            'date': request.data.get('date'),
+            'days': request.data.get('days'),
+            'forum': request.data.get('forum'),
+            'speakers': request.data.getlist('speakers[]'),
+            'banner': request.data.get('banner')
+        }
+        single_events_data = request.data.getlist('single_events[]')  
+        
+        multi_events_data = request.data.getlist('multi_events[]')
+        print("Received event_data:", event_data)
+        print("Received single_events_data:", single_events_data)
+        print("Received multi_events_data:", multi_events_data)
+        
+        event_serializer = EventSerializer(data=event_data)
+        
+        
+        if event_serializer.is_valid():
+            event = event_serializer.save()
+        else:
+            return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Extracting data from the request
-        forum_id = data.get('forum')
-        event_name = data.get('event_name')
-        event_date = data.get('date')
-        days = int(data.get('days', 1))
-        banner = request.FILES.get('banner')
-        speakers = data.getlist('speakers[]', [])
+      
+        for single_data in single_events_data:
+            single_data['event'] = event.id
+            single_serializer = SingleEventSerializer(data=single_data)
+            if single_serializer.is_valid():
+                single_serializer.save()
+            else:
+                print(single_serializer.errors)
+                return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Parse schedules data
-        schedules = []
-        for day_index in range(days):
-            day_schedules = []
-            for key, value in data.items():
-                if key.startswith(f'schedules[{day_index}]'):
-                    schedule_index = int(key.split('[')[2].split(']')[0])
-                    schedule_field = key.split('[')[3].split(']')[0]
-                    while len(day_schedules) <= schedule_index:
-                        day_schedules.append({})
-                    day_schedules[schedule_index][schedule_field] = value
-            schedules.append(day_schedules)
+        # Create MultiEvent instances
+        for multi_data in multi_events_data:
+            multi_data['event'] = event.id
+            multi_serializer = MultiEventSerializer(data=multi_data)
+            if multi_serializer.is_valid():
+                multi_serializer.save()
+            else:
+                print(multi_serializer.errors)
+                return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validating the presence of the banner image
-        if not banner:
-            return Response({'error': 'Banner image is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Event and associated data created successfully'}, status=status.HTTP_201_CREATED)
 
-        # Validating the date format
-        try:
-            event_date = datetime.strptime(event_date, '%Y-%m-%d').date()
-        except ValueError as e:
-            print('Invalid date format:', str(e))
-            return Response({'error': 'Invalid date format. Please provide date in YYYY-MM-DD format.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Retrieving the forum object
-        try:
-            forum = Forum.objects.get(id=forum_id)
-        except Forum.DoesNotExist:
-            print('Forum does not exist')
-            return Response({'error': 'Forum does not exist.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Creating the event object
-        try:
-            event = Event.objects.create(
-                forum=forum,
-                event_name=event_name,
-                date=event_date,
-                days=days,
-                banner=banner,
-            )
-
-            # Creating single events for each schedule and day
-            for day_index, day_schedules in enumerate(schedules):
-                for schedule_data in day_schedules:
-                    try:
-                        speaker_id = schedule_data.get('single_speaker')
-                        speaker = Speaker.objects.get(id=speaker_id)
-                        single_event = SingleEvent.objects.create(
-                            event=event,
-                            youtube_link=schedule_data.get('youtube_link'),
-                            points=schedule_data.get('points'),
-                            starting_time=schedule_data.get('starting_time'),
-                            ending_time=schedule_data.get('ending_time'),
-                            topics=schedule_data.get('topics'),
-                            highlights=schedule_data.get('highlights'),
-                            single_speaker=speaker,
-                        )
-                    except KeyError as e:
-                        print(f"KeyError: {e}")
-                        return Response({'error': 'Missing key in schedule data.'}, status=status.HTTP_400_BAD_REQUEST)
-                    except ValidationError as e:
-                        print('Validation error:', str(e))
-                        return Response({'error': 'Validation error while creating single event.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Assigning speakers to the event
-            event.speakers.set(speakers)
-
-        except ValidationError as e:
-            print('Validation error:', str(e))
-            return Response({'error': 'Validation error while creating event.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'message': 'Event created successfully'}, status=status.HTTP_201_CREATED)
 
 
 

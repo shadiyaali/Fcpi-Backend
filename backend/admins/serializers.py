@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent 
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent 
 
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,13 +20,7 @@ class ForumSerializer(serializers.ModelSerializer):
         model = Forum
         fields = ['id','title', 'description', 'image']
         
-class SingleEventSerializer(serializers.ModelSerializer):
-    
-    event = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all())
-
-    class Meta:
-        model = SingleEvent
-        fields = ['event', 'single_speaker', 'youtube_link', 'points', 'starting_time' ,'ending_time', 'topics', 'highlights']        
+  
 
 class SpeakerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,29 +35,29 @@ class EventSpeakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ['id', 'speakers']
- 
-
-
-
-
-
+  
 
  
+
+class MultiEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MultiEvent
+        fields = ['id', 'starting_time', 'ending_time', 'topics', 'single_speaker']
+
+class SingleEventSerializer(serializers.ModelSerializer):
+    multi_events = MultiEventSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SingleEvent
+        fields = ['id', 'event', 'youtube_link', 'points', 'highlights', 'multi_events']
 
 class EventSerializer(serializers.ModelSerializer):
-  
-    speakers = serializers.StringRelatedField(many=True)  
-
-    forum_name = serializers.SerializerMethodField()
     single_events = SingleEventSerializer(many=True, read_only=True)
-    banner = serializers.ImageField(required=False)   
 
     class Meta:
         model = Event
-        fields = ['id', 'days', 'forum', 'event_name', 'forum_name', 'date', 'speakers', 'banner', 'single_events']
-    
-    def get_forum_name(self, obj):
-        return obj.forum.title if obj.forum else None 
+        fields = ['id', 'forum', 'event_name', 'speakers', 'date', 'days', 'banner', 'single_events']
+
 
 
 
