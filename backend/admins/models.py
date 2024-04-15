@@ -66,7 +66,7 @@ class SingleEvent(models.Model):
 
     
 class MultiEvent(models.Model):
-    sinlge_event =  models.ForeignKey(SingleEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='multi_events')
+    single_event = models.ForeignKey(SingleEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='multi_events')
     starting_time = models.TimeField(null=True, blank=True)
     ending_time = models.TimeField(null=True, blank=True)
     topics = models.TextField(null=True, blank=True)

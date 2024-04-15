@@ -5,7 +5,7 @@ from rest_framework import status
 from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -13,6 +13,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
  
+from django.db import transaction
+import json
+
+ 
+
+ 
+import logging 
  
  
 
@@ -87,61 +94,88 @@ class SpeakerDeleteView(generics.DestroyAPIView):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
     
- 
- 
- 
- 
-from django.db import transaction
- 
+  
+
+
+logger = logging.getLogger(__name__)
 
 class EventListCreate(APIView):
     @transaction.atomic
     def post(self, request):
-     
-        event_data = {
-            'event_name': request.data.get('event_name'),
-            'date': request.data.get('date'),
-            'days': request.data.get('days'),
-            'forum': request.data.get('forum'),
-            'speakers': request.data.getlist('speakers[]'),
-            'banner': request.data.get('banner')
-        }
-        single_events_data = request.data.getlist('single_events[]')  
-        
-        multi_events_data = request.data.getlist('multi_events[]')
-        print("Received event_data:", event_data)
-        print("Received single_events_data:", single_events_data)
-        print("Received multi_events_data:", multi_events_data)
-        
-        event_serializer = EventSerializer(data=event_data)
-        
-        
-        if event_serializer.is_valid():
-            event = event_serializer.save()
-        else:
-            return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            print("Request Data:", request.data)
 
-      
-        for single_data in single_events_data:
-            single_data['event'] = event.id
-            single_serializer = SingleEventSerializer(data=single_data)
-            if single_serializer.is_valid():
-                single_serializer.save()
+            # Extract event data from request
+            event_data = {
+                'event_name': request.data.get('event_name'),
+                'date': request.data.get('date'),
+                'days': request.data.get('days'),
+                'forum': request.data.get('forum'),
+                'speakers': [speaker.strip('"') for speaker in request.data.getlist('speakers[]')],
+                'banner': request.data.get('banner')
+            }
+
+            # Extract and deserialize single events data from request
+            single_events_data = request.data.get('single_events[]')
+            single_events_data = json.loads(single_events_data)
+
+            print("Event Data:", event_data)
+            print("Single Events Data:", single_events_data)
+
+            # Serialize event data
+            event_serializer = EventSerializer(data=event_data)
+            if event_serializer.is_valid():
+                event = event_serializer.save()
             else:
-                print(single_serializer.errors)
+                print("Event Serializer Errors:", event_serializer.errors)
+                return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            # Process and save single event data
+            single_serializer = SingleEventSerializer(data=single_events_data)
+            if single_serializer.is_valid():
+                single_instance = single_serializer.save(event=event)
+            else:
+                print("Single Event Serializer Errors:", single_serializer.errors)
                 return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create MultiEvent instances
-        for multi_data in multi_events_data:
-            multi_data['event'] = event.id
-            multi_serializer = MultiEventSerializer(data=multi_data)
-            if multi_serializer.is_valid():
-                multi_serializer.save()
-            else:
-                print(multi_serializer.errors)
-                return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Process and save multi event data
+            multi_events_data = single_events_data.get('multi_events', [])
+            for multi_event_data in multi_events_data:
+                # Ensure starting_time and ending_time are in correct format
+                try:
+                    datetime.strptime(multi_event_data['starting_time'], '%H:%M:%S')
+                    datetime.strptime(multi_event_data['ending_time'], '%H:%M:%S')
+                except ValueError:
+                    print("Invalid time format:", multi_event_data)
+                    return Response({'error': 'Invalid time format'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check if the multi event already exists
+                existing_multi_event = MultiEvent.objects.filter(
+                    single_event=single_instance,
+                    starting_time=multi_event_data['starting_time'],
+                    ending_time=multi_event_data['ending_time']
+                ).first()
+                
+                if existing_multi_event:
+                    print("Multi Event already exists:", existing_multi_event)
+                else:
+                    multi_event_data['single_event'] = single_instance.id
+                    multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
+                    if multi_serializer.is_valid():
+                        multi_serializer.save()
+                    else:
+                        print("Multi Event Serializer Errors:", multi_serializer.errors)
+                        return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({'message': 'Event and associated data created successfully'}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'Event and associated data created successfully'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print("Error:", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
 
 
 
