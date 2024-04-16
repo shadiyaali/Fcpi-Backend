@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent 
-
+from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Admin
@@ -40,17 +40,21 @@ class EventSpeakerSerializer(serializers.ModelSerializer):
  
 
 class MultiEventSerializer(serializers.ModelSerializer):
+    speaker_name = serializers.SerializerMethodField()
+
     class Meta:
         model = MultiEvent
-        fields = ['id', 'starting_time', 'ending_time', 'topics', 'single_speaker']
-        
-    def create(self, validated_data):
-        # Get the associated SingleEvent instance from the context
-        single_event = self.context['single_event']
+        fields = ['id', 'starting_time', 'ending_time', 'topics', 'single_speaker', 'speaker_name']
 
-         
+    def create(self, validated_data):
+        single_event = self.context['single_event']
         multi_event = MultiEvent.objects.create(single_event=single_event, **validated_data)
         return multi_event
+
+    def get_speaker_name(self, obj):
+        return obj.single_speaker.name if obj.single_speaker else None
+
+    
 
  
 
@@ -65,7 +69,7 @@ class SingleEventSerializer(serializers.Serializer):
         single_event = SingleEvent.objects.create(**validated_data)
 
         for multi_event_data in multi_events_data:
-            multi_event_data['single_event'] = single_event  # Add the single_event object
+            multi_event_data['single_event'] = single_event   
             MultiEvent.objects.create(**multi_event_data)
 
         return single_event
@@ -82,13 +86,19 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 
-
+ 
 class EventListSerializer(serializers.ModelSerializer):
     forum_name = serializers.SerializerMethodField()
+    single_events = SingleEventSerializer(many=True, read_only=True)
+     
 
     class Meta:
         model = Event
-        fields = ['id', 'event_name', 'date', 'forum', 'forum_name', 'days' ,'banner']  
+        fields = ['id', 'event_name', 'date', 'forum', 'forum_name', 'days', 'banner', 'single_events' ]
 
     def get_forum_name(self, obj):
         return obj.forum.title if obj.forum else None
+
+     
+    
+    

@@ -52,3 +52,9 @@ class UserProfile(models.Model):
         return self.user.email
  
 
+class Feedback(models.Model):
+    Content_of_presentation = models.CharField(
+       'verisatisfied','verisatisfied'
+    )
+        
+    

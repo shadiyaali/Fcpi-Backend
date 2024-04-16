@@ -64,6 +64,12 @@ class SingleEvent(models.Model):
     points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)    
     highlights = models.TextField(null=True, blank=True)
 
+    def save(self, *args, **kwargs):
+        # Ensure highlights is saved as a string
+        if isinstance(self.highlights, list):
+            self.highlights = ', '.join(self.highlights)
+        super().save(*args, **kwargs)
+
     
 class MultiEvent(models.Model):
     single_event = models.ForeignKey(SingleEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='multi_events')

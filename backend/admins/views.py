@@ -116,9 +116,7 @@ class EventListCreate(APIView):
             }
 
             # Extract and deserialize single events data from request
-            single_events_data = request.data.get('single_events[]')
-            single_events_data = json.loads(single_events_data)
-
+            single_events_data = request.data.getlist('single_events[]')  # Use getlist to get all single events
             print("Event Data:", event_data)
             print("Single Events Data:", single_events_data)
 
@@ -130,47 +128,43 @@ class EventListCreate(APIView):
                 print("Event Serializer Errors:", event_serializer.errors)
                 return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            # Process and save single event data
-            single_serializer = SingleEventSerializer(data=single_events_data)
-            if single_serializer.is_valid():
-                single_instance = single_serializer.save(event=event)
-            else:
-                print("Single Event Serializer Errors:", single_serializer.errors)
-                return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            # Process and save multi event data
-            multi_events_data = single_events_data.get('multi_events', [])
-            for multi_event_data in multi_events_data:
-                # Ensure starting_time and ending_time are in correct format
-                try:
-                    datetime.strptime(multi_event_data['starting_time'], '%H:%M:%S')
-                    datetime.strptime(multi_event_data['ending_time'], '%H:%M:%S')
-                except ValueError:
-                    print("Invalid time format:", multi_event_data)
-                    return Response({'error': 'Invalid time format'}, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Check if the multi event already exists
-                existing_multi_event = MultiEvent.objects.filter(
-                    single_event=single_instance,
-                    starting_time=multi_event_data['starting_time'],
-                    ending_time=multi_event_data['ending_time']
-                ).first()
-                
-                if existing_multi_event:
-                    print("Multi Event already exists:", existing_multi_event)
+            # Process and save each single event data
+            for single_event_data in single_events_data:
+                single_serializer = SingleEventSerializer(data=json.loads(single_event_data))
+                if single_serializer.is_valid():
+                    single_instance = single_serializer.save(event=event)
                 else:
-                    multi_event_data['single_event'] = single_instance.id
-                    multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
-                    if multi_serializer.is_valid():
-                        multi_serializer.save()
+                    print("Single Event Serializer Errors:", single_serializer.errors)
+                    return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                # Process and save multi event data for this single event
+                multi_events_data = single_serializer.validated_data.get('multi_events', [])
+                for multi_event_data in multi_events_data:
+                    # Check if the multi event already exists
+                    existing_multi_event = MultiEvent.objects.filter(
+                        single_event=single_instance,
+                        starting_time=multi_event_data['starting_time'],
+                        ending_time=multi_event_data['ending_time']
+                    ).first()
+                    
+                    if existing_multi_event:
+                        print("Multi Event already exists:", existing_multi_event)
                     else:
-                        print("Multi Event Serializer Errors:", multi_serializer.errors)
-                        return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                        multi_event_data['single_event'] = single_instance.id
+                        multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
+                        if multi_serializer.is_valid():
+                            multi_serializer.save()
+                        else:
+                            print("Multi Event Serializer Errors:", multi_serializer.errors)
+                            return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({'message': 'Event and associated data created successfully'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 
 
 
@@ -265,9 +259,9 @@ class EventListView(APIView):
             else:
                 completed_events.append(event)
 
-        live_events_data = EventSerializer(live_events, many=True).data
-        upcoming_events_data = EventSerializer(upcoming_events, many=True).data
-        completed_events_data = EventSerializer(completed_events, many=True).data
+        live_events_data = EventListSerializer(live_events, many=True).data
+        upcoming_events_data = EventListSerializer(upcoming_events, many=True).data
+        completed_events_data = EventListSerializer(completed_events, many=True).data
 
         return Response({
             'live_events': live_events_data,
@@ -279,16 +273,19 @@ class SingleEventDetailView(APIView):
     def get(self, request, event_id):
         try:
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events'), pk=event_id)
-            serializer = EventSerializer(event)
+            serializer = EventListSerializer(event)
             
             day = request.GET.get('day')  
             if day:
+                # Filter single events for the specified day
                 single_events = event.single_events.filter(day=day)  
-                serializer.data['single_events'] = EventSerializer(single_events, many=True).data
                 
+                # Serialize the filtered single events
+                serializer.data['single_events'] = EventListSerializer(single_events, many=True).data
             return Response(serializer.data)
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
          
             
 class EventSpeakersView(APIView):
@@ -297,3 +294,5 @@ class EventSpeakersView(APIView):
         serializer = EventSpeakerSerializer(event)
         print("vvvvvvvvvvvvvvvvv",serializer.data)
         return Response(serializer.data)
+
+
