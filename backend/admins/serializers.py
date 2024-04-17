@@ -76,12 +76,18 @@ class SingleEventSerializer(serializers.Serializer):
 
 
 
+ 
+ 
+
 class EventSerializer(serializers.ModelSerializer):
     single_events = SingleEventSerializer(many=True, read_only=True)
+    date = serializers.DateField(format='%d-%m-%Y')  # Specify the desired output format
 
     class Meta:
         model = Event
         fields = ['id', 'forum', 'event_name', 'speakers', 'date', 'days', 'banner', 'single_events']
+
+
 
 
 

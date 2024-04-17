@@ -16,7 +16,7 @@ urlpatterns = [
     path('events/<int:pk>/list/', EventDetailView.as_view(), name='event-detail'),
     path('eventslist/', EventListView.as_view(), name='event-list'),
     path('events/<int:event_id>/single-events/', SingleEventDetailView.as_view(), name='single-events-detail'),
-    path('enroll/<int:event_id>/single-events/', SingleEventDetailView.as_view(), name='single-events-enroll'),
+    path('enroll/<int:event_id>/single-events/', SingleDetailView.as_view(), name='single-events-enroll'),
     path('events/<int:event_id>/speakers/', EventSpeakersView.as_view(), name='event-speakers'),
  
 
