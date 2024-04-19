@@ -58,21 +58,31 @@ class MultiEventSerializer(serializers.ModelSerializer):
 
  
 
+ 
 class SingleEventSerializer(serializers.Serializer):
-    highlights = serializers.ListField(child=serializers.CharField())
+    highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
     youtube_link = serializers.URLField()
     points = serializers.IntegerField()
     multi_events = MultiEventSerializer(many=True)
 
     def create(self, validated_data):
-        multi_events_data = validated_data.pop('multi_events')
-        single_event = SingleEvent.objects.create(**validated_data)
+        multi_events_data = validated_data.pop('multi_events', [])
+
+        # Convert highlights to a string if it's a list
+        highlights_list = validated_data.pop('highlights', [])
+        highlights_string = ', '.join(highlights_list) if isinstance(highlights_list, list) else highlights_list
+
+        single_event = SingleEvent.objects.create(highlights=highlights_string, **validated_data)
 
         for multi_event_data in multi_events_data:
-            multi_event_data['single_event'] = single_event   
+            multi_event_data['single_event'] = single_event
             MultiEvent.objects.create(**multi_event_data)
 
         return single_event
+
+
+
+
 
 
 
@@ -81,7 +91,7 @@ class SingleEventSerializer(serializers.Serializer):
 
 class EventSerializer(serializers.ModelSerializer):
     single_events = SingleEventSerializer(many=True, read_only=True)
-    date = serializers.DateField(format='%d-%m-%Y')  # Specify the desired output format
+    date = serializers.DateField(format='%Y-%m-%d')   
 
     class Meta:
         model = Event

@@ -63,12 +63,19 @@ class SingleEvent(models.Model):
     youtube_link = models.URLField(null=True, blank=True)
     points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)    
     highlights = models.TextField(null=True, blank=True)
-
+    date = models.DateField(null=True) 
+    day = models.IntegerField(null=True)
+    
     def save(self, *args, **kwargs):
-        # Ensure highlights is saved as a string
-        if isinstance(self.highlights, list):
-            self.highlights = ', '.join(self.highlights)
+        if self._state.adding or (self.pk is not None and getattr(self, '_original_highlights', None) != self.highlights):
+            if isinstance(self.highlights, list):
+                self.highlights = ', '.join(self.highlights)
         super().save(*args, **kwargs)
+
+    def refresh_from_db(self, *args, **kwargs):
+        super().refresh_from_db(*args, **kwargs)
+        self._original_highlights = self.highlights
+
 
     
 class MultiEvent(models.Model):
