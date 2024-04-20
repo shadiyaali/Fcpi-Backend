@@ -1,6 +1,7 @@
 from django.db import models
 from accounts.models import User
-
+from admins.models import Forum,Event
+from django.contrib.auth import get_user_model
  
 
 class SecondUser(models.Model):
@@ -11,10 +12,16 @@ class SecondUser(models.Model):
     def __str__(self):
         return self.username
     
+ 
+
+
 class Message(models.Model):
+    forum = models.ForeignKey(Forum, on_delete=models.CASCADE, related_name='messages', null=True) 
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='speaker_messages')
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.content
+

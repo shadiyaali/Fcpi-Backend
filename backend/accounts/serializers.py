@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User,UserRole,UserProfile
+from .models import User,UserRole,UserProfile,Feedback
 
     
 class UserRoleSerializer(serializers.ModelSerializer):
@@ -32,3 +32,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ['id', 'user', 'date_of_birth', 'primary_position', 'state', 'primary_pharmacy_degree', 'secondary_pharmacy_degree', 'additional_degrees', 'city', 'country', 'pharmacy_college_name', 'pharmacy_college_degree']
+   
+   
+   
+class FeedbackSerializer(serializers.ModelSerializer):
+    howDidYouHear = serializers.CharField(source='how_did_you_hear')
+
+    class Meta:
+        model = Feedback
+        fields = '__all__'
+ 

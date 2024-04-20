@@ -4,6 +4,10 @@ from .models import Message
 from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from .models import SecondUser
+from django.contrib.auth import get_user_model
+from admins.serializers import SingleEventSerializer
+from admins.models import Forum,Event
+
 
 class SecondUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,7 +15,7 @@ class SecondUserSerializer(serializers.ModelSerializer):
         fields = ['id','username', 'password']
 
     def create(self, validated_data):
-        # Hash the password before saving
+       
         password = validated_data.pop('password')
         hashed_password = make_password(password)
         validated_data['password'] = hashed_password
@@ -20,17 +24,30 @@ class SecondUserSerializer(serializers.ModelSerializer):
 
  
 
-from rest_framework import serializers
-from .models import Message
-from django.contrib.auth.models import User
-from django.contrib.auth import get_user_model
+ 
 
-User = get_user_model()  # Retrieve the custom user model
+ 
+ 
+from .models import Message
 
 class MessageSerializer(serializers.ModelSerializer):
-    author = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    author_name = serializers.CharField(source='author.username', read_only=True)
 
     class Meta:
         model = Message
-        fields = ['id', 'content', 'author', 'timestamp']
+        fields = ['id', 'content', 'author', 'author_name', 'timestamp'] 
+      
+
+    
+class MessageSerializerChat(serializers.ModelSerializer):
+    forum_name = serializers.CharField(source='forum.title', read_only=True)
+    event_name = serializers.CharField(source='event.event_name', read_only=True)
+    author_name = serializers.CharField(source='author.username', read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'content', 'forum_name', 'event_name', 'author_name','event_name', 'timestamp']
+
+
+
 

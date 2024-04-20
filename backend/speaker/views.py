@@ -9,8 +9,21 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from .models import Message,User
 from .serializers import MessageSerializer
-
+from rest_framework.generics import ListAPIView
 from rest_framework.authentication import TokenAuthentication
+from .models import Message
+from admins.models import Forum,Event
+from .serializers import MessageSerializer
+
+ 
+from django.contrib.auth import get_user_model
+from .models import Message
+from .serializers import MessageSerializer,MessageSerializerChat
+
+User = get_user_model()
+
+ 
+from accounts.models import User
 
 
 class SecondUserLoginView(APIView):
@@ -72,39 +85,61 @@ class SecondUserStatusChangeView(APIView):
         
         
 
-class MessageListCreateView(generics.ListCreateAPIView):
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
-    permission_classes = [ ]
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+ 
+ 
+class MessageListView(APIView):
+    def get(self, request, format=None):
+        messages = Message.objects.select_related('event', 'forum').all()
+        serialized_messages = MessageSerializerChat(messages, many=True).data
+        print("kkkkkkkk",serialized_messages)
+        return Response(serialized_messages)
         
  
  
-
  
 
 class SendMessageAPIView(APIView):
-    
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         content = request.data.get('content')
         author_id = request.data.get('author')
-        print("Request Data:", request.data)
+        event_name = request.data.get('event_name')  
+        forum_name = request.data.get('forum_name')   
 
         if content and author_id:
-            print("Content:", content)
-            print("Author ID:", author_id)
             try:
+                # Assuming author is a User model
                 author = User.objects.get(id=author_id)
-                message = Message.objects.create(content=content, author=author)
+
+                # Retrieve the event object based on the provided name
+                event = Event.objects.get(event_name=event_name) if event_name else None
+
+                # Retrieve the forum object based on the provided name
+                forum = Forum.objects.get(title=forum_name) if forum_name else None
+
+                # Create the message object with the provided data
+                message = Message.objects.create(
+                    content=content,
+                    author=author,
+                    event=event,
+                    forum=forum
+                )
+
+                # Serialize the message object
                 serializer = MessageSerializer(message)
-                print("Serialized Data:", serializer.data)
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             except User.DoesNotExist:
                 return Response({'error': 'Invalid author ID'}, status=status.HTTP_400_BAD_REQUEST)
+            except Event.DoesNotExist:
+                return Response({'error': 'Invalid event name'}, status=status.HTTP_400_BAD_REQUEST)
+            except Forum.DoesNotExist:
+                return Response({'error': 'Invalid forum name'}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                # Handle other exceptions
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'error': 'Content and author ID are required'}, status=status.HTTP_400_BAD_REQUEST)
+
 

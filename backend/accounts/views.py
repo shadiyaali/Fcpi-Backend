@@ -283,3 +283,18 @@ class UserProfileView(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class FeedbackCreateView(APIView):
+    def post(self, request, format=None):
+        
+        print("RRRRRRRRR",request.data)
+        serializer = FeedbackSerializer(data=request.data)
+    
+        if serializer.is_valid():
+            serializer.save()
+            print("jjjjjj",serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

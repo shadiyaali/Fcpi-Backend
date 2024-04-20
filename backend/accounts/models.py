@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .manager import UserManager
+from django.utils import timezone
 
 class UserRole(models.Model):
     name = models.CharField(max_length=200)
@@ -51,10 +52,33 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.user.email
  
+ 
 
 class Feedback(models.Model):
-    Content_of_presentation = models.CharField(
-       'verisatisfied','verisatisfied'
-    )
-        
+   SATISFACTION_CHOICES = [
+        ('VS', 'Very Satisfied'),
+        ('SS', 'Somewhat Satisfied'),
+        ('N', 'Neutral'),
+        ('US', 'Unsatisfied'),
+        ('VU', 'Very Unsatisfied'),
+    ]
+   HEAR_CHOICES = [
+       ('VS', 'Email'),
+       ('SS', 'SocialMediaPost'),
+       ('P', ' WhatsApp'),
+       ('VO', 'FCPIWebsite'),
+       ('VV', 'Referral'),
+       ('VH', ' IDCongress2023'),
+       ('VS', ' Other'),
+   ]
+   presentation_content = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+   speaker_delivery = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+   presentation_duration = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+   audio_video_quality = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+   how_did_you_hear = models.CharField(max_length=100, null=True)
+   suggestion = models.TextField(blank=True, null=True)
+   created_at = models.DateTimeField(default=timezone.now,null=True)
+
+   def __str__(self):
+        return f"Feedback - {self.created_at}"
     
