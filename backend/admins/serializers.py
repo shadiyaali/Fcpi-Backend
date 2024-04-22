@@ -56,29 +56,44 @@ class MultiEventSerializer(serializers.ModelSerializer):
 
     
 
- 
-
- 
 class SingleEventSerializer(serializers.Serializer):
     highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
     youtube_link = serializers.URLField()
-    points = serializers.IntegerField()
+    points = serializers.DecimalField(max_digits=5, decimal_places=2)
     multi_events = MultiEventSerializer(many=True)
 
     def create(self, validated_data):
         multi_events_data = validated_data.pop('multi_events', [])
+        highlights = validated_data.pop('highlights', [])
 
-        # Convert highlights to a string if it's a list
-        highlights_list = validated_data.pop('highlights', [])
-        highlights_string = ', '.join(highlights_list) if isinstance(highlights_list, list) else highlights_list
-
-        single_event = SingleEvent.objects.create(highlights=highlights_string, **validated_data)
+        single_event = SingleEvent.objects.create(highlights=', '.join(highlights), **validated_data)
 
         for multi_event_data in multi_events_data:
             multi_event_data['single_event'] = single_event
             MultiEvent.objects.create(**multi_event_data)
 
         return single_event
+
+
+
+class RetrieveSingleEventSerializer(serializers.Serializer):
+    highlights = serializers.CharField()
+    youtube_link = serializers.URLField()
+    points = serializers.DecimalField(max_digits=5, decimal_places=2)
+    multi_events = MultiEventSerializer(many=True)
+
+    def to_representation(self, instance):
+        return {
+            'highlights': instance.highlights.split(', '),
+            'youtube_link': instance.youtube_link,
+            'points': instance.points,
+            'multi_events': MultiEventSerializer(instance.multi_events, many=True).data
+        }
+
+
+
+
+
 
 
 

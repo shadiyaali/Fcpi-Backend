@@ -54,31 +54,41 @@ class UserProfile(models.Model):
  
  
 
+ 
+
 class Feedback(models.Model):
-   SATISFACTION_CHOICES = [
+    SATISFACTION_CHOICES = [
         ('VS', 'Very Satisfied'),
         ('SS', 'Somewhat Satisfied'),
         ('N', 'Neutral'),
         ('US', 'Unsatisfied'),
         ('VU', 'Very Unsatisfied'),
     ]
-   HEAR_CHOICES = [
-       ('VS', 'Email'),
-       ('SS', 'SocialMediaPost'),
-       ('P', ' WhatsApp'),
-       ('VO', 'FCPIWebsite'),
-       ('VV', 'Referral'),
-       ('VH', ' IDCongress2023'),
-       ('VS', ' Other'),
-   ]
-   presentation_content = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
-   speaker_delivery = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
-   presentation_duration = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
-   audio_video_quality = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
-   how_did_you_hear = models.CharField(max_length=100, null=True)
-   suggestion = models.TextField(blank=True, null=True)
-   created_at = models.DateTimeField(default=timezone.now,null=True)
+    
+    HEAR_CHOICES = [
+       ('E', 'Email'),
+       ('S', 'Social Media Post'),
+       ('W', 'WhatsApp'),
+       ('F', 'FCPI Website'),
+       ('R', 'Referral'),
+       ('I', 'IDCongress2023'),
+       ('O', 'Other'),
+    ]
 
-   def __str__(self):
+    presentation_content = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    speaker_delivery = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    presentation_duration = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    audio_video_quality = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    how_did_you_hear = models.CharField(max_length=1, choices=HEAR_CHOICES, null=True)
+    suggestion = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now, null=True)
+
+    def __str__(self):
         return f"Feedback - {self.created_at}"
+
+
+
+
+
+
     

@@ -15,6 +15,8 @@ class SecondUser(models.Model):
  
 
 
+User = get_user_model()
+
 class Message(models.Model):
     forum = models.ForeignKey(Forum, on_delete=models.CASCADE, related_name='messages', null=True) 
     event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='speaker_messages')
@@ -24,4 +26,3 @@ class Message(models.Model):
 
     def __str__(self):
         return self.content
-

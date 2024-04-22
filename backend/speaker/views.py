@@ -106,19 +106,19 @@ class SendMessageAPIView(APIView):
         author_id = request.data.get('author')
         event_name = request.data.get('event_name')  
         forum_name = request.data.get('forum_name')   
-
+        print("pppppp",request.data)
         if content and author_id:
             try:
-                # Assuming author is a User model
+                 
                 author = User.objects.get(id=author_id)
 
-                # Retrieve the event object based on the provided name
+               
                 event = Event.objects.get(event_name=event_name) if event_name else None
 
-                # Retrieve the forum object based on the provided name
+                
                 forum = Forum.objects.get(title=forum_name) if forum_name else None
 
-                # Create the message object with the provided data
+              
                 message = Message.objects.create(
                     content=content,
                     author=author,
@@ -126,7 +126,7 @@ class SendMessageAPIView(APIView):
                     forum=forum
                 )
 
-                # Serialize the message object
+              
                 serializer = MessageSerializer(message)
 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -137,7 +137,7 @@ class SendMessageAPIView(APIView):
             except Forum.DoesNotExist:
                 return Response({'error': 'Invalid forum name'}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
-                # Handle other exceptions
+         
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'error': 'Content and author ID are required'}, status=status.HTTP_400_BAD_REQUEST)

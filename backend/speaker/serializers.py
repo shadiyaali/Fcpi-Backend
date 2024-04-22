@@ -26,28 +26,28 @@ class SecondUserSerializer(serializers.ModelSerializer):
 
  
 
- 
- 
-from .models import Message
 
 class MessageSerializer(serializers.ModelSerializer):
-    author_name = serializers.CharField(source='author.username', read_only=True)
+    author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ['id', 'content', 'author', 'author_name', 'timestamp'] 
-      
+        fields = ['id', 'content', 'author', 'author_name', 'timestamp']
 
-    
+    def get_author_name(self, obj):
+        return obj.author.name() if obj.author else None
+
 class MessageSerializerChat(serializers.ModelSerializer):
     forum_name = serializers.CharField(source='forum.title', read_only=True)
     event_name = serializers.CharField(source='event.event_name', read_only=True)
-    author_name = serializers.CharField(source='author.username', read_only=True)
+    author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ['id', 'content', 'forum_name', 'event_name', 'author_name','event_name', 'timestamp']
+        fields = ['id', 'content', 'forum_name', 'event_name', 'author_name', 'timestamp']
 
+    def get_author_name(self, obj):
+        return obj.author.name() if obj.author else None
 
 
 

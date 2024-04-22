@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,MultiEvent
@@ -12,7 +12,7 @@ from rest_framework.exceptions import NotFound
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
- 
+
 from django.db import transaction
 import json
 
@@ -97,35 +97,11 @@ class SpeakerDeleteView(generics.DestroyAPIView):
   
 
 
-logger = logging.getLogger(__name__)
+
 
  
-from django.http import JsonResponse
  
-
-from datetime import datetime, timedelta
-
- 
-
-from datetime import datetime, timedelta
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.db import transaction
-from .models import Event, SingleEvent, MultiEvent
-from .serializers import EventSerializer, SingleEventSerializer, MultiEventSerializer
-
-from datetime import datetime, timedelta
-import json
-
-from django.db import transaction
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-
-from .models import Event, MultiEvent
-from .serializers import EventSerializer, SingleEventSerializer, MultiEventSerializer
-
+logger = logging.getLogger(__name__) 
 
 class EventListCreate(APIView):
     @transaction.atomic
@@ -262,12 +238,6 @@ class EventDetailView(APIView):
 
  
 
-from datetime import datetime
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .models import Event
-from .serializers import EventListSerializer
-
 
 class EventListView(APIView):
     def calculate_end_date(self, event):
@@ -338,14 +308,8 @@ class EventListView(APIView):
 
 
  
-
-from datetime import datetime
-from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import Event
-from .serializers import EventListSerializer, SingleEventSerializer, MultiEventSerializer
+ 
+ 
 class SingleEventDetailView(APIView):
     def calculate_end_date(self, start_date, end_date):
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
@@ -356,12 +320,13 @@ class SingleEventDetailView(APIView):
         try:
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), pk=event_id)
             serialized_data = EventListSerializer(event, context={'request': request}).data
+            print(serialized_data)
 
             serialized_single_events = []
             single_events = event.single_events.all().order_by('day')
             if single_events.exists():  # Check if any single events exist
                 for single_event in single_events:  
-                    single_event_dict = SingleEventSerializer(single_event).data
+                    single_event_dict = RetrieveSingleEventSerializer(single_event).data
                     single_event_dict['day'] = single_event.day  
                     serialized_multi_events = []
                     for multi_event in single_event.multi_events.all():
@@ -388,19 +353,6 @@ class SingleEventDetailView(APIView):
 
 
 
-
-
-
-      
-
-
-
-
-
-
-
-
- 
  
 
 class SingleDetailView(APIView):

@@ -296,5 +296,5 @@ class FeedbackCreateView(APIView):
             serializer.save()
             print("jjjjjj",serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print(serializer.errors)
+        print("hhhhhhhhhhhhhhhh",serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

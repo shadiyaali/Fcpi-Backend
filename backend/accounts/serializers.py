@@ -34,11 +34,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'date_of_birth', 'primary_position', 'state', 'primary_pharmacy_degree', 'secondary_pharmacy_degree', 'additional_degrees', 'city', 'country', 'pharmacy_college_name', 'pharmacy_college_degree']
    
    
-   
-class FeedbackSerializer(serializers.ModelSerializer):
-    howDidYouHear = serializers.CharField(source='how_did_you_hear')
+ 
+ 
 
+class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
-        fields = '__all__'
- 
+        fields = ['presentation_content', 'speaker_delivery', 'presentation_duration', 'audio_video_quality', 'how_did_you_hear', 'suggestion']
+
