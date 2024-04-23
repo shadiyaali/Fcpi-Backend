@@ -11,4 +11,5 @@ urlpatterns = [
     path('login/', SecondUserLoginView.as_view(), name='second_user_login'),
     path('messages/', MessageListView.as_view(), name='message-list-create'),
     path('send-message/', SendMessageAPIView.as_view(), name='send-message'),
+    
 ]

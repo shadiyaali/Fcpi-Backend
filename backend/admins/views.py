@@ -355,18 +355,28 @@ class SingleEventDetailView(APIView):
 
  
 
+from django.utils import timezone
+
 class SingleDetailView(APIView):
     def get(self, request, event_id):
         try:
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events'), pk=event_id)
             serialized_data = EventListSerializer(event, context={'request': request}).data
             
-            
             serialized_single_events = []
+            current_date = timezone.now().date()  # Get current date
+            
             for index, single_event in enumerate(event.single_events.all(), start=1):
                 serialized_single_event = SingleEventSerializer(single_event).data
                 serialized_single_event['day'] = index  
                 serialized_single_event['date'] = single_event.date.strftime('%Y-%m-%d')
+                
+                # Check if the event is live or completed
+                if single_event.date <= current_date:
+                    serialized_single_event['is_live_or_completed'] = True
+                else:
+                    serialized_single_event['is_live_or_completed'] = False
+                
                 serialized_single_events.append(serialized_single_event)
             
             serialized_data['single_events'] = serialized_single_events
@@ -375,6 +385,7 @@ class SingleDetailView(APIView):
                
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 

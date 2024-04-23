@@ -14,11 +14,10 @@ from rest_framework.authentication import TokenAuthentication
 from .models import Message
 from admins.models import Forum,Event
 from .serializers import MessageSerializer
-
- 
+from .models import SecondUser 
 from django.contrib.auth import get_user_model
 from .models import Message
-from .serializers import MessageSerializer,MessageSerializerChat
+from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer
 
 User = get_user_model()
 
@@ -41,8 +40,7 @@ class SecondUserLoginView(APIView):
             return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
  
-from .models import SecondUser
-from .serializers import SecondUserSerializer
+
 
 class SecondUserCreateView(APIView):
     def post(self, request, *args, **kwargs):
@@ -88,11 +86,21 @@ class SecondUserStatusChangeView(APIView):
  
  
 class MessageListView(APIView):
-    def get(self, request, format=None):
-        messages = Message.objects.select_related('event', 'forum').all()
+    def get(self, request, event_name=None, forum_name=None, format=None):
+        
+        if event_name and forum_name:
+            messages = Message.objects.select_related('event', 'forum').filter(event__event_name=event_name, forum__title=forum_name)
+        elif event_name:
+            messages = Message.objects.select_related('event', 'forum').filter(event__event_name=event_name)
+        elif forum_name:
+            messages = Message.objects.select_related('event', 'forum').filter(forum__title=forum_name)
+        else:
+            messages = Message.objects.select_related('event', 'forum').all()
+
         serialized_messages = MessageSerializerChat(messages, many=True).data
-        print("kkkkkkkk",serialized_messages)
+        print("kkkkkk",serialized_messages)
         return Response(serialized_messages)
+
         
  
  
@@ -104,21 +112,25 @@ class SendMessageAPIView(APIView):
     def post(self, request, *args, **kwargs):
         content = request.data.get('content')
         author_id = request.data.get('author')
-        event_name = request.data.get('event_name')  
-        forum_name = request.data.get('forum_name')   
-        print("pppppp",request.data)
+        event_name = request.data.get('event_name')
+        forum_name = request.data.get('forum_name')
+
         if content and author_id:
             try:
-                 
+                # Get the author
                 author = User.objects.get(id=author_id)
 
-               
-                event = Event.objects.get(event_name=event_name) if event_name else None
+                # Determine the event dynamically based on event_name
+                event = None
+                if event_name:
+                    event = Event.objects.get(event_name=event_name)
 
-                
-                forum = Forum.objects.get(title=forum_name) if forum_name else None
+                # Determine the forum dynamically based on forum_name
+                forum = None
+                if forum_name:
+                    forum = Forum.objects.get(title=forum_name)
 
-              
+                # Create the message with associated event and forum
                 message = Message.objects.create(
                     content=content,
                     author=author,
@@ -126,10 +138,10 @@ class SendMessageAPIView(APIView):
                     forum=forum
                 )
 
-              
+                 
                 serializer = MessageSerializer(message)
-
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+
             except User.DoesNotExist:
                 return Response({'error': 'Invalid author ID'}, status=status.HTTP_400_BAD_REQUEST)
             except Event.DoesNotExist:
@@ -137,9 +149,8 @@ class SendMessageAPIView(APIView):
             except Forum.DoesNotExist:
                 return Response({'error': 'Invalid forum name'}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
-         
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         else:
             return Response({'error': 'Content and author ID are required'}, status=status.HTTP_400_BAD_REQUEST)
-
 
