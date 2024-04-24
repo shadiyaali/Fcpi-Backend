@@ -36,11 +36,15 @@ class MessageSerializer(serializers.ModelSerializer):
 
     def get_author_name(self, obj):
         return obj.author.name() if obj.author else None
+ 
+
+import pytz
 
 class MessageSerializerChat(serializers.ModelSerializer):
     forum_name = serializers.CharField(source='forum.title', read_only=True)
     event_name = serializers.CharField(source='event.event_name', read_only=True)
     author_name = serializers.SerializerMethodField()
+    timestamp = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
@@ -48,6 +52,23 @@ class MessageSerializerChat(serializers.ModelSerializer):
 
     def get_author_name(self, obj):
         return obj.author.name() if obj.author else None
+
+    def get_timestamp(self, obj): 
+        # Convert the timestamp to Indian Standard Time (IST)
+        ist = pytz.timezone('Asia/Kolkata')
+        timestamp = obj.timestamp.astimezone(ist)
+        
+        # Format the timestamp as required
+        formatted_timestamp = timestamp.strftime('%b %d, %Y %I:%M%p').lower()
+        formatted_timestamp = formatted_timestamp[:-2] + formatted_timestamp[-2:].upper()
+        formatted_timestamp = formatted_timestamp[0].upper() + formatted_timestamp[1:]
+        return formatted_timestamp
+
+
+
+
+
+
 
 
 

@@ -100,7 +100,7 @@ REST_FRAMEWORK = {
     )
     
 }
-
+TIME_ZONE = 'Asia/Kolkata'
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME":  timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=90),
@@ -155,13 +155,14 @@ CACHES = {
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+
 DATABASES = {
       'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'fcpi',
-        'USER': 'postgres',
-        'PASSWORD': '12345678',
-        'HOST': 'localhost',
+        'NAME': 'hoztoxin_fcpi',
+        'USER': 'hoztoxin_fcpiuser',
+        'PASSWORD': 'Fcpi@963',
+        'HOST': '66.198.240.22',
         'PORT': '5432',     
     }
   }
@@ -199,7 +200,7 @@ USE_I18N = True
 USE_TZ = True
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "http://localhost:3000",s
   
  ]
 CORS_ALLOW_ALL_HEADERS = True

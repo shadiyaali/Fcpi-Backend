@@ -239,6 +239,10 @@ class EventDetailView(APIView):
  
 
 
+from datetime import datetime, timedelta
+
+from datetime import datetime
+
 class EventListView(APIView):
     def calculate_end_date(self, event):
         start_date = None
@@ -253,12 +257,13 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         current_date = datetime.now().date()
-        if event.date is not None:
-            if event.date > current_date:
-                return "Upcoming"
-            elif event.date == current_date:
-                return "Live"
-        return "Completed"
+        start_date, end_date = self.calculate_end_date(event)
+        if start_date <= current_date <= end_date:
+            return "Live"
+        elif current_date > end_date:
+            return "Completed"
+        else:
+            return "Upcoming"
 
     def get(self, request):
         events = Event.objects.all()

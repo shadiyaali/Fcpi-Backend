@@ -2,7 +2,7 @@
 
 from django.urls import path
 from .views import SecondUserCreateView,SecondUserListView,SecondUserStatusChangeView,SecondUserLoginView,SendMessageAPIView,MessageListView
- 
+from .views import toggle_answer
 
 urlpatterns = [
     path('createuser/', SecondUserCreateView.as_view(), name='user-section-create'),
@@ -11,5 +11,6 @@ urlpatterns = [
     path('login/', SecondUserLoginView.as_view(), name='second_user_login'),
     path('messages/', MessageListView.as_view(), name='message-list-create'),
     path('send-message/', SendMessageAPIView.as_view(), name='send-message'),
-    
+    path('messages/<int:message_id>/toggle/', toggle_answer, name='toggle_answer'),
+
 ]

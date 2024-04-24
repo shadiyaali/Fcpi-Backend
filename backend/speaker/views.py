@@ -18,7 +18,7 @@ from .models import SecondUser
 from django.contrib.auth import get_user_model
 from .models import Message
 from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer
-
+from django.shortcuts import get_object_or_404
 User = get_user_model()
 
  
@@ -112,25 +112,21 @@ class SendMessageAPIView(APIView):
     def post(self, request, *args, **kwargs):
         content = request.data.get('content')
         author_id = request.data.get('author')
-        event_name = request.data.get('event_name')
-        forum_name = request.data.get('forum_name')
+        event_name = request.data.get('event_name')  
+        forum_name = request.data.get('forum_name')   
 
         if content and author_id:
             try:
-                # Get the author
                 author = User.objects.get(id=author_id)
 
-                # Determine the event dynamically based on event_name
                 event = None
                 if event_name:
                     event = Event.objects.get(event_name=event_name)
 
-                # Determine the forum dynamically based on forum_name
                 forum = None
                 if forum_name:
                     forum = Forum.objects.get(title=forum_name)
 
-                # Create the message with associated event and forum
                 message = Message.objects.create(
                     content=content,
                     author=author,
@@ -138,7 +134,6 @@ class SendMessageAPIView(APIView):
                     forum=forum
                 )
 
-                 
                 serializer = MessageSerializer(message)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -153,4 +148,11 @@ class SendMessageAPIView(APIView):
 
         else:
             return Response({'error': 'Content and author ID are required'}, status=status.HTTP_400_BAD_REQUEST)
-
+        
+        
+        
+def toggle_answer(request, message_id):
+    message = get_object_or_404(Message, pk=message_id)
+    message.answered = not message.answered
+    message.save()
+    return JsonResponse({'status': 'success'})
