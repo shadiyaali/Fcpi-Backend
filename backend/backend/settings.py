@@ -155,14 +155,13 @@ CACHES = {
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
 DATABASES = {
       'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'hoztoxin_fcpi',
-        'USER': 'hoztoxin_fcpiuser',
-        'PASSWORD': 'Fcpi@963',
-        'HOST': '66.198.240.22',
+        'NAME': 'fcpi',
+        'USER': 'postgres',
+        'PASSWORD': '12345678',
+        'HOST': 'localhost',
         'PORT': '5432',     
     }
   }
@@ -200,7 +199,7 @@ USE_I18N = True
 USE_TZ = True
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",s
+    "http://localhost:3000",
   
  ]
 CORS_ALLOW_ALL_HEADERS = True
