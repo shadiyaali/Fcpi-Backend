@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,MultiEvent
@@ -243,27 +243,30 @@ from datetime import datetime, timedelta
 
 from datetime import datetime
 
+from datetime import datetime
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Event
+from .serializers import EventListSerializer
+
 class EventListView(APIView):
     def calculate_end_date(self, event):
-        start_date = None
-        end_date = None
-        first_single_event = event.single_events.first()
-        last_single_event = event.single_events.last()
-        if first_single_event is not None:
-            start_date = first_single_event.date
-        if last_single_event is not None:
-            end_date = last_single_event.date
-        return start_date, end_date
+        single_events = event.single_events.all()
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
 
     def get_event_status(self, event):
         current_date = datetime.now().date()
         start_date, end_date = self.calculate_end_date(event)
-        if start_date <= current_date <= end_date:
-            return "Live"
-        elif current_date > end_date:
-            return "Completed"
-        else:
-            return "Upcoming"
+        if start_date and end_date:
+            if start_date <= current_date <= end_date:
+                return "Live"
+            elif current_date > end_date:
+                return "Completed"
+        return "Upcoming"
 
     def get(self, request):
         events = Event.objects.all()
@@ -284,19 +287,20 @@ class EventListView(APIView):
         upcoming_events_data = []
         completed_events_data = []
 
-        # Serialize and categorize events
         for event in live_events:
             start_date, end_date = self.calculate_end_date(event)
             live_event_data = EventListSerializer(event).data
             live_event_data['start_date'] = start_date
             live_event_data['end_date'] = end_date
             live_events_data.append(live_event_data)
+
         for event in upcoming_events:
             start_date, end_date = self.calculate_end_date(event)
             upcoming_event_data = EventListSerializer(event).data
             upcoming_event_data['start_date'] = start_date
             upcoming_event_data['end_date'] = end_date
             upcoming_events_data.append(upcoming_event_data)
+
         for event in completed_events:
             start_date, end_date = self.calculate_end_date(event)
             completed_event_data = EventListSerializer(event).data
@@ -391,11 +395,6 @@ class SingleDetailView(APIView):
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
-
-       
-    
      
             
 class EventSpeakersView(APIView):
@@ -406,3 +405,67 @@ class EventSpeakersView(APIView):
         return Response(serializer.data)
 
 
+class EventListbannerView(APIView):
+    def calculate_end_date(self, event):
+        single_events = event.single_events.all()
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
+
+    def get_event_status(self, event):
+        current_date = datetime.now().date()
+        start_date, end_date = self.calculate_end_date(event)
+        if start_date and end_date:
+            if start_date <= current_date <= end_date:
+                return "Live"
+            elif current_date > end_date:
+                return "Past"
+        return "Upcoming"
+
+    def get(self, request):
+        events = Event.objects.all()
+        live_events = []
+        upcoming_events = []
+        completed_events = []
+
+        for event in events:
+            status = self.get_event_status(event)
+            if status == "Live":
+                live_events.append(event)
+            elif status == "Upcoming":
+                upcoming_events.append(event)
+            else:
+                completed_events.append(event)
+
+        live_events_data = []
+        upcoming_events_data = []
+        completed_events_data = []
+
+        for event in live_events:
+            start_date, end_date = self.calculate_end_date(event)
+            live_event_data = EventBannerSerializer(event).data
+            live_event_data['start_date'] = start_date
+            live_event_data['end_date'] = end_date
+            live_events_data.append(live_event_data)
+
+        for event in upcoming_events:
+            start_date, end_date = self.calculate_end_date(event)
+            upcoming_event_data = EventBannerSerializer(event).data
+            upcoming_event_data['start_date'] = start_date
+            upcoming_event_data['end_date'] = end_date
+            upcoming_events_data.append(upcoming_event_data)
+
+        for event in completed_events:
+            start_date, end_date = self.calculate_end_date(event)
+            completed_event_data = EventBannerSerializer(event).data
+            completed_event_data['start_date'] = start_date
+            completed_event_data['end_date'] = end_date
+            completed_events_data.append(completed_event_data)
+
+        return Response({
+            'live_events': live_events_data,
+            'upcoming_events': upcoming_events_data,
+            'completed_events': completed_events_data,
+        })

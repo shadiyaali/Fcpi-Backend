@@ -90,17 +90,6 @@ class RetrieveSingleEventSerializer(serializers.Serializer):
             'multi_events': MultiEventSerializer(instance.multi_events, many=True).data
         }
 
-
-
-
-
-
-
-
-
-
-
-
  
  
 
@@ -111,9 +100,6 @@ class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ['id', 'forum', 'event_name', 'speakers', 'date', 'days', 'banner', 'single_events']
-
-
-
 
 
 
@@ -132,4 +118,14 @@ class EventListSerializer(serializers.ModelSerializer):
 
      
     
-    
+class EventBannerSerializer(serializers.ModelSerializer):
+    banner_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Event
+        fields = ['id', 'event_name', 'date', 'days', 'banner_image', 'forum', 'speakers']   
+
+    def get_banner_image(self, obj):
+        if obj.banner:
+            return obj.banner.url
+        return None   

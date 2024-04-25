@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import User,UserRole,UserProfile,Feedback
-
+from admins.models import Event
     
 class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,3 +42,5 @@ class FeedbackSerializer(serializers.ModelSerializer):
         model = Feedback
         fields = ['presentation_content', 'speaker_delivery', 'presentation_duration', 'audio_video_quality', 'how_did_you_hear', 'suggestion']
 
+
+ 

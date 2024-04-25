@@ -17,7 +17,7 @@ from .serializers import MessageSerializer
 from .models import SecondUser 
 from django.contrib.auth import get_user_model
 from .models import Message
-from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer
+from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer,ToggleAnswerSerializer
 from django.shortcuts import get_object_or_404
 User = get_user_model()
 
@@ -85,21 +85,38 @@ class SecondUserStatusChangeView(APIView):
 
  
  
+from datetime import date
+
 class MessageListView(APIView):
     def get(self, request, event_name=None, forum_name=None, format=None):
-        
+        # Get the current date
+        current_date = date.today()
+
         if event_name and forum_name:
-            messages = Message.objects.select_related('event', 'forum').filter(event__event_name=event_name, forum__title=forum_name)
+            messages = Message.objects.select_related('event', 'forum').filter(
+                event__event_name=event_name,
+                forum__title=forum_name,
+                timestamp__date=current_date  
+            )
         elif event_name:
-            messages = Message.objects.select_related('event', 'forum').filter(event__event_name=event_name)
+            messages = Message.objects.select_related('event', 'forum').filter(
+                event__event_name=event_name,
+                timestamp__date=current_date  
+            )
         elif forum_name:
-            messages = Message.objects.select_related('event', 'forum').filter(forum__title=forum_name)
+            messages = Message.objects.select_related('event', 'forum').filter(
+                forum__title=forum_name,
+                timestamp__date=current_date  
+            )
         else:
-            messages = Message.objects.select_related('event', 'forum').all()
+            messages = Message.objects.select_related('event', 'forum').filter(
+                timestamp__date=current_date   
+            )
 
         serialized_messages = MessageSerializerChat(messages, many=True).data
-        print("kkkkkk",serialized_messages)
+        print("kkkkkk", serialized_messages)
         return Response(serialized_messages)
+
 
         
  
@@ -151,8 +168,21 @@ class SendMessageAPIView(APIView):
         
         
         
-def toggle_answer(request, message_id):
-    message = get_object_or_404(Message, pk=message_id)
-    message.answered = not message.answered
-    message.save()
-    return JsonResponse({'status': 'success'})
+class ToggleAnswerView(APIView):
+    def put(self, request, message_id, format=None):
+        print("rrrrr",message_id)
+        print("ppppp",request.data)
+        serializer = ToggleAnswerSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                message = Message.objects.get(pk=message_id)
+                message.answered = not message.answered
+                message.save()
+                return Response({"message": "Answer toggled successfully."}, status=status.HTTP_200_OK)
+            except Message.DoesNotExist:
+                return Response({"error": "Message with this ID does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

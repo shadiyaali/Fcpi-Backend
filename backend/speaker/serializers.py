@@ -65,6 +65,16 @@ class MessageSerializerChat(serializers.ModelSerializer):
         return formatted_timestamp
 
 
+class ToggleAnswerSerializer(serializers.Serializer):
+    message_id = serializers.IntegerField()
+
+    def validate_message_id(self, value):
+        try:
+          
+            message = Message.objects.get(pk=value)
+        except Message.DoesNotExist:
+            raise serializers.ValidationError("Message with this ID does not exist.")
+        return value
 
 
 
