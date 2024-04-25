@@ -156,27 +156,27 @@ CACHES = {
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# DATABASES = {
-#       'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'fcpi',
-#         'USER': 'postgres',
-#         'PASSWORD': '12345678',
-#         'HOST': 'localhost',
-#         'PORT': '5432',     
-#     }
-#   }
-
 DATABASES = {
       'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'hoztoxin_fcpi',
-        'USER': 'hoztoxin_fcpiuser',
-        'PASSWORD': 'Fcpi@963',
-        'HOST': 'https://hoztox.in',
+        'NAME': 'fcpi',
+        'USER': 'postgres',
+        'PASSWORD': '12345678',
+        'HOST': 'localhost',
         'PORT': '5432',     
     }
   }
+
+# DATABASES = {
+#       'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'hoztoxin_fcpi',
+#         'USER': 'hoztoxin_fcpiuser',
+#         'PASSWORD': 'Fcpi@963',
+#         'HOST': 'https://hoztox.in',
+#         'PORT': '5432',     
+#     }
+#   }
 
 # DATABASES = {
 #        "default": {
