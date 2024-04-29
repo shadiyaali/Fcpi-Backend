@@ -17,7 +17,7 @@ from .serializers import MessageSerializer
 from .models import SecondUser 
 from django.contrib.auth import get_user_model
 from .models import Message
-from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer,ToggleAnswerSerializer
+from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer 
 from django.shortcuts import get_object_or_404
 User = get_user_model()
 
@@ -168,21 +168,17 @@ class SendMessageAPIView(APIView):
         
         
         
-class ToggleAnswerView(APIView):
-    def put(self, request, message_id, format=None):
-        print("rrrrr",message_id)
-        print("ppppp",request.data)
-        serializer = ToggleAnswerSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                message = Message.objects.get(pk=message_id)
-                message.answered = not message.answered
-                message.save()
-                return Response({"message": "Answer toggled successfully."}, status=status.HTTP_200_OK)
-            except Message.DoesNotExist:
-                return Response({"error": "Message with this ID does not exist."}, status=status.HTTP_404_NOT_FOUND)
-            except Exception as e:
-                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class MessageUpdateView(APIView):
+    def put(self, request, pk):
+        print("kkkkkk",request.data)
+        try:
+            message = Message.objects.get(pk=pk)
+        except Message.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
+        # Update the 'answered' field based on the request data
+        message.answered = request.data.get('answered', False)
+        message.save()
+
+        serializer = MessageSerializer(message)
+        return Response(serializer.data)

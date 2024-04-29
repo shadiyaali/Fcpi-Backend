@@ -23,6 +23,7 @@ class Message(models.Model):
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    answered = models.BooleanField(default=False)  # New field to track message status
 
     def __str__(self):
         return self.content

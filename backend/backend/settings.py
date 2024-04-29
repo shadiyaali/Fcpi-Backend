@@ -173,7 +173,7 @@ DATABASES = {
 #         'NAME': 'hoztoxin_fcpi',
 #         'USER': 'hoztoxin_fcpiuser',
 #         'PASSWORD': 'Fcpi@963',
-#         'HOST': 'https://hoztox.in',
+#         'HOST': '66.198.240.22',
 #         'PORT': '5432',     
 #     }
 #   }
