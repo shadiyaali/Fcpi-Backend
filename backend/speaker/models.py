@@ -7,7 +7,13 @@ from django.contrib.auth import get_user_model
 class SecondUser(models.Model):
     username = models.CharField(max_length=150, unique=True)
     password = models.CharField(max_length=128) 
-    status = models.CharField(max_length=10, choices=(('Active', 'Active'), ('Inactive', 'Inactive')), default='Active')  
+    ACTIVE = 'Active'
+    INACTIVE = 'Inactive'
+    STATUS_CHOICES = [
+        (ACTIVE, 'Active'),
+        (INACTIVE, 'Inactive'),
+    ]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=INACTIVE)  
 
     def __str__(self):
         return self.username

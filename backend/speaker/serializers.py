@@ -69,7 +69,10 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = ['id', 'forum', 'event', 'content', 'author', 'timestamp', 'answered']
 
-
+class SecondUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SecondUser
+        fields = ['id', 'username', 'password', 'status']
 
 
 

@@ -32,14 +32,19 @@ class SecondUserLoginView(APIView):
         
         try:
             user = SecondUser.objects.get(username=username)
-            if check_password(password, user.password) and user.status == 'Active':
+            print("Username:", username)
+            print("Password:", password)
+            print("User Status:", user.status)
+
+             
+            if user.status == 'Active':
                 return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
             else:
-                return Response({'error': 'Invalid username, password, or user status'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'User account is inactive'}, status=status.HTTP_400_BAD_REQUEST)
+            
         except SecondUser.DoesNotExist:
             return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
- 
 
 
 class SecondUserCreateView(APIView):
@@ -182,3 +187,48 @@ class MessageUpdateView(APIView):
 
         serializer = MessageSerializer(message)
         return Response(serializer.data)
+
+
+class ToggleUserStatus(APIView):
+    def patch(self, request, user_id):
+        try:
+            user = SecondUser.objects.get(pk=user_id)
+            old_status = user.status
+            user.status = 'Active' if user.status == 'Inactive' else 'Inactive'
+            user.save()
+
+            # Print all details after status change
+            print("User ID:", user.id)
+            print("Username:", user.username)
+            print("Old Status:", old_status)
+            print("New Status:", user.status)
+
+            serializer = SecondUserSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except SecondUser.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class DeleteUser(APIView):
+    def delete(self, request, user_id):
+        try:
+            user = SecondUser.objects.get(pk=user_id)
+            user.delete()
+            return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except SecondUser.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND) 
+        
+        
+class DeactivateUserView(APIView):
+    def post(self, request, user_id):
+        try:
+            user = SecondUser.objects.get(pk=user_id)
+            user.status = 'Inactive'
+            user.save()
+
+            # Invalidate user's session
+            logout(request)
+
+            return Response({'message': 'User deactivated successfully'}, status=status.HTTP_200_OK)
+        except SecondUser.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)

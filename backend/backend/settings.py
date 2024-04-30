@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-nlt*ny*q3%^4n%3=w@6ar^6qawc1u)67x^dgo8jm%32p6x@-6c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 AUTH_USER_MODEL  = 'accounts.User'
 
 
@@ -153,30 +153,6 @@ CACHES = {
     }
 }
 
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-DATABASES = {
-      'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'fcpi',
-        'USER': 'postgres',
-        'PASSWORD': '12345678',
-        'HOST': 'localhost',
-        'PORT': '5432',     
-    }
-  }
-
-# DATABASES = {
-#       'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'hoztoxin_fcpi',
-#         'USER': 'hoztoxin_fcpiuser',
-#         'PASSWORD': 'Fcpi@963',
-#         'HOST': '66.198.240.22',
-#         'PORT': '5432',     
-#     }
-#   }
 
 # DATABASES = {
 #        "default": {
@@ -187,6 +163,16 @@ DATABASES = {
 #          },
 #     }
 # }
+# DATABASES = {
+#       'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'fcpi',
+#         'USER': 'postgres',
+#         'PASSWORD': '12345678',
+#         'HOST': 'localhost',
+#         'PORT': '5432',     
+#     }
+#   }
 
 
 # Password validation
@@ -222,6 +208,7 @@ USE_TZ = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://hoztox.in",
   
  ]
 CORS_ALLOW_ALL_HEADERS = True
