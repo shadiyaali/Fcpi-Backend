@@ -209,6 +209,7 @@ USE_TZ = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://hoztox.in",
+    "https://fcpi-shadiyaalis-projects.vercel.app",
   
  ]
 CORS_ALLOW_ALL_HEADERS = True
