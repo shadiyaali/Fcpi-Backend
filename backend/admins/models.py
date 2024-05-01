@@ -1,6 +1,5 @@
 from django.db import models
 from .manager import AdminManager 
-from autoslug import AutoSlugField
 from django.contrib.auth.models import AbstractUser
  
 class Admin(AbstractUser):

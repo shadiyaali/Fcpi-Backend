@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-nlt*ny*q3%^4n%3=w@6ar^6qawc1u)67x^dgo8jm%32p6x@-6c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 AUTH_USER_MODEL  = 'accounts.User'
 
 
@@ -163,16 +163,16 @@ CACHES = {
 #          },
 #     }
 # }
-# DATABASES = {
-#       'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'fcpi',
-#         'USER': 'postgres',
-#         'PASSWORD': '12345678',
-#         'HOST': 'localhost',
-#         'PORT': '5432',     
-#     }
-#   }
+DATABASES = {
+      'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'fcpi',
+        'USER': 'postgres',
+        'PASSWORD': '12345678',
+        'HOST': 'localhost',
+        'PORT': '5432',     
+    }
+  }
 
 
 # Password validation

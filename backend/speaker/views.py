@@ -132,6 +132,7 @@ class SendMessageAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        print("ppppp", request.data)
         content = request.data.get('content')
         author_id = request.data.get('author')
         event_name = request.data.get('event_name')  
@@ -157,6 +158,7 @@ class SendMessageAPIView(APIView):
                 )
 
                 serializer = MessageSerializer(message)
+                print("lllll", serializer.data)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
             except User.DoesNotExist:
@@ -170,7 +172,7 @@ class SendMessageAPIView(APIView):
 
         else:
             return Response({'error': 'Content and author ID are required'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         
         
 class MessageUpdateView(APIView):
