@@ -154,25 +154,25 @@ CACHES = {
 }
 
 
-# DATABASES = {
-#        "default": {
-#        "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#         "TEST": {
-#              "NAME": BASE_DIR / "db.sqlite3",
-#          },
-#     }
-# }
 DATABASES = {
-      'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'fcpi',
-        'USER': 'postgres',
-        'PASSWORD': '12345678',
-        'HOST': 'localhost',
-        'PORT': '5432',     
+       "default": {
+       "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+        "TEST": {
+             "NAME": BASE_DIR / "db.sqlite3",
+         },
     }
-  }
+}
+# DATABASES = {
+#       'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'fcpi',
+#         'USER': 'postgres',
+#         'PASSWORD': '12345678',
+#         'HOST': 'localhost',
+#         'PORT': '5432',     
+#     }
+#   }
 
 
 # Password validation
