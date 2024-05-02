@@ -45,8 +45,9 @@ class RegisterView(APIView):
                             return Response({'status': 500, 'error': 'Failed to send OTP to email. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
                
-                    user = serializer.save()
-                    email_sent = send_otp_to_email(user.email, user)
+                    # user = serializer.save()
+                
+                    email_sent = send_otp_to_email(email,serializer.validated_data)
                     if email_sent:
                         return Response({'status': 200, 'message': 'An OTP sent to your email for verification'}, status=status.HTTP_200_OK)
                     else:
@@ -68,20 +69,63 @@ class VerifyOtp(APIView):
         
             print("Received email:", email)
             print("Received OTP:", otp)
+            redis_conn = settings.REDIS
 
+        # Get the key from the request or wherever it's coming from
+            key =  email
+
+        # Retrieve the payload from Redis
+            payload = redis_conn.get(key)
+            print("inside verify",payload) 
+            payload_str = payload.decode('utf-8')  # Decode bytes to string
+            payload_dict = json.loads(payload_str)  # Parse JSON string to dictionary
+
+ 
              
-            cached_otp = cache.get(email)
+         
+    
+            otp = payload_dict.get('otp')
+
+         
+           
+          
+            cached_otp =  otp
             if cached_otp is None:
                 return Response({'status': 403, 'error': 'OTP expired or not found'})
 
            
-            if otp == str(cached_otp):                 
-                cache.delete(email)              
+            if otp == cached_otp:                 
+                settings.REDIS.delete(email)             
                 try:
-                    user_obj = User.objects.get(email__iexact=email)
-                    user_obj.is_email_verified = True
-                    user_obj.save()
-                    return Response({'status': 200, 'message': 'OTP verified successfully'})
+                    user_data = {
+                        'phone': payload_dict.get('phone_number'),
+                        'first_name': payload_dict.get('first_name'),
+                        'last_name': payload_dict.get('last_name'),
+                        'email': payload_dict.get('email'),
+                        'password': payload_dict.get('password'),
+                        'otp': otp
+                    }
+
+                    # Create a serializer instance with the data
+                    serializer = UserSerializer(data=user_data)
+
+                    # Validate and save the data
+                    if serializer.is_valid():
+                        user = serializer.save()
+                        user.is_email_verified = True
+                        user.save()
+                        print("User saved successfully")
+                        return Response({'status': 200, 'message': 'OTP verified successfully'})
+                 
+                   
+                       
+                    else:
+                        print(serializer.errors)
+                        return Response(serializer.errors)
+                    # user_obj = User.objects.get(email__iexact=email)
+                    # user_obj.is_email_verified = True
+                    # user_obj.save()
+            
                 except User.DoesNotExist:
                     return Response({'status': 400, 'error': 'User not found'})
             else:
