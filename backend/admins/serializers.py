@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent 
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -129,3 +129,14 @@ class EventBannerSerializer(serializers.ModelSerializer):
         if obj.banner:
             return obj.banner.url
         return None   
+    
+    
+class MemeberSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False)  
+
+    class Meta:
+        model = Member
+        fields = ['id','name', 'qualification', 'recent_job_title','additional_job_titles','image','previous_work_experience','publications','current_research','conference','additional_information','achievements','areas']
+        
+        
+   

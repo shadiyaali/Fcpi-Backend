@@ -19,6 +19,9 @@ urlpatterns = [
     path('enroll/<int:event_id>/single-events/', SingleDetailView.as_view(), name='single-events-enroll'),
     path('events/<int:event_id>/speakers/', EventSpeakersView.as_view(), name='event-speakers'),
     path('eventslistb/', EventListbannerView.as_view(), name='event-list'),
+    path('members/', MemberListCreate.as_view(), name='member-list-create'),
+    path('members/<int:pk>/update/', MemberUpdateView.as_view(), name='member-update'),
+    path('members/<int:pk>/delete/', MemberDeleteView.as_view(), name='member-delete'),
 
     
 ]

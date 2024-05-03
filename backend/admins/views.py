@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -469,3 +469,32 @@ class EventListbannerView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
+
+
+
+class MemberListCreate(generics.ListCreateAPIView):
+    queryset = Member.objects.all()
+    serializer_class = MemeberSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+class MemberUpdateView(generics.UpdateAPIView):
+    queryset = Member.objects.all()
+    serializer_class = MemeberSerializer
+
+    def update(self, request, *args, **kwargs):
+        print("Request Data:", request.data)
+        response = super().update(request, *args, **kwargs)
+        print("Response Data:", response.data)
+        return response 
+
+class MemberDeleteView(generics.DestroyAPIView):
+    queryset = Member.objects.all()
+    serializer_class = MemeberSerializer
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
