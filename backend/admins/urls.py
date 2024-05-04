@@ -22,6 +22,11 @@ urlpatterns = [
     path('members/', MemberListCreate.as_view(), name='member-list-create'),
     path('members/<int:pk>/update/', MemberUpdateView.as_view(), name='member-update'),
     path('members/<int:pk>/delete/', MemberDeleteView.as_view(), name='member-delete'),
+    path('forummembers/', ForumMemberCreateView.as_view(), name='member-create'),
+    path('forummembers/<int:forum_id>/', ForumMemberListView.as_view(), name='forum_members_list'),
+    path('forummembers/<int:forum_id>/update/', UpdateForumMember.as_view(), name='update_forum_member'),
 
-    
-]
+
+ 
+
+]     

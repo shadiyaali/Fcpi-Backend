@@ -85,8 +85,7 @@ class MultiEvent(models.Model):
     single_speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='selected_events', default=None)
 
     
-class Member(models.Model): 
-    forum = models.ForeignKey(Forum, related_name='forum', on_delete=models.CASCADE, null=True)
+class Member(models.Model):     
     name = models.CharField(max_length=100)
     qualification = models.CharField(max_length=100)
     recent_job_title = models.CharField(max_length=100)
@@ -103,3 +102,6 @@ class Member(models.Model):
     def __str__(self):
         return self.name
 
+class ForumMember(models.Model):    
+    forum = models.ForeignKey(Forum, related_name='forum', on_delete=models.CASCADE)
+    member = models.ManyToManyField (Member, related_name='member', blank=True)

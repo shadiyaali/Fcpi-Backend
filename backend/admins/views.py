@@ -2,17 +2,17 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-
+from django.http import JsonResponse
 from django.db import transaction
 import json
 
@@ -498,3 +498,63 @@ class MemberDeleteView(generics.DestroyAPIView):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    
+class ForumMemberCreateView(generics.CreateAPIView):
+    serializer_class = ForumMemberSerializer
+    def create(self, request, *args, **kwargs):
+        print(request.data)
+        selected_members = request.data.get('member', [])   
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        forum_member_instance = serializer.save()       
+        forum_member_instance.member.add(*selected_members)
+        return Response({"message": "Forum member created successfully."}, status=status.HTTP_201_CREATED)
+
+
+class ForumMemberListView(APIView):
+    def get(self, request, forum_id):
+        try:           
+            forum_members = ForumMember.objects.filter(forum=forum_id)            
+            serializer = ForumMemberSerializer(forum_members, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+        
+class UpdateForumMember(APIView):
+    def put(self, request, forum_id):
+        # Parse JSON request data
+        data = json.loads(request.body)
+        
+        # Debugging: Log request data and forum_id
+        print('Request Data:', data)
+        print('Forum ID:', forum_id)
+        
+        try:
+            # Retrieve forum member object
+            forum_member = ForumMember.objects.get(forum_id=forum_id)
+            print('Forum Member:', forum_member)  # Debugging
+            
+            # Extract member IDs from request data
+            new_member_ids = data.get('members', [])
+            
+            # Get existing member IDs
+            existing_member_ids = list(forum_member.member.values_list('id', flat=True))
+            print('Existing Member IDs:', existing_member_ids)  # Debugging
+            
+            # Find member IDs to be added and removed
+            added_member_ids = list(set(new_member_ids) - set(existing_member_ids))
+            removed_member_ids = list(set(existing_member_ids) - set(new_member_ids))
+            
+            # Add new members
+            for member_id in added_member_ids:
+                forum_member.member.add(member_id)
+            
+            # Remove old members
+            for member_id in removed_member_ids:
+                forum_member.member.remove(member_id)
+            
+            return JsonResponse({'message': 'Members updated successfully'})
+        
+        except ForumMember.DoesNotExist:
+            return JsonResponse({'error': 'Forum member not found'}, status=404)

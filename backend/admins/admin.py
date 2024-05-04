@@ -9,4 +9,5 @@ admin.site.register(Event)
 admin.site.register(SingleEvent)
 admin.site.register(MultiEvent)
 admin.site.register(Member)
+admin.site.register(ForumMember)
  

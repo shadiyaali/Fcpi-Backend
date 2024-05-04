@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -139,4 +139,7 @@ class MemeberSerializer(serializers.ModelSerializer):
         fields = ['id','name', 'qualification', 'recent_job_title','additional_job_titles','image','previous_work_experience','publications','current_research','conference','additional_information','achievements','areas']
         
         
-   
+class ForumMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ForumMember
+        fields = ['forum', 'member']
