@@ -25,6 +25,7 @@ urlpatterns = [
     path('forummembers/', ForumMemberCreateView.as_view(), name='member-create'),
     path('forummembers/<int:forum_id>/', ForumMemberListView.as_view(), name='forum_members_list'),
     path('forummembers/<int:forum_id>/update/', UpdateForumMember.as_view(), name='update_forum_member'),
+    path('blogs/', BlogAPIView.as_view(), name='blog_admin'),
 
 
  

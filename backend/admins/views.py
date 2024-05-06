@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer ,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer,BlogsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember
@@ -493,7 +493,6 @@ class MemberUpdateView(generics.UpdateAPIView):
 class MemberDeleteView(generics.DestroyAPIView):
     queryset = Member.objects.all()
     serializer_class = MemeberSerializer
-
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
@@ -512,6 +511,7 @@ class ForumMemberCreateView(generics.CreateAPIView):
         return Response({"message": "Forum member created successfully."}, status=status.HTTP_201_CREATED)
 
 
+
 class ForumMemberListView(APIView):
     def get(self, request, forum_id):
         try:           
@@ -520,41 +520,38 @@ class ForumMemberListView(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+ 
+ 
         
 class UpdateForumMember(APIView):
-    def put(self, request, forum_id):
-        # Parse JSON request data
-        data = json.loads(request.body)
-        
-        # Debugging: Log request data and forum_id
+    def put(self, request, forum_id):        
+        data = json.loads(request.body)        
         print('Request Data:', data)
-        print('Forum ID:', forum_id)
-        
-        try:
-            # Retrieve forum member object
+        print('Forum ID:', forum_id)        
+        try:          
             forum_member = ForumMember.objects.get(forum_id=forum_id)
-            print('Forum Member:', forum_member)  # Debugging
-            
-            # Extract member IDs from request data
-            new_member_ids = data.get('members', [])
-            
-            # Get existing member IDs
+            print('Forum Member:', forum_member)              
+            new_member_ids = data.get('members', [])           
             existing_member_ids = list(forum_member.member.values_list('id', flat=True))
-            print('Existing Member IDs:', existing_member_ids)  # Debugging
-            
-            # Find member IDs to be added and removed
+            print('Existing Member IDs:', existing_member_ids)             
             added_member_ids = list(set(new_member_ids) - set(existing_member_ids))
-            removed_member_ids = list(set(existing_member_ids) - set(new_member_ids))
-            
-            # Add new members
+            removed_member_ids = list(set(existing_member_ids) - set(new_member_ids))           
             for member_id in added_member_ids:
-                forum_member.member.add(member_id)
-            
-            # Remove old members
+                forum_member.member.add(member_id)           
             for member_id in removed_member_ids:
-                forum_member.member.remove(member_id)
-            
-            return JsonResponse({'message': 'Members updated successfully'})
-        
+                forum_member.member.remove(member_id)            
+            return JsonResponse({'message': 'Members updated successfully'})        
         except ForumMember.DoesNotExist:
             return JsonResponse({'error': 'Forum member not found'}, status=404)
+
+
+class BlogAPIView(APIView):
+    def post(self, request):
+        print(request.data)
+        serializer = BlogsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            print("pppppp",serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

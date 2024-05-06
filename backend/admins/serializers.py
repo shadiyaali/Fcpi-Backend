@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -143,3 +143,28 @@ class ForumMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = ForumMember
         fields = ['forum', 'member']
+        
+ 
+class BlogsContentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlogsContents
+        fields = ['topic', 'description', 'image']   
+        extra_kwargs = {
+            'topic': {'required': True}   
+        }
+ 
+      
+
+class BlogsSerializer(serializers.ModelSerializer):
+    blogs_contents = BlogsContentsSerializer(many=True, write_only=True)
+    
+    class Meta:
+        model = Blogs
+        fields = ['forum', 'title', 'author', 'qualification', 'date', 'blogs_contents']
+
+    def create(self, validated_data):
+        blogs_contents_data = validated_data.pop('blogs_contents')
+        blog = Blogs.objects.create(**validated_data)
+        for blog_content_data in blogs_contents_data:
+            BlogsContents.objects.create(blog=blog, **blog_content_data)
+        return blog
