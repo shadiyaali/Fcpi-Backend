@@ -545,13 +545,23 @@ class UpdateForumMember(APIView):
             return JsonResponse({'error': 'Forum member not found'}, status=404)
 
 
-class BlogAPIView(APIView):
+ 
+
+class BlogsCreateView(APIView):
     def post(self, request):
-        print(request.data)
-        serializer = BlogsSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            print("pppppp",serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print(serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print("kkkkk",request.data)
+        try:
+            formData = request.data
+            serializer = BlogsSerializer(data=formData)
+            # print("tttttt",serializer)
+            if serializer.is_valid():
+                # print("tttttt",serializer)
+                serializer.save()
+                print("ddddd",serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                print("EEEEE",serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print("e",e)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -148,23 +148,24 @@ class ForumMemberSerializer(serializers.ModelSerializer):
 class BlogsContentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogsContents
-        fields = ['topic', 'description', 'image']   
-        extra_kwargs = {
-            'topic': {'required': True}   
-        }
- 
-      
+        fields = ['topic', 'description', 'image']
 
 class BlogsSerializer(serializers.ModelSerializer):
-    blogs_contents = BlogsContentsSerializer(many=True, write_only=True)
-    
+    blog_contents = BlogsContentsSerializer(many=True)
+
     class Meta:
         model = Blogs
-        fields = ['forum', 'title', 'author', 'qualification', 'date', 'blogs_contents']
+        fields = ['forum', 'title', 'author', 'qualification', 'date', 'blog_contents']
 
     def create(self, validated_data):
-        blogs_contents_data = validated_data.pop('blogs_contents')
+        blog_contents_data = validated_data.pop('blog_contents', [])
         blog = Blogs.objects.create(**validated_data)
-        for blog_content_data in blogs_contents_data:
-            BlogsContents.objects.create(blog=blog, **blog_content_data)
+        for content_data in blog_contents_data:
+            image = content_data.pop('image', None)
+            BlogsContents.objects.create(blog=blog, image=image, **content_data)
         return blog
+
+
+
+
+
