@@ -109,25 +109,21 @@ class ForumMember(models.Model):
 
  
 
-class Blogs(models.Model):
-    
+class Blogs(models.Model):    
     forum = models.ForeignKey(Forum, related_name='blogs', on_delete=models.CASCADE,null=True, blank=True)
     title = models.CharField(max_length=100)     
     author = models.CharField(max_length=100)
     qualification = models.CharField(max_length=100)
     date = models.DateField(null=True)
-    blog_contents = models.ManyToManyField('BlogsContents', related_name='blogs', blank=True)
-
-    
+      
     def __str__(self):
-        return self.title if self.title else ""
+        return self.title  
     
-
+    
 class BlogsContents(models.Model): 
     blog =  models.ForeignKey(Blogs, related_name='blogs', on_delete=models.CASCADE,null=True, blank=True)  
     topic = models.CharField(max_length=100,null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to='blogs/', null=True, blank=True)   
     
-    def __str__(self):
-        return self.topic if self.topic else ""
+ 

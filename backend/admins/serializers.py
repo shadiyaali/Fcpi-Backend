@@ -151,7 +151,7 @@ class BlogsContentsSerializer(serializers.ModelSerializer):
         fields = ['topic', 'description', 'image']
 
 class BlogsSerializer(serializers.ModelSerializer):
-    blog_contents = BlogsContentsSerializer(many=True)
+    blog_contents = BlogsContentsSerializer(many=True, required=False)
 
     class Meta:
         model = Blogs
@@ -159,11 +159,22 @@ class BlogsSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         blog_contents_data = validated_data.pop('blog_contents', [])
+
+        # Create the main blog instance
         blog = Blogs.objects.create(**validated_data)
+
+        # Process and save blog contents data
         for content_data in blog_contents_data:
-            image = content_data.pop('image', None)
-            BlogsContents.objects.create(blog=blog, image=image, **content_data)
+            # Associate the content with the blog instance
+            content_data['blog'] = blog
+            try:
+                # Create the blog content
+                BlogsContents.objects.create(**content_data)
+            except Exception as e:
+                print("Error creating BlogsContents:", e)
+
         return blog
+
 
 
 

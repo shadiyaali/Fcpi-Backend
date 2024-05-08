@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer,BlogsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -543,25 +543,46 @@ class UpdateForumMember(APIView):
             return JsonResponse({'message': 'Members updated successfully'})        
         except ForumMember.DoesNotExist:
             return JsonResponse({'error': 'Forum member not found'}, status=404)
-
-
+        
+        
+ 
  
 
 class BlogsCreateView(APIView):
     def post(self, request):
-        print("kkkkk",request.data)
         try:
-            formData = request.data
-            serializer = BlogsSerializer(data=formData)
-            # print("tttttt",serializer)
+            print("Request Data:", request.data)   
+
+            serializer = BlogsSerializer(data=request.data)
             if serializer.is_valid():
-                # print("tttttt",serializer)
-                serializer.save()
-                print("ddddd",serializer.data)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+                blog = serializer.save()
+ 
+                blog_contents_data = request.data.get('blog_contents', [])
+                if blog_contents_data:
+                    for content_data in blog_contents_data:
+                    
+                        content_data['blog'] = blog.id    
+
+                  
+                    blog_contents_serializer = BlogsContentsSerializer(data=blog_contents_data, many=True)
+                    if blog_contents_serializer.is_valid():
+                        blog_contents_serializer.save()
+                    else:
+                        print("Blog Contents Serializer Errors:", blog_contents_serializer.errors)
+                        return Response(blog_contents_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                # Now, fetch the updated serialized data of the main blog instance
+                serialized_blog_data = BlogsSerializer(blog).data
+                print("Main Blog Serialized Data:", serialized_blog_data)
+                return Response(serialized_blog_data, status=status.HTTP_201_CREATED)
             else:
-                print("EEEEE",serializer.errors)
+                print("Main Blog Serializer Errors:", serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print("e",e)
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            print("Exception occurred:", e)
+            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
