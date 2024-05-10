@@ -142,40 +142,36 @@ class MemeberSerializer(serializers.ModelSerializer):
 class ForumMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = ForumMember
-        fields = ['forum', 'member']
+        fields = ['id','forum', 'member']
         
  
+
 class BlogsContentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogsContents
-        fields = ['topic', 'description', 'image']
+        fields = ['id', 'topic', 'description', 'image']
+
 
 class BlogsSerializer(serializers.ModelSerializer):
     blog_contents = BlogsContentsSerializer(many=True, required=False)
-
+    forum_title = serializers.CharField(source='forum.title')
+    
     class Meta:
         model = Blogs
-        fields = ['forum', 'title', 'author', 'qualification', 'date', 'blog_contents']
+        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents','forum_title']
 
     def create(self, validated_data):
         blog_contents_data = validated_data.pop('blog_contents', [])
-
-        # Create the main blog instance
         blog = Blogs.objects.create(**validated_data)
 
-        # Process and save blog contents data
         for content_data in blog_contents_data:
-            # Associate the content with the blog instance
-            content_data['blog'] = blog
-            try:
-                # Create the blog content
-                BlogsContents.objects.create(**content_data)
-            except Exception as e:
-                print("Error creating BlogsContents:", e)
+            image_data = content_data.pop('image', None)
+            blog_content = BlogsContents.objects.create(blog=blog, **content_data)
+            if image_data:
+                blog_content.image = image_data
+                blog_content.save()
 
         return blog
-
-
 
 
 

@@ -5,7 +5,7 @@ from rest_framework import status
 from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -15,10 +15,7 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import transaction
 import json
-
- 
-
- 
+from django.db import transaction 
 import logging 
  
  
@@ -501,14 +498,24 @@ class MemberDeleteView(generics.DestroyAPIView):
     
 class ForumMemberCreateView(generics.CreateAPIView):
     serializer_class = ForumMemberSerializer
+
     def create(self, request, *args, **kwargs):
-        print(request.data)
-        selected_members = request.data.get('member', [])   
+        forum_id = request.data.get('forum')
+        selected_members = request.data.get('members', [])
+
+        # Check if a forum member already exists for the given forum
+        existing_forum_member = ForumMember.objects.filter(forum_id=forum_id).first()
+        if existing_forum_member:
+            return Response({"error": "Forum member already exists for this forum."}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        forum_member_instance = serializer.save()       
+        forum_member_instance = serializer.save()
         forum_member_instance.member.add(*selected_members)
+
         return Response({"message": "Forum member created successfully."}, status=status.HTTP_201_CREATED)
+
+
 
 
 
@@ -522,66 +529,154 @@ class ForumMemberListView(APIView):
             return Response({"error": str(e)}, status=500)
  
  
-        
-class UpdateForumMember(APIView):
-    def put(self, request, forum_id):        
-        data = json.loads(request.body)        
-        print('Request Data:', data)
-        print('Forum ID:', forum_id)        
-        try:          
-            forum_member = ForumMember.objects.get(forum_id=forum_id)
-            print('Forum Member:', forum_member)              
-            new_member_ids = data.get('members', [])           
-            existing_member_ids = list(forum_member.member.values_list('id', flat=True))
-            print('Existing Member IDs:', existing_member_ids)             
-            added_member_ids = list(set(new_member_ids) - set(existing_member_ids))
-            removed_member_ids = list(set(existing_member_ids) - set(new_member_ids))           
-            for member_id in added_member_ids:
-                forum_member.member.add(member_id)           
-            for member_id in removed_member_ids:
-                forum_member.member.remove(member_id)            
-            return JsonResponse({'message': 'Members updated successfully'})        
-        except ForumMember.DoesNotExist:
-            return JsonResponse({'error': 'Forum member not found'}, status=404)
-        
-        
- 
  
 
-class BlogsCreateView(APIView):
+ 
+class ForumMemberView(APIView):
+    def put(self, request, forum_id, format=None):
+        try:
+            forum_member = ForumMember.objects.get(forum_id=forum_id)
+        except ForumMember.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        selected_members = request.data.get('members', [])
+        deleted_members = request.data.get('deleted_members', [])
+        print("kkkkk", selected_members)
+        print("DDDDD", deleted_members)
+        
+        # Add new members
+        if selected_members:
+            forum_member.member.add(*selected_members)
+
+        # Remove deleted members
+        if deleted_members:
+            forum_member.member.remove(*deleted_members)
+
+        # Add previously deleted members back to the forum if re-added
+        for member_id in deleted_members:
+            if member_id in selected_members:
+                forum_member.member.add(member_id)
+
+        serializer = ForumMemberSerializer(forum_member)
+        print("ssssss", serializer.data)
+        return Response(serializer.data)
+
+
+
+
+ 
+
+
+
+class CreateBlog(APIView):
     def post(self, request):
         try:
-            print("Request Data:", request.data)   
-
-            serializer = BlogsSerializer(data=request.data)
-            if serializer.is_valid():
-            
-                blog = serializer.save()
- 
-                blog_contents_data = request.data.get('blog_contents', [])
-                if blog_contents_data:
-                    for content_data in blog_contents_data:
+            with transaction.atomic():
+                forum_id = request.POST.get('forum')
+                title = request.POST.get('title')
+                author = request.POST.get('author')
+                qualification = request.POST.get('qualification')
+                date = request.POST.get('date')
+                
+                blog, created = Blogs.objects.get_or_create(
+                    forum_id=forum_id,
+                    title=title,
+                    author=author,
+                    qualification=qualification,
+                    date=date
+                )
+                
+                processed_contents = set()   
+                for key, value in request.POST.items():
+                    if key.startswith('blog_contents'):
+                        index = key.split('[')[1].split(']')[0]
+                        topic = request.POST.get(f'blog_contents[{index}][topic]')
+                        description = request.POST.get(f'blog_contents[{index}][description]')
+                        image = request.FILES.get(f'blog_contents[{index}][image]')
+                        
+                        content_key = (topic, description)   
+                        if content_key in processed_contents:
+                            continue   
+                        processed_contents.add(content_key)
+                        
+                        if image:
+                            image_name = image.name
+                            content = BlogsContents.objects.create(
+                                blog=blog,
+                                topic=topic,
+                                description=description,
+                                image=image  
+                            )
+                        else:
+                            content = BlogsContents.objects.create(
+                                blog=blog,
+                                topic=topic,
+                                description=description,
+                            )
                     
-                        content_data['blog'] = blog.id    
-
-                  
-                    blog_contents_serializer = BlogsContentsSerializer(data=blog_contents_data, many=True)
-                    if blog_contents_serializer.is_valid():
-                        blog_contents_serializer.save()
-                    else:
-                        print("Blog Contents Serializer Errors:", blog_contents_serializer.errors)
-                        return Response(blog_contents_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-                # Now, fetch the updated serialized data of the main blog instance
-                serialized_blog_data = BlogsSerializer(blog).data
-                print("Main Blog Serialized Data:", serialized_blog_data)
-                return Response(serialized_blog_data, status=status.HTTP_201_CREATED)
-            else:
-                print("Main Blog Serializer Errors:", serializer.errors)
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print("Exception occurred:", e)
-            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(status=status.HTTP_201_CREATED)
+
+
+class BlogListView(generics.ListAPIView):
+    queryset = Blogs.objects.prefetch_related('blog_contents').all()
+    serializer_class = BlogsSerializer
+    
+class BlogDeleteView(generics.DestroyAPIView):
+    queryset = Blogs.objects.all()
+    serializer_class = BlogsSerializer
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class BlogUpdateView(generics.UpdateAPIView):
+    queryset = Blogs.objects.all()
+    serializer_class = BlogsSerializer
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
