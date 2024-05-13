@@ -173,11 +173,26 @@ class BlogsSerializer(serializers.ModelSerializer):
 
         return blog
 
-
 class BlogsSerializerFoum(serializers.ModelSerializer):
-    blog_contents = BlogsContentsSerializer(many=True, required=False, read_only=True)
+    blog_contents = BlogsContentsSerializer(many=True, required=False)
 
     class Meta:
         model = Blogs
         fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents']
 
+    def update(self, instance, validated_data):
+        blog_contents_data = validated_data.pop('blog_contents', None)
+        if blog_contents_data:
+        
+            for content_data in blog_contents_data:
+                content_id = content_data.get('id')
+                if content_id:
+                 
+                    content_instance = instance.blog_contents.get(id=content_id)
+                    content_serializer = BlogsContentsSerializer(instance=content_instance, data=content_data, partial=True)
+                    if content_serializer.is_valid():
+                        content_serializer.save()
+                else:
+             
+                    BlogsContents.objects.create(blog=instance, **content_data)
+        return super().update(instance, validated_data)
