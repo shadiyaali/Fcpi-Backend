@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer,BlogsSerializerFoum,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs
@@ -633,9 +633,47 @@ class BlogDeleteView(generics.DestroyAPIView):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class BlogUpdateView(generics.UpdateAPIView):
+
+
+ 
+ 
+from rest_framework.generics import UpdateAPIView
+class BlogUpdateView(UpdateAPIView):
     queryset = Blogs.objects.all()
-    serializer_class = BlogsSerializer
+    serializer_class = BlogsSerializerFoum
+
+    def put(self, request, *args, **kwargs):
+        try:
+            print("Request data:", request.data)
+            blog = self.get_object()
+            serializer = self.get_serializer(blog, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            
+            # Update blog contents separately
+            # Update blog contents separately
+            if 'blog_contents' in request.data:
+                blog_contents_data = request.data['blog_contents']
+                print("Blog contents data:", blog_contents_data)
+                
+                for content_data in blog_contents_data:
+                    content_id = content_data.get('id')
+                    if content_id:
+                        # Update existing blog content
+                        content = blog.blog_contents.get(id=content_id)
+                        content.image = content_data.get('image', content.image)
+                        content.save()
+
+            
+            print("Updated data:", serializer.data)
+            
+            return Response(serializer.data)
+        except ValidationError as e:
+            print("Validation errors:", e.detail)
+            return Response({'error': 'Validation failed'}, status=status.HTTP_400_BAD_REQUEST)
+        except Blogs.DoesNotExist:
+            print("Blog not found")
+            return Response({'error': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
 
         
         

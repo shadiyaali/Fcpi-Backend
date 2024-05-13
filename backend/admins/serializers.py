@@ -174,5 +174,10 @@ class BlogsSerializer(serializers.ModelSerializer):
         return blog
 
 
+class BlogsSerializerFoum(serializers.ModelSerializer):
+    blog_contents = BlogsContentsSerializer(many=True, required=False, read_only=True)
 
+    class Meta:
+        model = Blogs
+        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents']
 
