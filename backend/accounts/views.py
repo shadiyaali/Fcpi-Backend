@@ -167,46 +167,7 @@ class ResendOtp(APIView):
             return Response({'status': 500, 'error': 'Something went wrong'})
         
         
-# class LoginView(APIView):
-#     def post(self, request):
-#         try:
-#             email = request.data.get('email')
-#             password = request.data.get('password')
-            
-#             print("Email:", email)
-#             print("Password:", password)
-            
-#             if not email or not password:
-#                 print("Email or password is missing")
-#                 return Response({'status': 400, 'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-#             print("Attempting login with email:", email, password)
-            
-#             user = authenticate(request, email=email, password=password)
-            
-#             if user is not None:
-#                 refresh = RefreshToken.for_user(user)
-#                 access_token = str(refresh.access_token)
-#                 refresh_token = str(refresh)
-                
-#                 print("Access Token:", access_token)
-#                 print("Refresh Token:", refresh_token)
-                
-#                 return Response({
-#                     'status': 200,
-#                     'user': {'id': user.id, 'email': user.email},
-#                     'tokens': {
-#                         'refresh': refresh_token,
-#                         'access': access_token,
-#                     }
-#                 }, status=status.HTTP_200_OK)
-#             else:
-#                 print("Authentication failed")
-#                 return Response({'status': 400, 'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
-            
-#         except Exception as e:
-#             print("Error in LoginView:", e)
-#             return Response({'status': 500, 'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+ 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -173,6 +173,7 @@ class BlogsSerializer(serializers.ModelSerializer):
 
         return blog
 
+
 class BlogsSerializerFoum(serializers.ModelSerializer):
     blog_contents = BlogsContentsSerializer(many=True, required=False)
 
@@ -181,18 +182,46 @@ class BlogsSerializerFoum(serializers.ModelSerializer):
         fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents']
 
     def update(self, instance, validated_data):
-        blog_contents_data = validated_data.pop('blog_contents', None)
-        if blog_contents_data:
+        forum_data = validated_data.get('forum')
         
+        # Exclude 'forum' field if it's missing or set to 'null'
+        if forum_data is None or forum_data == 'null':
+            validated_data.pop('forum', None)
+        
+        blog_contents_data = validated_data.pop('blog_contents', None)
+        
+        if blog_contents_data is not None:
+            # Update existing or create new blog contents
             for content_data in blog_contents_data:
                 content_id = content_data.get('id')
+                
                 if content_id:
-                 
-                    content_instance = instance.blog_contents.get(id=content_id)
-                    content_serializer = BlogsContentsSerializer(instance=content_instance, data=content_data, partial=True)
-                    if content_serializer.is_valid():
-                        content_serializer.save()
+                    # If content has ID, update existing blog content
+                    try:
+                        content_instance = instance.blog_contents.get(id=content_id)
+                        content_serializer = BlogsContentsSerializer(instance=content_instance, data=content_data, partial=True)
+                        if content_serializer.is_valid():
+                            content_serializer.save()
+                    except BlogsContents.DoesNotExist:
+                        pass  # Handle if content doesn't exist
                 else:
-             
+                    # Create new blog content
                     BlogsContents.objects.create(blog=instance, **content_data)
+        
         return super().update(instance, validated_data)
+
+
+
+class CertificatesSerializer(serializers.ModelSerializer):
+        event_name = serializers.CharField(source='event.event_name', read_only=True)
+
+        class Meta:
+                model = Certificates
+                fields = ['id', 'event', 'event_name', 'image']
+
+class CertificatesListSerializer(serializers.ModelSerializer):
+    event = EventSerializer()   
+    class Meta:
+        model = Certificates
+        fields = ['id', 'event','image']
+    

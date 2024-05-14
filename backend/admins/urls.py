@@ -29,7 +29,9 @@ urlpatterns = [
     path('bloglist/', BlogListView.as_view(), name='blog-list'),
     path('blogs/<int:pk>/delete/', BlogDeleteView.as_view(), name='blogs-delete'),
     path('blogs/<int:pk>/update/', BlogUpdateView.as_view(), name='forum-update'),
-
- 
-
+    path('certificates/', certificatesCreate.as_view(), name='certificate-list-create'),
+    path('certificates/<int:pk>/delete', CertificatesDeleteView.as_view(), name='certificates-delete'),
+    path('certificateslist/', CertificatesList.as_view(), name='certificates-list'),
+    path('certificates/<int:pk>/', CertificatesDetail.as_view(), name='certificate-detail'),
 ]     
+ 

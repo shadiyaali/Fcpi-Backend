@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,EventSerializer,BlogsSerializerFoum,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,CertificatesListSerializer,EventSerializer,BlogsSerializerFoum,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -643,25 +643,26 @@ class BlogUpdateView(UpdateAPIView):
     serializer_class = BlogsSerializerFoum
 
     def put(self, request, *args, **kwargs):
+        print("request",request.data)
         try:
             blog = self.get_object()
             serializer = self.get_serializer(blog, data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
             
-            # Update blog contents if present in request
+          
             if 'blog_contents' in request.data:
                 blog_contents_data = request.data['blog_contents']
                 for content_data in blog_contents_data:
                     content_id = content_data.get('id')
                     if content_id:
-                        # Update existing blog content
+                       
                         content = blog.blog_contents.get(id=content_id)
                         content.topic = content_data.get('topic', content.topic)
                         content.description = content_data.get('description', content.description)
                         content.image = content_data.get('image', content.image)
                         content.save()
-            
+            print("serializer.data",serializer.data)
             return Response(serializer.data)
         except ValidationError as e:
             return Response({'error': 'Validation failed'}, status=status.HTTP_400_BAD_REQUEST)
@@ -672,18 +673,55 @@ class BlogUpdateView(UpdateAPIView):
         
         
         
+class certificatesCreate(generics.ListCreateAPIView):
+    queryset = Certificates.objects.all()
+    serializer_class = CertificatesSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    def post(self, request, *args, **kwargs):
+        print("Request Data:", request.data)
+        try:
+            response = super().post(request, *args, **kwargs)
+        except Exception as e:
+            print("Error:", e)
+            response = Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return response
+        
+class CertificatesList(generics.ListAPIView):
+    queryset = Certificates.objects.all()
+    serializer_class = CertificatesSerializer        
         
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
+class CertificatesDeleteView(generics.DestroyAPIView):
+    queryset = Certificates.objects.all()
+    serializer_class = CertificatesSerializer
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+      
+class CertificatesDetail(generics.RetrieveUpdateAPIView):
+    queryset = Certificates.objects.all()
+    serializer_class = CertificatesListSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_update(serializer)
+            print("Request:", request.data)
+            print("Updated instance:", serializer.data)
+            return Response(serializer.data)
+        except Exception as e:
+            print("Error:", e)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
         
         
         

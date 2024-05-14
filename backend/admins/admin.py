@@ -12,4 +12,5 @@ admin.site.register(Member)
 admin.site.register(ForumMember)
 admin.site.register(Blogs)
 admin.site.register(BlogsContents)
+admin.site.register(Certificates)
  
