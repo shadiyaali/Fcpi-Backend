@@ -293,18 +293,22 @@ class UserProfileView(APIView):
 
 
 class FeedbackCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, format=None):
-        
-        print("RRRRRRRRR",request.data)
+        # Check if the user has already submitted feedback
+        existing_feedback = Feedback.objects.filter(user=request.user).exists()
+        if existing_feedback:
+            return Response({"message": "Feedback already submitted"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Proceed with creating new feedback
         serializer = FeedbackSerializer(data=request.data)
-    
         if serializer.is_valid():
+            serializer.validated_data['user'] = request.user
             serializer.save()
-            print("jjjjjj",serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print("hhhhhhhhhhhhhhhh",serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 
 
  

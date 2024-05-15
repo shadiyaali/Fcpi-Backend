@@ -184,31 +184,30 @@ class BlogsSerializerFoum(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         forum_data = validated_data.get('forum')
         
-        # Exclude 'forum' field if it's missing or set to 'null'
+       
         if forum_data is None or forum_data == 'null':
             validated_data.pop('forum', None)
         
         blog_contents_data = validated_data.pop('blog_contents', None)
         
         if blog_contents_data is not None:
-            # Update existing or create new blog contents
+           
             for content_data in blog_contents_data:
                 content_id = content_data.get('id')
                 
                 if content_id:
-                    # If content has ID, update existing blog content
+                    
                     try:
                         content_instance = instance.blog_contents.get(id=content_id)
                         content_serializer = BlogsContentsSerializer(instance=content_instance, data=content_data, partial=True)
                         if content_serializer.is_valid():
                             content_serializer.save()
                     except BlogsContents.DoesNotExist:
-                        pass  # Handle if content doesn't exist
-                else:
-                    # Create new blog content
-                    BlogsContents.objects.create(blog=instance, **content_data)
+                        pass  
         
         return super().update(instance, validated_data)
+
+
 
 
 

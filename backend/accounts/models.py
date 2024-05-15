@@ -57,7 +57,7 @@ class UserProfile(models.Model):
  
 
 class Feedback(models.Model):
-    user = models.ForeignKey(User, related_name='feedback', on_delete=models.CASCADE,blank= True,default=True) 
+    user = models.ForeignKey(User, related_name='feedback', on_delete=models.CASCADE, blank=True) 
     SATISFACTION_CHOICES = [
         ('VS', 'Very Satisfied'),
         ('SS', 'Somewhat Satisfied'),
