@@ -133,5 +133,8 @@ class BlogsContents(models.Model):
 class Certificates(models.Model):    
     event = models.ForeignKey(Event, related_name='certificates', on_delete=models.CASCADE,null=True, blank=True)
     image = models.ImageField(upload_to='blogs/', null=True, blank=True) 
+ 
+    
+     
       
     

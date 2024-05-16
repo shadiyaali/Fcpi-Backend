@@ -22,7 +22,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
- 
+from admins.models import Certificates
+from .serializers import CertificategenerateSerializer
  
  
 
@@ -296,12 +297,13 @@ class FeedbackCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=None):
-        # Check if the user has already submitted feedback
-        existing_feedback = Feedback.objects.filter(user=request.user).exists()
+        
+        event_id = request.data.get('event')   
+        existing_feedback = Feedback.objects.filter(user=request.user, event_id=event_id).exists()
         if existing_feedback:
-            return Response({"message": "Feedback already submitted"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Feedback already submitted for this event"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Proceed with creating new feedback
+        # 
         serializer = FeedbackSerializer(data=request.data)
         if serializer.is_valid():
             serializer.validated_data['user'] = request.user
@@ -310,5 +312,28 @@ class FeedbackCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
  
+
+
+class CertificateImageView(APIView):
+    def get(self,user, event_id=None):
+        if event_id is None:
+            return Response({"error": "Event ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            print("Event ID:", event_id) 
+            certificate = Certificates.objects.filter(event_id=event_id).first()
+            print("Certificate:", certificate)
+            if certificate:             
+                has_feedback = Feedback.objects.filter(event_id=event_id, user=user).exists()
+                print("Has feedback:", has_feedback)
+                if has_feedback:
+                    serializer = CertificategenerateSerializer(certificate)
+                    return Response(serializer.data)
+                else:
+                    return Response({"error": "Feedback not provided for this event."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                return Response({"error": "Certificate not found for this event."}, status=status.HTTP_404_NOT_FOUND)
+        except Feedback.DoesNotExist:
+            print("Feedback does not exist for this event.")
+            return Response({"error": "Feedback not found for this event."}, status=status.HTTP_404_NOT_FOUND)

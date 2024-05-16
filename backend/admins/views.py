@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,CertificatesListSerializer,EventSerializer,BlogsSerializerFoum,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,CertificatesListSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates
@@ -637,10 +637,12 @@ class BlogDeleteView(generics.DestroyAPIView):
 
  
  
+ 
 from rest_framework.generics import UpdateAPIView
+ 
 class BlogUpdateView(UpdateAPIView):
     queryset = Blogs.objects.all()
-    serializer_class = BlogsSerializerFoum
+    serializer_class = BlogsFormSerializer
 
     def put(self, request, *args, **kwargs):
         print("request",request.data)
@@ -649,28 +651,16 @@ class BlogUpdateView(UpdateAPIView):
             serializer = self.get_serializer(blog, data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
-            
-          
-            if 'blog_contents' in request.data:
-                blog_contents_data = request.data['blog_contents']
-                for content_data in blog_contents_data:
-                    content_id = content_data.get('id')
-                    if content_id:
-                       
-                        content = blog.blog_contents.get(id=content_id)
-                        content.topic = content_data.get('topic', content.topic)
-                        content.description = content_data.get('description', content.description)
-                        content.image = content_data.get('image', content.image)
-                        content.save()
-            print("serializer.data",serializer.data)
+            print("updated data",serializer.data)
             return Response(serializer.data)
-        except ValidationError as e:
-            return Response({'error': 'Validation failed'}, status=status.HTTP_400_BAD_REQUEST)
-        except Blogs.DoesNotExist:
-            return Response({'error': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
- 
-        
-        
+        except Exception as e:
+            print("eeee",e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
         
         
 class certificatesCreate(generics.ListCreateAPIView):

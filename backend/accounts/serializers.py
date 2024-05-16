@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import User,UserRole,UserProfile,Feedback
-from admins.models import Event
+from admins.models import Event,Certificates
     
 class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,6 +41,13 @@ class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = ['presentation_content' , 'speaker_delivery', 'presentation_duration', 'audio_video_quality', 'how_did_you_hear', 'suggestion']
+
+
+
+class CertificategenerateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Certificates
+        fields = ['image']
 
 
  

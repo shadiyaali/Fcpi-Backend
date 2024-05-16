@@ -173,8 +173,15 @@ class BlogsSerializer(serializers.ModelSerializer):
 
         return blog
 
+from rest_framework import serializers
+from .models import Blogs, BlogsContents
 
-class BlogsSerializerFoum(serializers.ModelSerializer):
+class BlogsContentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlogsContents
+        fields = ['id', 'topic', 'description', 'image']
+
+class BlogsFormSerializer(serializers.ModelSerializer):
     blog_contents = BlogsContentsSerializer(many=True, required=False)
 
     class Meta:
@@ -182,30 +189,32 @@ class BlogsSerializerFoum(serializers.ModelSerializer):
         fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents']
 
     def update(self, instance, validated_data):
-        forum_data = validated_data.get('forum')
-        
-       
-        if forum_data is None or forum_data == 'null':
-            validated_data.pop('forum', None)
-        
-        blog_contents_data = validated_data.pop('blog_contents', None)
-        
-        if blog_contents_data is not None:
-           
-            for content_data in blog_contents_data:
-                content_id = content_data.get('id')
-                
-                if content_id:
-                    
-                    try:
-                        content_instance = instance.blog_contents.get(id=content_id)
-                        content_serializer = BlogsContentsSerializer(instance=content_instance, data=content_data, partial=True)
-                        if content_serializer.is_valid():
-                            content_serializer.save()
-                    except BlogsContents.DoesNotExist:
-                        pass  
-        
-        return super().update(instance, validated_data)
+        blog_contents_data = validated_data.pop('blog_contents', [])
+        instance = super().update(instance, validated_data)
+
+        for content_data in blog_contents_data:
+            content_id = content_data.get('id')
+            if content_id:  # Only update existing content
+                blog_content = BlogsContents.objects.get(pk=content_id, blog=instance)
+                image_data = content_data.pop('image', None)
+                for key, value in content_data.items():
+                    setattr(blog_content, key, value)
+                if image_data:
+                    blog_content.image = image_data
+                blog_content.save()
+
+        return instance
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .manager import UserManager
 from django.utils import timezone
+from admins.models import Event 
 
 class UserRole(models.Model):
     name = models.CharField(max_length=200)
@@ -57,7 +58,8 @@ class UserProfile(models.Model):
  
 
 class Feedback(models.Model):
-    user = models.ForeignKey(User, related_name='feedback', on_delete=models.CASCADE, blank=True) 
+    user = models.ForeignKey(User, related_name='feedback', on_delete=models.CASCADE,blank=True)
+    event = models.ForeignKey(Event, related_name='feedbacks', on_delete=models.CASCADE,default=True)
     SATISFACTION_CHOICES = [
         ('VS', 'Very Satisfied'),
         ('SS', 'Somewhat Satisfied'),
@@ -83,6 +85,7 @@ class Feedback(models.Model):
     how_did_you_hear = models.CharField(max_length=1, choices=HEAR_CHOICES, null=True)
     suggestion = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now, null=True)
+ 
 
     def __str__(self):
         return f"Feedback - {self.created_at}"
