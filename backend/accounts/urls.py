@@ -18,6 +18,6 @@ urlpatterns = [
     path('user/<int:pk>/delete/', DeleteUser.as_view(), name='user-delete'),
     path('singleuser/', UserProfileView.as_view(), name='user-profile'),
     path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'), 
-    path('certificates/', CertificateImageView.as_view(), name='get_certificate_image'), 
-    
+    path('ecertificate/', CertificateView.as_view(), name='certificate-view'),
+    path('feedback/<int:pk>/', FeedbackDetailsView.as_view(), name='feedback-details'),
 ]

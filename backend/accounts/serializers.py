@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User,UserRole,UserProfile,Feedback
 from admins.models import Event,Certificates
+from admins.serializers import EventSerializer
     
 class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,16 +39,64 @@ class UserProfileSerializer(serializers.ModelSerializer):
  
 
 class FeedbackSerializer(serializers.ModelSerializer):
+    # Use PrimaryKeyRelatedField to make the event field writable
+      # Define a nested serializer for the event field if needed
+    event = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all())
+
     class Meta:
         model = Feedback
-        fields = ['presentation_content' , 'speaker_delivery', 'presentation_duration', 'audio_video_quality', 'how_did_you_hear', 'suggestion']
+        fields = [
+            'event',
+            'presentation_content',
+            'speaker_delivery',
+            'presentation_duration',
+            'audio_video_quality',
+            'how_did_you_hear',
+            'suggestion'
+        ]
+ 
+from admins.models import Certificates
 
-
-
-class CertificategenerateSerializer(serializers.ModelSerializer):
+class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certificates
-        fields = ['image']
+        fields = ['id','event', 'image']
 
 
+ 
+class FeedbackUserSerializer(serializers.ModelSerializer):
+ 
+    user = serializers.SerializerMethodField() 
+    event = serializers.SerializerMethodField()
+
+    def get_user(self, feedback):
+        user = feedback.user
+        return {
+            'id': user.id,
+            'username': user.username,
+            
+        }
+
+    def get_event(self, feedback):
+        event = feedback.event
+        return {
+            'id': event.id,
+            'name': event.name,
+         
+        }
+
+    class Meta:
+        model = Feedback
+        fields = [
+            'id',   
+            'user',
+            'event',
+            'presentation_content',
+            'speaker_delivery',
+            'presentation_duration',
+            'audio_video_quality',
+            'how_did_you_hear',
+            'suggestion',
+          
+        ]
  
