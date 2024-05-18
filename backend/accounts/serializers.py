@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import User,UserRole,UserProfile,Feedback
-from admins.models import Event,Certificates
-from admins.serializers import EventSerializer
+from admins.models import Event,Certificates,SingleEvent
+from admins.serializers import EventSerializer,SingleEventlistSerializer
     
 class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,9 +38,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
  
  
 
+ 
+
 class FeedbackSerializer(serializers.ModelSerializer):
-    # Use PrimaryKeyRelatedField to make the event field writable
-      # Define a nested serializer for the event field if needed
     event = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all())
 
     class Meta:
@@ -52,9 +52,10 @@ class FeedbackSerializer(serializers.ModelSerializer):
             'presentation_duration',
             'audio_video_quality',
             'how_did_you_hear',
-            'suggestion'
+            'suggestion',
+       
         ]
- 
+
 from admins.models import Certificates
 
 class CertificateSerializer(serializers.ModelSerializer):
@@ -64,39 +65,42 @@ class CertificateSerializer(serializers.ModelSerializer):
 
 
  
-class FeedbackUserSerializer(serializers.ModelSerializer):
- 
-    user = serializers.SerializerMethodField() 
-    event = serializers.SerializerMethodField()
-
-    def get_user(self, feedback):
-        user = feedback.user
-        return {
-            'id': user.id,
-            'username': user.username,
-            
-        }
-
-    def get_event(self, feedback):
-        event = feedback.event
-        return {
-            'id': event.id,
-            'name': event.name,
-         
-        }
+class FeedbacklistSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    event_name = serializers.CharField(source='event.name', read_only=True)
+    event_date = serializers.DateField(source='event.date', read_only=True)
 
     class Meta:
         model = Feedback
-        fields = [
-            'id',   
-            'user',
-            'event',
-            'presentation_content',
-            'speaker_delivery',
-            'presentation_duration',
-            'audio_video_quality',
-            'how_did_you_hear',
-            'suggestion',
-          
-        ]
+        fields = ['id', 'user_name', 'event_name', 'event_date', 'presentation_content', 'speaker_delivery', 'presentation_duration', 'audio_video_quality', 'how_did_you_hear', 'suggestion', 'created_at']
  
+ 
+ 
+
+class CertificatelistSerializer(serializers.ModelSerializer):
+    event_name = serializers.CharField(source='event.event_name')
+    event_date = serializers.DateField(source='event.date')
+    single_events = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Certificates
+        fields = ['id', 'image', 'event_name', 'event_date', 'single_events']
+
+    def get_single_events(self, obj):
+        single_events = obj.event.single_events.all()
+        if single_events.exists():
+         
+            sorted_single_events = single_events.order_by('day')
+            
+            return SingleEventlistSerializer(sorted_single_events, many=True).data
+        else:
+            return []
+
+
+  
+  
+        
+class UserlistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'first_name','last_name' ,'email']

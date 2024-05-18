@@ -22,7 +22,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
-from admins.models import Certificates,Event
+from admins.models import Certificates,Event,SingleEvent
  
  
  
@@ -291,62 +291,112 @@ class UserProfileView(APIView):
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
+ 
 from rest_framework.exceptions import ValidationError
+
+ 
+from datetime import datetime
+
+from datetime import datetime
+
+from django.db.models import Q
 
 class FeedbackCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, format=None):
-        print("request", request.data)
-        
-        event_id = request.data.get('event')   
-        print("event_id", event_id)
-        existing_feedback = Feedback.objects.filter(user=request.user, event_id=event_id).exists()
-        if existing_feedback:
-            return Response({"message": "Feedback already submitted for this event"}, status=status.HTTP_400_BAD_REQUEST)
-
         serializer = FeedbackSerializer(data=request.data)
         try:
-            if serializer.is_valid(raise_exception=True):
+            serializer.is_valid(raise_exception=True)
+            event = serializer.validated_data['event']
+            
+         
+            single_event = event
+            
+         
+            current_day = single_event.date
+            
+          
+            existing_feedback = Feedback.objects.filter(
+                Q(user=request.user) & 
+                Q(event=event) & 
+                Q(created_at__date=current_day)
+            ).first()
+            
+            if existing_feedback:
+              
+                serializer = FeedbackSerializer(existing_feedback, data=request.data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            else:
+         
+                serializer.validated_data['created_at'] = current_day
                 serializer.save(user=request.user)
-                print("ssss", serializer.data)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
-            print("Validation Error:", e.detail)
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            errors = dict(e.detail)
+            print("Validation errors:", errors)
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 
  
-
-
 class CertificateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
         user = request.user
-
-     
         feedbacks = Feedback.objects.filter(user=user)
         event_ids = feedbacks.values_list('event_id', flat=True)
-
-        
         certificates = Certificates.objects.filter(event_id__in=event_ids)
 
         if not certificates.exists():
             return Response({"message": "No certificates found for your events"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Serialize the certificates
-        serializer = CertificateSerializer(certificates, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        serialized_certificates = []
+        serialized_certificate_ids = set()
+
+        for feedback in feedbacks:
+            event = feedback.event
+            single_events = event.single_events.all()
+
+            for single_event in single_events:
+                print("pp",single_events)
+                relevant_certificates = certificates.filter(event=event, event__single_events__date=single_event.date)
+                for certificate in relevant_certificates:
+                    if certificate.id not in serialized_certificate_ids:
+                        serialized_certificate = {
+                            "id": certificate.id,
+                            "image": certificate.image.url,
+                            "event_name": event.event_name,
+                            "event_date": single_event.date,
+                            "single_event": {
+                                "points": single_event.points,
+                                "day": single_event.day
+                            }
+                        }
+                        serialized_certificates.append(serialized_certificate)
+                        serialized_certificate_ids.add(certificate.id)
+        print("ss",serialized_certificates)
+        return Response(serialized_certificates, status=status.HTTP_200_OK)
 
 
 
 
-class FeedbackDetailsView(generics.RetrieveAPIView):
-    permission_classes = [IsAuthenticated]
-    queryset = Feedback.objects.all()
-    serializer_class = FeedbackUserSerializer
-    print("sss",serializer_class)
+
+
+
+
+
+
+
+class AuthenticatedUserView(APIView):
+    def get(self, request):
+        user = request.user
+        serializer = UserlistSerializer(user)
+        
+        return Response(serializer.data)

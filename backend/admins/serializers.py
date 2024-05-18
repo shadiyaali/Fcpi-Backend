@@ -74,7 +74,13 @@ class SingleEventSerializer(serializers.Serializer):
 
         return single_event
 
+class SingleEventlistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SingleEvent
+        fields = ['id',  'points',   'date', 'day']
 
+
+    
 
 class RetrieveSingleEventSerializer(serializers.Serializer):
     highlights = serializers.CharField()

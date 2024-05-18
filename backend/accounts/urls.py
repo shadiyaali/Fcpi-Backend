@@ -19,5 +19,6 @@ urlpatterns = [
     path('singleuser/', UserProfileView.as_view(), name='user-profile'),
     path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'), 
     path('ecertificate/', CertificateView.as_view(), name='certificate-view'),
-    path('feedback/<int:pk>/', FeedbackDetailsView.as_view(), name='feedback-details'),
+    path('usercertificate/', AuthenticatedUserView.as_view(), name='authenticated-user'),
+     
 ]

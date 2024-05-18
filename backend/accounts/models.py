@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .manager import UserManager
 from django.utils import timezone
-from admins.models import Event 
+from admins.models import Event ,SingleEvent
 
 class UserRole(models.Model):
     name = models.CharField(max_length=200)
@@ -12,7 +12,7 @@ class UserRole(models.Model):
 
 
 class User(AbstractUser):
-    username = None
+    username = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=12)
     is_email_verified = models.BooleanField(default=False)
@@ -60,6 +60,7 @@ class UserProfile(models.Model):
 class Feedback(models.Model):
     user = models.ForeignKey(User, related_name='feedback', on_delete=models.CASCADE,blank=True)
     event = models.ForeignKey(Event, related_name='feedbacks', on_delete=models.CASCADE,null=True)
+ 
     SATISFACTION_CHOICES = [
         ('VS', 'Very Satisfied'),
         ('SS', 'Somewhat Satisfied'),
