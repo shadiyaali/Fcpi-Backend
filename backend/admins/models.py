@@ -64,7 +64,8 @@ class SingleEvent(models.Model):
     highlights = models.TextField(null=True, blank=True)
     date = models.DateField(null=True) 
     day = models.IntegerField(null=True)
-    
+    class Meta:
+        unique_together = ('event', 'day')
     def save(self, *args, **kwargs):
         if self._state.adding or (self.pk is not None and getattr(self, '_original_highlights', None) != self.highlights):
             if isinstance(self.highlights, list):
@@ -75,7 +76,9 @@ class SingleEvent(models.Model):
         super().refresh_from_db(*args, **kwargs)
         self._original_highlights = self.highlights
 
-
+    def __str__(self):
+        return f"{self.event.event_name} - Day {self.day}"
+  
     
 class MultiEvent(models.Model):
     single_event = models.ForeignKey(SingleEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='multi_events')

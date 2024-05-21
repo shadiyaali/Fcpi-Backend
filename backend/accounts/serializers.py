@@ -39,22 +39,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
  
 
  
+from rest_framework import serializers
 
 class FeedbackSerializer(serializers.ModelSerializer):
-    event = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all())
+    single_event = serializers.PrimaryKeyRelatedField(queryset=SingleEvent.objects.all())
 
     class Meta:
         model = Feedback
         fields = [
-            'event',
+            'id',
+            'single_event',
             'presentation_content',
             'speaker_delivery',
             'presentation_duration',
             'audio_video_quality',
             'how_did_you_hear',
             'suggestion',
-       
         ]
+
 
 from admins.models import Certificates
 
@@ -104,3 +106,6 @@ class UserlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'first_name','last_name' ,'email']
+        
+        
+ 

@@ -59,8 +59,8 @@ class UserProfile(models.Model):
 
 class Feedback(models.Model):
     user = models.ForeignKey(User, related_name='feedback', on_delete=models.CASCADE,blank=True)
-    event = models.ForeignKey(Event, related_name='feedbacks', on_delete=models.CASCADE,null=True)
- 
+    single_event = models.ForeignKey(SingleEvent, related_name='feedbacks', on_delete=models.CASCADE,null=True)
+   
     SATISFACTION_CHOICES = [
         ('VS', 'Very Satisfied'),
         ('SS', 'Somewhat Satisfied'),
