@@ -39,7 +39,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
  
 
  
-from rest_framework import serializers
+ 
 
 class FeedbackSerializer(serializers.ModelSerializer):
     single_event = serializers.PrimaryKeyRelatedField(queryset=SingleEvent.objects.all())
@@ -48,7 +48,8 @@ class FeedbackSerializer(serializers.ModelSerializer):
         model = Feedback
         fields = [
             'id',
-            'single_event',
+            'single_event',  
+                                             
             'presentation_content',
             'speaker_delivery',
             'presentation_duration',
@@ -60,10 +61,20 @@ class FeedbackSerializer(serializers.ModelSerializer):
 
 from admins.models import Certificates
 
+from rest_framework.serializers import SerializerMethodField
+
 class CertificateSerializer(serializers.ModelSerializer):
+    certificate_image = SerializerMethodField()
+
+    def get_certificate_image(self, obj):
+        if obj.image:
+            return self.context['request'].build_absolute_uri(obj.image.url)
+        return None
+
     class Meta:
         model = Certificates
-        fields = ['id','event', 'image']
+        fields = ['id', 'event', 'certificate_image']
+
 
 
  

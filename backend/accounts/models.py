@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .manager import UserManager
 from django.utils import timezone
-from admins.models import Event ,SingleEvent
+from admins.models import Event ,SingleEvent,Certificates
 
 class UserRole(models.Model):
     name = models.CharField(max_length=200)
@@ -60,6 +60,7 @@ class UserProfile(models.Model):
 class Feedback(models.Model):
     user = models.ForeignKey(User, related_name='feedback', on_delete=models.CASCADE,blank=True)
     single_event = models.ForeignKey(SingleEvent, related_name='feedbacks', on_delete=models.CASCADE,null=True)
+     
    
     SATISFACTION_CHOICES = [
         ('VS', 'Very Satisfied'),
@@ -90,7 +91,8 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"Feedback - {self.created_at}"
-
+    class Meta:
+        unique_together = ('single_event', 'created_at')
 
 
 

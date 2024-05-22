@@ -64,8 +64,7 @@ class SingleEvent(models.Model):
     highlights = models.TextField(null=True, blank=True)
     date = models.DateField(null=True) 
     day = models.IntegerField(null=True)
-    class Meta:
-        unique_together = ('event', 'day')
+      
     def save(self, *args, **kwargs):
         if self._state.adding or (self.pk is not None and getattr(self, '_original_highlights', None) != self.highlights):
             if isinstance(self.highlights, list):
@@ -76,8 +75,11 @@ class SingleEvent(models.Model):
         super().refresh_from_db(*args, **kwargs)
         self._original_highlights = self.highlights
 
+    class Meta:
+        unique_together = ('event', 'day')   
+
     def __str__(self):
-        return f"{self.event.event_name} - Day {self.day}"
+        return f"{self.event.event_name}  day {self.day}"
   
     
 class MultiEvent(models.Model):
@@ -134,8 +136,10 @@ class BlogsContents(models.Model):
     
 
 class Certificates(models.Model):    
-    event = models.ForeignKey(Event, related_name='certificates', on_delete=models.CASCADE,null=True, blank=True)
-    image = models.ImageField(upload_to='blogs/', null=True, blank=True) 
+    event = models.ForeignKey(Event, related_name='certificates', on_delete=models.CASCADE,null=True, blank=True)     
+    image = models.ImageField(upload_to='blogs/', null=True, blank=True)
+     
+    
  
     
      

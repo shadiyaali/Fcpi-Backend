@@ -57,6 +57,7 @@ class MultiEventSerializer(serializers.ModelSerializer):
     
 
 class SingleEventSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
     highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
     youtube_link = serializers.URLField()
     points = serializers.DecimalField(max_digits=5, decimal_places=2)
