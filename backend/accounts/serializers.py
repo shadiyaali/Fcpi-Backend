@@ -28,13 +28,36 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(required=False)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = UserProfile
-        fields = ['id', 'user', 'date_of_birth', 'primary_position', 'state', 'primary_pharmacy_degree', 'secondary_pharmacy_degree', 'additional_degrees', 'city', 'country', 'pharmacy_college_name', 'pharmacy_college_degree']
-   
-   
+        fields = ['id', 'user', 'date_of_birth', 'image', 'primary_position', 'state', 
+                  'primary_pharmacy_degree', 'secondary_pharmacy_degree', 
+                  'additional_degrees', 'city', 'country', 'pharmacy_college_name', 
+                  'pharmacy_college_degree']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        
+        # Update UserProfile fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Update User fields if user_data is present and is a dictionary
+        if isinstance(user_data, dict):
+            user = instance.user
+            for attr, value in user_data.items():
+                setattr(user, attr, value)
+            try:
+                user.save()
+            except Exception as e:
+                raise serializers.ValidationError({"user": str(e)})
+        
+        instance.save()
+        return instance
+
+
  
  
 

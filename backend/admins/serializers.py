@@ -180,8 +180,7 @@ class BlogsSerializer(serializers.ModelSerializer):
 
         return blog
 
-from rest_framework import serializers
-from .models import Blogs, BlogsContents
+ 
 
 class BlogsContentsSerializer(serializers.ModelSerializer):
     class Meta:

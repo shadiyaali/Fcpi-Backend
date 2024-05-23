@@ -20,5 +20,6 @@ urlpatterns = [
     path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'), 
     path('ecertificate/', CertificateView.as_view(), name='certificate-view'),
     path('usercertificate/', AuthenticatedUserView.as_view(), name='authenticated-user'),
+    path('user/<int:user_id>/', UserProfileAPIView.as_view(), name='user_profile_api'),
  
 ]

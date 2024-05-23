@@ -394,24 +394,40 @@ class CertificateView(APIView):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class AuthenticatedUserView(APIView):
     def get(self, request):
         user = request.user
         serializer = UserlistSerializer(user)
         
         return Response(serializer.data)
+    
+    
+    
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+class UserProfileAPIView(APIView):
+    def post(self, request, user_id):
+        print("Request data:", request.data)
+        try:
+            user_profile = UserProfile.objects.get(user_id=user_id)
+
+            if request.data:
+                serializer = UserProfileSerializer(user_profile, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    print("Serializer errors:", serializer.errors)
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = UserProfileSerializer(user_profile)
+            print("sss", serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except UserProfile.DoesNotExist:
+            return Response({"message": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print("EEE", e)
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
