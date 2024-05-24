@@ -140,7 +140,10 @@ class Certificates(models.Model):
     image = models.ImageField(upload_to='blogs/', null=True, blank=True)
      
     
- 
+class Banner(models.Model):
+    banner =  models.ImageField(upload_to='banner/', null=True, blank=True)
+    url = models.URLField(null=True, blank=True)
+    
     
      
       

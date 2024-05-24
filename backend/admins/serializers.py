@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -237,5 +237,13 @@ class CertificatesListSerializer(serializers.ModelSerializer):
     event = EventSerializer()   
     class Meta:
         model = Certificates
-        fields = ['id', 'event','image']
+        fields = ['id', 'event','image'] 
+        
     
+class BannerSerializer(serializers.ModelSerializer):
+    banner = serializers.ImageField(required=False)  
+
+    class Meta:
+        model = Banner
+        fields = ['id','url', 'banner']
+        

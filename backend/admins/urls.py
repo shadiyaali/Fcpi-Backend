@@ -33,5 +33,6 @@ urlpatterns = [
     path('certificates/<int:pk>/delete', CertificatesDeleteView.as_view(), name='certificates-delete'),
     path('certificateslist/', CertificatesList.as_view(), name='certificates-list'),
     path('certificates/<int:pk>/', CertificatesDetail.as_view(), name='certificate-detail'),
+    path('banner/', BannerListCreate.as_view(), name='banner-list-create'),
 ]     
  
