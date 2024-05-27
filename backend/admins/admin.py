@@ -14,4 +14,5 @@ admin.site.register(Blogs)
 admin.site.register(BlogsContents)
 admin.site.register(Certificates)
 admin.site.register(Banner)
+admin.site.register(News)
  

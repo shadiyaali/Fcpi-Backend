@@ -122,6 +122,8 @@ class Blogs(models.Model):
     author = models.CharField(max_length=100)
     qualification = models.CharField(max_length=100)
     date = models.DateField(null=True)
+    blog_banner = models.ImageField(upload_to='blogs_banner/', null=True, blank=True)
+    author_profile = models.ImageField(upload_to='author_profile/', null=True, blank=True)
       
     def __str__(self):
         return self.title  
@@ -145,6 +147,11 @@ class Banner(models.Model):
     url = models.URLField(null=True, blank=True)
     
     
+class News(models.Model):
+   date = models.DateField(null=True) 
+   text = models.TextField(null=True, blank=True)
+   
      
+         
       
     

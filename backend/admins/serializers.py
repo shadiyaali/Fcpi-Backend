@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -158,6 +158,20 @@ class BlogsContentsSerializer(serializers.ModelSerializer):
         model = BlogsContents
         fields = ['id', 'topic', 'description', 'image']
 
+    def create(self, validated_data):
+        # Extract the image data
+        image_data = validated_data.pop('image', None)
+
+        # Create the BlogsContents instance
+        blog_content = super().create(validated_data)
+
+        # If there is image data, save it
+        if image_data:
+            blog_content.image = image_data
+            blog_content.save()
+
+        return blog_content
+
 
 class BlogsSerializer(serializers.ModelSerializer):
     blog_contents = BlogsContentsSerializer(many=True, required=False)
@@ -165,7 +179,7 @@ class BlogsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Blogs
-        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents','forum_title']
+        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents','forum_title','blog_banner','author_profile']
 
     def create(self, validated_data):
         blog_contents_data = validated_data.pop('blog_contents', [])
@@ -182,17 +196,31 @@ class BlogsSerializer(serializers.ModelSerializer):
 
  
 
-class BlogsContentsSerializer(serializers.ModelSerializer):
+ 
+
+class BlogContentsSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(use_url=True)
+
     class Meta:
         model = BlogsContents
         fields = ['id', 'topic', 'description', 'image']
+
+class BlogSerializer(serializers.ModelSerializer):
+    blog_contents = BlogContentsSerializer(many=True, required=False)
+    blog_banner = serializers.ImageField(use_url=True)
+    author_profile = serializers.ImageField(use_url=True)
+
+    class Meta:
+        model = Blogs
+        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
+
 
 class BlogsFormSerializer(serializers.ModelSerializer):
     blog_contents = BlogsContentsSerializer(many=True, required=False)
 
     class Meta:
         model = Blogs
-        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents']
+        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents' ,'blog_banner','author_profile']
 
     def update(self, instance, validated_data):
         blog_contents_data = validated_data.pop('blog_contents', [])
@@ -246,4 +274,11 @@ class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
         fields = ['id','url', 'banner']
+    
+    
+class NewsSerializer(serializers.ModelSerializer):
+   
+    class Meta:
+        model = News
+        fields = ['id','text', 'date']
         

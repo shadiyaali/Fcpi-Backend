@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,SpeakerSerializer,CertificatesListSerializer,BannerSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,SpeakerSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -14,10 +14,9 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import transaction
-import json
-from django.db import transaction 
+import json 
 import logging 
- 
+from rest_framework.generics import UpdateAPIView 
  
 
 class AdminLogin(APIView):
@@ -566,64 +565,76 @@ class ForumMemberView(APIView):
 
 
  
-
-
+ 
+from django.http import QueryDict
 
 class CreateBlog(APIView):
     def post(self, request):
         try:
+            print("Request data:", request.data)
             with transaction.atomic():
-                forum_id = request.POST.get('forum')
-                title = request.POST.get('title')
-                author = request.POST.get('author')
-                qualification = request.POST.get('qualification')
-                date = request.POST.get('date')
+             
+                forum_id = request.data.get('forum')
+                title = request.data.get('title')
+                author = request.data.get('author')
+                qualification = request.data.get('qualification')
+                date = request.data.get('date')
+                blog_banner = request.data.get('blog_banner')
+                author_profile = request.data.get('author_profile')
                 
-                blog, created = Blogs.objects.get_or_create(
+             
+                blog = Blogs.objects.create(
                     forum_id=forum_id,
                     title=title,
                     author=author,
                     qualification=qualification,
-                    date=date
+                    date=date,
+                    blog_banner=blog_banner,
+                    author_profile=author_profile
                 )
                 
-                processed_contents = set()   
-                for key, value in request.POST.items():
+               
+                blog_contents = []
+                for key in request.data.keys():
                     if key.startswith('blog_contents'):
                         index = key.split('[')[1].split(']')[0]
-                        topic = request.POST.get(f'blog_contents[{index}][topic]')
-                        description = request.POST.get(f'blog_contents[{index}][description]')
-                        image = request.FILES.get(f'blog_contents[{index}][image]')
-                        
-                        content_key = (topic, description)   
-                        if content_key in processed_contents:
-                            continue   
-                        processed_contents.add(content_key)
-                        
-                        if image:
-                            image_name = image.name
-                            content = BlogsContents.objects.create(
-                                blog=blog,
-                                topic=topic,
-                                description=description,
-                                image=image  
-                            )
-                        else:
-                            content = BlogsContents.objects.create(
-                                blog=blog,
-                                topic=topic,
-                                description=description,
-                            )
+                        if len(blog_contents) <= int(index):
+                            blog_contents.append({})
+                        field = key.split('[')[2].split(']')[0]
+                        blog_contents[int(index)][field] = request.data.get(key)
+                
+                print("Extracted blog contents:", blog_contents)
+
+                for content_data in blog_contents:
+                    topic = content_data.get('topic')
+                    description = content_data.get('description')
+                    image = request.data.get(f'blog_contents[{blog_contents.index(content_data)}][image]')
                     
+                    content = BlogsContents.objects.create(
+                        blog=blog,
+                        topic=topic,
+                        description=description,
+                        image=image
+                    )
+                        
         except Exception as e:
+            print("Error:", e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response(status=status.HTTP_201_CREATED)
 
 
-class BlogListView(generics.ListAPIView):
-    queryset = Blogs.objects.prefetch_related('blog_contents').all()
-    serializer_class = BlogsSerializer
+
+class BlogListView(APIView):
+    def get(self, request):
+        blogs = Blogs.objects.all()
+        serializer = BlogSerializer(blogs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# class BlogListView(generics.ListAPIView):
+#     queryset = Blogs.objects.prefetch_related('blog_contents').all()
+#     serializer_class = BlogsSerializer
     
 class BlogDeleteView(generics.DestroyAPIView):
     queryset = Blogs.objects.all()
@@ -639,7 +650,7 @@ class BlogDeleteView(generics.DestroyAPIView):
  
  
  
-from rest_framework.generics import UpdateAPIView
+
  
 class BlogUpdateView(UpdateAPIView):
     queryset = Blogs.objects.all()
@@ -723,9 +734,33 @@ class BannerListCreate(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save()        
         
+
+class BannerUpdateView(generics.UpdateAPIView):
+    queryset = Banner.objects.all()
+    serializer_class = BannerSerializer
+
+class BannerDeleteView(generics.DestroyAPIView):
+    queryset = Banner.objects.all()
+    serializer_class = BannerSerializer
         
         
+class NewsListCreate(generics.ListCreateAPIView):
+    queryset = News.objects.all()
+    serializer_class = NewsSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save()        
         
+
+class NewsUpdateView(generics.UpdateAPIView):
+    queryset = News.objects.all()
+    serializer_class = NewsSerializer 
+
+class NewsDeleteView(generics.DestroyAPIView):
+    queryset = News.objects.all()
+    serializer_class = NewsSerializer
+               
         
         
         

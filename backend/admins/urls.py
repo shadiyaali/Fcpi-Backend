@@ -26,7 +26,7 @@ urlpatterns = [
     path('forummembers/<int:forum_id>/', ForumMemberListView.as_view(), name='forum_members_list'),
     path('forummembers/<int:forum_id>/update/', ForumMemberView.as_view(), name='update_forum_member'),
     path('blogs/', CreateBlog.as_view(), name='blog_admin'),
-    path('bloglist/', BlogListView.as_view(), name='blog-list'),
+    path('blogslist/', BlogListView.as_view(), name='blog-list'),
     path('blogs/<int:pk>/delete/', BlogDeleteView.as_view(), name='blogs-delete'),
     path('blogs/<int:pk>/update/', BlogUpdateView.as_view(), name='forum-update'),
     path('certificates/',certificatesCreate.as_view(), name='certificate-list-create'),
@@ -34,5 +34,10 @@ urlpatterns = [
     path('certificateslist/', CertificatesList.as_view(), name='certificates-list'),
     path('certificates/<int:pk>/', CertificatesDetail.as_view(), name='certificate-detail'),
     path('banner/', BannerListCreate.as_view(), name='banner-list-create'),
+    path('banner/<int:pk>/update/', BannerUpdateView.as_view(), name='banner-update'),
+    path('banner/<int:pk>/delete/', BannerDeleteView.as_view(), name='banner-delete'),
+    path('news/', NewsListCreate.as_view(), name='news-list-create'),
+    path('news/<int:pk>/update/', NewsUpdateView.as_view(), name='news-update'),
+    path('news/<int:pk>/delete/', NewsDeleteView.as_view(), name='news-delete'),
 ]     
  
