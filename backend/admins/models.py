@@ -153,5 +153,7 @@ class News(models.Model):
    
      
          
+class BoardMember(models.Model):        
+    member = models.ManyToManyField(Member, related_name='board_members', blank=True)
       
     

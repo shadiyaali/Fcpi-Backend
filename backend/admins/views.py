@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,SpeakerSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,SpeakerSerializer,BoardMemberSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News
@@ -632,9 +632,9 @@ class BlogListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# class BlogListView(generics.ListAPIView):
-#     queryset = Blogs.objects.prefetch_related('blog_contents').all()
-#     serializer_class = BlogsSerializer
+class BlogListViewall(generics.ListAPIView):
+    queryset = Blogs.objects.prefetch_related('blog_contents').all()
+    serializer_class = BlogsSerializer
     
 class BlogDeleteView(generics.DestroyAPIView):
     queryset = Blogs.objects.all()
@@ -757,13 +757,34 @@ class NewsUpdateView(generics.UpdateAPIView):
     queryset = News.objects.all()
     serializer_class = NewsSerializer 
 
+
 class NewsDeleteView(generics.DestroyAPIView):
     queryset = News.objects.all()
     serializer_class = NewsSerializer
-               
+
+
+class ForumMemberList(generics.ListAPIView):
+    serializer_class = ForumMemberSerializer
+
+    def get_queryset(self):
+        forum_id = self.kwargs.get('forum_id')
+        print("ppp",forum_id)
+        return ForumMember.objects.filter(forum_id=forum_id)              
         
         
+          
+class AddBoardMember(APIView):
+    def post(self, request, format=None):
+        print("Request Data:", request.data)   
         
+        serializer = BoardMemberSerializer(data=request.data)
+        if serializer.is_valid():
+            print("Validated Data:", serializer.validated_data)   
+            serializer.save()   
+            print("Saved Data:", serializer.data)  
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print("Validation Errors:", serializer.errors)   
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 

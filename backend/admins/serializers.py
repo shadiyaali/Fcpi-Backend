@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -147,6 +147,8 @@ class MemeberSerializer(serializers.ModelSerializer):
         
         
 class ForumMemberSerializer(serializers.ModelSerializer):
+    member = MemeberSerializer(many=True, read_only=True)
+
     class Meta:
         model = ForumMember
         fields = ['id','forum', 'member']
@@ -243,17 +245,6 @@ class BlogsFormSerializer(serializers.ModelSerializer):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 class CertificatesSerializer(serializers.ModelSerializer):
         event_name = serializers.CharField(source='event.event_name', read_only=True)
 
@@ -281,4 +272,10 @@ class NewsSerializer(serializers.ModelSerializer):
     class Meta:
         model = News
         fields = ['id','text', 'date']
-        
+
+class BoardMemberSerializer(serializers.ModelSerializer):
+    member = MemeberSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ForumMember
+        fields = ['id', 'member']

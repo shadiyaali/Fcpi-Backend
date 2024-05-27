@@ -27,6 +27,7 @@ urlpatterns = [
     path('forummembers/<int:forum_id>/update/', ForumMemberView.as_view(), name='update_forum_member'),
     path('blogs/', CreateBlog.as_view(), name='blog_admin'),
     path('blogslist/', BlogListView.as_view(), name='blog-list'),
+    path('blogslistall/', BlogListViewall.as_view(), name='blog-list'),
     path('blogs/<int:pk>/delete/', BlogDeleteView.as_view(), name='blogs-delete'),
     path('blogs/<int:pk>/update/', BlogUpdateView.as_view(), name='forum-update'),
     path('certificates/',certificatesCreate.as_view(), name='certificate-list-create'),
@@ -39,5 +40,7 @@ urlpatterns = [
     path('news/', NewsListCreate.as_view(), name='news-list-create'),
     path('news/<int:pk>/update/', NewsUpdateView.as_view(), name='news-update'),
     path('news/<int:pk>/delete/', NewsDeleteView.as_view(), name='news-delete'),
+    path('forums/<int:forum_id>/members/', ForumMemberList.as_view(), name='forum-members'),
+    path('boardmember/', AddBoardMember.as_view(), name='add_board_member'),
 ]     
  
