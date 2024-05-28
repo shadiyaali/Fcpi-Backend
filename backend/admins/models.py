@@ -113,7 +113,6 @@ class ForumMember(models.Model):
     forum = models.ForeignKey(Forum, related_name='forum', on_delete=models.CASCADE,null=True, blank=True)
     member = models.ManyToManyField(Member, related_name='member', blank=True)
 
-
  
 
 class Blogs(models.Model):    
@@ -152,8 +151,6 @@ class News(models.Model):
    text = models.TextField(null=True, blank=True)
    
      
-         
 class BoardMember(models.Model):        
-    member = models.ManyToManyField(Member, related_name='board_members', blank=True)
-      
+    members = models.ManyToManyField(Member, related_name='board_members', blank=True)
     

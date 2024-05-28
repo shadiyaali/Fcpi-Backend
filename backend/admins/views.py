@@ -5,7 +5,7 @@ from rest_framework import status
 from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,SpeakerSerializer,BoardMemberSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -474,7 +474,7 @@ class MemberListCreate(generics.ListCreateAPIView):
     serializer_class = MemeberSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer):        
         serializer.save()
 
 class MemberUpdateView(generics.UpdateAPIView):
@@ -503,7 +503,7 @@ class ForumMemberCreateView(generics.CreateAPIView):
         forum_id = request.data.get('forum')
         selected_members = request.data.get('members', [])
 
-        # Check if a forum member already exists for the given forum
+        
         existing_forum_member = ForumMember.objects.filter(forum_id=forum_id).first()
         if existing_forum_member:
             return Response({"error": "Forum member already exists for this forum."}, status=status.HTTP_400_BAD_REQUEST)
@@ -524,16 +524,28 @@ class ForumMemberListView(APIView):
         try:           
             forum_members = ForumMember.objects.filter(forum=forum_id)            
             serializer = ForumMemberSerializer(forum_members, many=True)
+       
             return Response(serializer.data)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
  
  
- 
+class ForumExcludeView(APIView):
+    def get(self, request, forum_id):
+        try:
+            all_members = Member.objects.all()
+            forum_members = ForumMember.objects.filter(forum=forum_id).values_list('member_id', flat=True)
+            members_not_in_forum = all_members.exclude(id__in=forum_members)
+            serializer = MemeberSerializer(members_not_in_forum, many=True)
+            print("serializer",serializer.data)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
  
 class ForumMemberView(APIView):
     def put(self, request, forum_id, format=None):
+        print("request",request.data)
         try:
             forum_member = ForumMember.objects.get(forum_id=forum_id)
         except ForumMember.DoesNotExist:
@@ -544,15 +556,15 @@ class ForumMemberView(APIView):
         print("kkkkk", selected_members)
         print("DDDDD", deleted_members)
         
-        # Add new members
+    
         if selected_members:
             forum_member.member.add(*selected_members)
 
-        # Remove deleted members
+    
         if deleted_members:
             forum_member.member.remove(*deleted_members)
 
-        # Add previously deleted members back to the forum if re-added
+      
         for member_id in deleted_members:
             if member_id in selected_members:
                 forum_member.member.add(member_id)
@@ -775,26 +787,70 @@ class ForumMemberList(generics.ListAPIView):
           
 class AddBoardMember(APIView):
     def post(self, request, format=None):
-        print("Request Data:", request.data)   
-        
-        serializer = BoardMemberSerializer(data=request.data)
+        board_member_id = request.data.get('id')
+        if board_member_id:
+            try:
+                board_member = BoardMember.objects.get(id=board_member_id)
+            except BoardMember.DoesNotExist:
+                return Response({"message": "Board member not found."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            board_member = BoardMember.objects.create()  # Create a new board member if ID not provided
+
+        serializer = BoardMemberSerializer(board_member, data=request.data)
+
         if serializer.is_valid():
-            print("Validated Data:", serializer.validated_data)   
-            serializer.save()   
-            print("Saved Data:", serializer.data)  
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print("Validation Errors:", serializer.errors)   
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ForumListView(APIView):
+    def get(self, request, format=None):
+    
+        forums = Forum.objects.all()
+       
+     
+        forums_with_members = ForumMember.objects.values_list('forum_id', flat=True).distinct()
+       
+
+       
+        filtered_forums = forums.exclude(id__in=forums_with_members)
+
+        serializer = ForumSerializer(filtered_forums, many=True)
+       
+        return Response(serializer.data)
 
 
+class ForumLisMembertView(APIView):
+    def get(self, request, format=None):
+       
+        forums = Forum.objects.all()
+        
+       
+        forums_with_members = ForumMember.objects.values_list('forum_id', flat=True).distinct()
+        
+       
+        filtered_forums = forums.filter(id__in=forums_with_members)
+        
+     
+        serializer = ForumSerializer(filtered_forums, many=True)
+ 
+        return Response(serializer.data)
 
 
+# class MemberExist(generics.ListAPIView):
+#     serializer_class = ForumMemberSerializer
+#     queryset = ForumMember.objects.all()
 
-
-
-
+#     def get_queryset(self):
+ 
+#         forum_id = self.request.query_params.get('forum_id')
+#         print("forum", forum_id)
+      
+#         if forum_id:
+#             return ForumMember.objects.filter(forum_id=forum_id)
+#         else:
+#             return ForumMember.objects.none()
 
 
 

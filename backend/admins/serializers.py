@@ -273,9 +273,20 @@ class NewsSerializer(serializers.ModelSerializer):
         model = News
         fields = ['id','text', 'date']
 
+
 class BoardMemberSerializer(serializers.ModelSerializer):
-    member = MemeberSerializer(many=True, read_only=True)
+    members = serializers.ListField(
+        child=serializers.PrimaryKeyRelatedField(queryset=Member.objects.all()), 
+        write_only=True
+    )
 
     class Meta:
-        model = ForumMember
-        fields = ['id', 'member']
+        model = BoardMember
+        fields = ['id', 'members']
+
+    def update(self, instance, validated_data):
+        members = validated_data.pop('members')
+        instance.members.set(members)  
+        instance.save()
+        return instance
+

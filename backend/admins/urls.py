@@ -42,5 +42,8 @@ urlpatterns = [
     path('news/<int:pk>/delete/', NewsDeleteView.as_view(), name='news-delete'),
     path('forums/<int:forum_id>/members/', ForumMemberList.as_view(), name='forum-members'),
     path('boardmember/', AddBoardMember.as_view(), name='add_board_member'),
+    path('forums_get/',  ForumListView.as_view(), name='forum-get'),
+    path('forums_get_member/',  ForumLisMembertView.as_view(), name='forum-get_member'),
+    path('members_exclude/<int:forum_id>/', ForumExcludeView.as_view(), name='forum_exclude'),
 ]     
  
