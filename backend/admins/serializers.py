@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember
+from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -140,10 +140,10 @@ class EventBannerSerializer(serializers.ModelSerializer):
     
 class MemeberSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False)  
-
+    slug = serializers.SlugField() 
     class Meta:
         model = Member
-        fields = ['id','name', 'qualification', 'recent_job_title','additional_job_titles','image','previous_work_experience','publications','current_research','conference','additional_information','achievements','areas']
+        fields = ['id','name','slug', 'qualification', 'recent_job_title','additional_job_titles','image','previous_work_experience','publications','current_research','conference','additional_information','achievements','areas']
         
         
 class ForumMemberSerializer(serializers.ModelSerializer):
@@ -274,19 +274,17 @@ class NewsSerializer(serializers.ModelSerializer):
         fields = ['id','text', 'date']
 
 
+ 
+
+class BoardSerializer(serializers.ModelSerializer):
+   
+    class Meta:
+        model = Board
+        fields = ['id','title' ]
+        
 class BoardMemberSerializer(serializers.ModelSerializer):
-    members = serializers.ListField(
-        child=serializers.PrimaryKeyRelatedField(queryset=Member.objects.all()), 
-        write_only=True
-    )
+    member = MemeberSerializer(many=True, read_only=True)
 
     class Meta:
         model = BoardMember
-        fields = ['id', 'members']
-
-    def update(self, instance, validated_data):
-        members = validated_data.pop('members')
-        instance.members.set(members)  
-        instance.save()
-        return instance
-
+        fields = ['id','board', 'member']

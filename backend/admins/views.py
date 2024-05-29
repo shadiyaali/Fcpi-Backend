@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,SpeakerSerializer,BoardMemberSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember
+from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -838,24 +838,243 @@ class ForumLisMembertView(APIView):
         return Response(serializer.data)
 
 
-# class MemberExist(generics.ListAPIView):
-#     serializer_class = ForumMemberSerializer
-#     queryset = ForumMember.objects.all()
+class BoardListCreate(generics.ListCreateAPIView):
+    queryset = Board.objects.all()
+    serializer_class = BoardSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
-#     def get_queryset(self):
- 
-#         forum_id = self.request.query_params.get('forum_id')
-#         print("forum", forum_id)
+    def perform_create(self, serializer):
+        
+        serializer.save()
+
+
+class BoardUpdateView(generics.UpdateAPIView):
+    queryset = Board.objects.all()
+    serializer_class = BoardSerializer
+
+class BoardDeleteView(generics.DestroyAPIView):
+    queryset = Board.objects.all()
+    serializer_class = BoardSerializer
+
+
+
+class BoardListView(APIView):
+    def get(self, request, format=None):
+        boards = Board.objects.all()
       
-#         if forum_id:
-#             return ForumMember.objects.filter(forum_id=forum_id)
-#         else:
-#             return ForumMember.objects.none()
+        boards_with_members = BoardMember.objects.values_list('board_id', flat=True).distinct()
+      
+        filtered_boards = boards.exclude(id__in=boards_with_members)
+        serializer = BoardSerializer(filtered_boards, many=True)
+        
+        return Response(serializer.data)
+    
+
+class BoardLisMembertView(APIView):
+    def get(self, request, format=None):
+               
+        boards = Board.objects.all() 
+        print("All boards:", boards)     
+        boards_with_members = BoardMember.objects.values_list('board_id', flat=True).distinct() 
+        print("Boards with members:", boards_with_members)    
+        filtered_boards = boards.filter(id__in=boards_with_members)    
+        serializer = BoardSerializer(filtered_boards, many=True)
+        print("serializer.data 2",serializer.data)
+        return Response(serializer.data)
+    
+class BoardExcludeView(APIView):
+    def get(self, request, board_id):
+        try:
+            all_members = Board.objects.all()
+            board_members = BoardMember.objects.filter(board=board_id).values_list('member_id', flat=True)
+            members_not_in_board = all_members.exclude(id__in=board_members)
+            serializer = MemeberSerializer(members_not_in_board, many=True)
+            print("serializer",serializer.data)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class BoardMemberCreateView(generics.CreateAPIView):
+    serializer_class = BoardMemberSerializer
+
+    def create(self, request, *args, **kwargs):
+        board_id = request.data.get('board')
+        selected_members = request.data.get('members', [])
+
+        # Check if the board exists
+        try:
+            board = Board.objects.get(pk=board_id)
+        except Board.DoesNotExist:
+            return Response({"error": "Board does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if a BoardMember already exists for this board
+        existing_board_member = BoardMember.objects.filter(board_id=board_id).first()
+        if existing_board_member:
+            return Response({"error": "Board member already exists for this board."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create the BoardMember
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        board_member_instance = serializer.save()
+
+        # Associate selected members with the BoardMember
+        board_member_instance.member.add(*selected_members)
+
+        return Response({"message": "Board member created successfully."}, status=status.HTTP_201_CREATED)
 
 
+class BoardMemberListView(APIView):
+    def get(self, request, board_id):
+        try:           
+            board_members = BoardMember.objects.filter(board=board_id)            
+            serializer = BoardMemberSerializer(board_members, many=True)
+       
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 
+class BoardMemberView(APIView):
+    def put(self, request, board_id, format=None):  # Corrected parameter name to board_id
+        print("request", request.data)
+        try:
+            board_member = BoardMember.objects.get(board_id=board_id)
+        except BoardMember.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        selected_members = request.data.get('members', [])
+        deleted_members = request.data.get('deleted_members', [])
+        print("kkkkk", selected_members)
+        print("DDDDD", deleted_members)
+        
+        if selected_members:
+            board_member.member.add(*selected_members)
+
+        if deleted_members:
+            board_member.member.remove(*deleted_members)
+
+        for member_id in deleted_members:
+            if member_id in selected_members:
+                board_member.member.add(member_id)
+
+        serializer = BoardMemberSerializer(board_member)
+        print("ssssss", serializer.data)
+        return Response(serializer.data)
+    
+    
+from django.db.models import Count
+from django.db.models.functions import Lower
+
+class AllBoardMembersView(APIView):
+    def get(self, request):
+        board_members = BoardMember.objects.all()
+        unique_members = {}
+
+     
+        for member in board_members:
+            unique_members[member.member.name] = member
+
+     
+        unique_members_list = list(unique_members.values())
+        
+        serializer = BoardMemberSerializer(unique_members_list, many=True)
+      
+        return Response(serializer.data)
+    
+    
+from django.http import JsonResponse
+from django.views import View
+from .models import Member  # Ensure you have the Member model
+
+class MemberDetailViewBySlug(View):
+    def get(self, request, slug):
+        try:
+            member = Member.objects.get(slug=slug)
+            data = {
+                'id': member.id,
+                'name': member.name,
+                'image': member.image.url if member.image else None,
+                'qualification': member.qualification,
+                'recentJobTitle': member.recent_job_title,
+                'additionalJobTitles': member.additional_job_titles,
+                'previousWorkExperience': member.previous_work_experience,
+                'publications': member.publications,
+                'currentResearch': member.current_research,
+                'conference': member.conference,
+                'additionalInformation': member.additional_information,
+                'achievements': member.achievements,
+                'areasOfInterest': member.areas,
+            }
+        
+            return JsonResponse(data)
+        except Member.DoesNotExist:
+            return JsonResponse({'error': 'Member not found'}, status=404)
 
 
+class EventForumListView(APIView):
+    def calculate_end_date(self, event):
+        single_events = event.single_events.all()
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
+
+    def get_event_status(self, event):
+        current_date = datetime.now().date()
+        start_date, end_date = self.calculate_end_date(event)
+        if start_date and end_date:
+            if current_date <= end_date:
+                return "Live" if current_date >= start_date else "Upcoming"
+            else:
+                return "Completed"
+        return "Upcoming"
+
+    def get(self, request, forum_id):
+     
+        events = Event.objects.filter(forum_id=forum_id)
+        
+        live_events = []
+        upcoming_events = []
+        completed_events = []
+
+        for event in events:
+            status = self.get_event_status(event)
+            if status == "Live":
+                live_events.append(event)
+            elif status == "Upcoming":
+                upcoming_events.append(event)
+            else:
+                completed_events.append(event)
+
+        live_events_data = []
+        upcoming_events_data = []
+        completed_events_data = []
+
+        for event in live_events:
+            start_date, end_date = self.calculate_end_date(event)
+            live_event_data = EventListSerializer(event).data
+            live_event_data['start_date'] = start_date
+            live_event_data['end_date'] = end_date
+            live_events_data.append(live_event_data)
+
+        for event in upcoming_events:
+            start_date, end_date = self.calculate_end_date(event)
+            upcoming_event_data = EventListSerializer(event).data
+            upcoming_event_data['start_date'] = start_date
+            upcoming_event_data['end_date'] = end_date
+            upcoming_events_data.append(upcoming_event_data)
+
+        for event in completed_events:
+            start_date, end_date = self.calculate_end_date(event)
+            completed_event_data = EventListSerializer(event).data
+            completed_event_data['start_date'] = start_date
+            completed_event_data['end_date'] = end_date
+            completed_events_data.append(completed_event_data)
+
+        return Response({
+            'live_events': live_events_data,
+            'upcoming_events': upcoming_events_data,
+            'completed_events': completed_events_data,
+        })

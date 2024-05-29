@@ -90,20 +90,34 @@ class MultiEvent(models.Model):
     single_speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='selected_events', default=None)
 
     
-class Member(models.Model):     
+import itertools 
+from django.utils.text import slugify
+from django.utils.crypto import get_random_string
+
+class Member(models.Model):
     name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
     qualification = models.CharField(max_length=100)
     recent_job_title = models.CharField(max_length=100)
     additional_job_titles = models.CharField(max_length=100)
     image = models.ImageField(upload_to='members/', null=True, blank=True)
     previous_work_experience = models.CharField(max_length=100)
-    publications =  models.CharField(max_length=100)
-    current_research =  models.CharField(max_length=100)
-    conference =  models.CharField(max_length=100)
-    additional_information =  models.CharField(max_length=100)
-    achievements =   models.CharField(max_length=100)
-    areas =  models.CharField(max_length=100)
-    
+    publications = models.CharField(max_length=100)
+    current_research = models.CharField(max_length=100)
+    conference = models.CharField(max_length=100)
+    additional_information = models.CharField(max_length=100)
+    achievements = models.CharField(max_length=100)
+    areas = models.CharField(max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = orig = slugify(self.name)
+            for x in itertools.count(1):
+                if not Member.objects.filter(slug=self.slug).exists():
+                    break
+                self.slug = '%s-%d' % (orig, x)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -151,6 +165,13 @@ class News(models.Model):
    text = models.TextField(null=True, blank=True)
    
      
-class BoardMember(models.Model):        
-    members = models.ManyToManyField(Member, related_name='board_members', blank=True)
+ 
+
+class Board(models.Model):
+    title = models.CharField(max_length=100)             
+    def __str__(self):
+        return self.title
     
+class BoardMember(models.Model):    
+    board = models.ForeignKey(Board, related_name='board', on_delete=models.CASCADE,null=True, blank=True)
+    member = models.ManyToManyField(Member, related_name='board_members', blank=True)

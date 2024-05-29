@@ -16,4 +16,5 @@ admin.site.register(Certificates)
 admin.site.register(Banner)
 admin.site.register(News)
 admin.site.register(BoardMember)
+admin.site.register(Board)
  
