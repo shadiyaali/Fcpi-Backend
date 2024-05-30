@@ -55,7 +55,14 @@ urlpatterns = [
     path('boardmembers/<int:board_id>/update/', BoardMemberView.as_view(), name='board_board_member'),
     path('allboardmembers/', AllBoardMembersView.as_view(), name='all_board_members'),
     path('members/<slug:slug>/detail/', MemberDetailViewBySlug.as_view(), name='member_detail_by_slug'),
-
-    path('forums/<int:forum_id>/events/', EventForumListView.as_view(), name='forum_events'),
+    path('forums/<slug:slug>/', EventForumListView.as_view(), name='forum-events'),
+    path('blogsforum/<slug:slug>/', BlogForumListView.as_view(), name='blog-list'),
+    path('forumsyear/<slug:slug>/', EventForumYearView.as_view(), name='forum-events'),
+    path('blogsyear/<slug:slug>/', BlogForumYearView.as_view(), name='blog-list'),
+    path('forum/<slug:slug>/events/', EventTodayView.as_view(), name='event-forum-list'),
+    path('forumweek/<slug:slug>/events/', EventThisWeekView.as_view(), name='eventweek-forum-list'),
+    path('forummonth/<slug:slug>/events/', EventThisMonthView.as_view(), name='eventmonth-forum-list'),
+    path('forumyear/<slug:slug>/events/', EventThisYearView.as_view(), name='eventyear-forum-list'),
+    path('blogs-detail/<slug:slug>/', BlogDetailView.as_view(), name='blog-detail'),
 ]     
  

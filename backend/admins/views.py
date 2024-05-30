@@ -1031,10 +1031,11 @@ class EventForumListView(APIView):
                 return "Completed"
         return "Upcoming"
 
-    def get(self, request, forum_id):
-     
-        events = Event.objects.filter(forum_id=forum_id)
-        
+    def get(self, request, slug):
+        forum = get_object_or_404(Forum, slug=slug)
+    
+        events = Event.objects.filter(forum=forum)
+
         live_events = []
         upcoming_events = []
         completed_events = []
@@ -1074,7 +1075,205 @@ class EventForumListView(APIView):
             completed_events_data.append(completed_event_data)
 
         return Response({
+            'forum': {
+                'title': forum.title,
+                'description': forum.description,
+                'image': forum.image.url if forum.image else None,
+            },
             'live_events': live_events_data,
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
+        
+        
+class BlogForumListView(APIView):
+    def get(self, request, slug):
+         
+        blogs = Blogs.objects.filter(forum__slug=slug)
+        print("blogs", blogs)
+        serializer = BlogSerializer(blogs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+class EventForumYearView(APIView):
+    def calculate_event_dates(self, event):
+        single_events = event.single_events.all()
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
+
+    def get_event_year(self, event):
+        start_date, _ = self.calculate_event_dates(event)
+        if start_date:
+            return start_date.year
+        return None
+
+    def serialize_event(self, event):
+        start_date, end_date = self.calculate_event_dates(event)
+        event_data = EventListSerializer(event).data
+        event_data['start_date'] = start_date
+        event_data['end_date'] = end_date
+        return event_data
+
+    def get(self, request, slug):
+        forum = get_object_or_404(Forum, slug=slug)
+        events = Event.objects.filter(forum=forum)
+
+        year_events = {}
+
+        for event in events:
+            event_year = self.get_event_year(event)
+            if event_year in [2024, 2023, 2022, 2021]:  # Filter events for specific years
+                if event_year not in year_events:
+                    year_events[event_year] = []
+                year_events[event_year].append(self.serialize_event(event))
+
+        forum_data = {
+            'title': forum.title,
+            'description': forum.description,
+            'image': forum.image.url if forum.image else None,
+        }
+
+        return Response({
+            'forum': forum_data,
+            'events': year_events,
+        })
+
+
+class BlogForumYearView(APIView):
+    def get(self, request, slug):
+  
+        years = [2024, 2023, 2022]
+        
+     
+        forum = get_object_or_404(Forum, slug=slug)
+        
+      
+        blogs = Blogs.objects.filter(forum=forum, date__year__in=years)
+        
+     
+        serializer = BlogSerializer(blogs, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+    
+class EventTodayView(APIView):
+    def get(self, request, slug):
+    
+        forum = get_object_or_404(Forum, slug=slug)
+    
+        current_date = datetime.now().date()
+        
+ 
+        events = Event.objects.filter(forum=forum, single_events__date=current_date).distinct()
+        
+    
+        events_data = EventListSerializer(events, many=True).data
+        
+        return Response({
+            'forum': {
+                'title': forum.title,
+                'description': forum.description,
+                'image': forum.image.url if forum.image else None,
+            },
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+
+from django.utils.timezone import now, timedelta
+
+
+       
+class EventThisWeekView(APIView):
+    def get(self, request, slug):
+        forum = get_object_or_404(Forum, slug=slug)
+        
+        
+        today = now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        
+        events = Event.objects.filter(forum=forum, single_events__date__range=[start_of_week, end_of_week]).distinct()
+        
+        events_data = EventListSerializer(events, many=True).data
+        
+        return Response({
+            'forum': {
+                'title': forum.title,
+                'description': forum.description,
+                'image': forum.image.url if forum.image else None,
+            },
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+import calendar       
+
+
+ 
+from datetime import timedelta
+
+class EventThisMonthView(APIView):
+    def get(self, request, slug):
+        forum = get_object_or_404(Forum, slug=slug)
+        
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        
+        # Calculate the end of the month
+        end_of_month = start_of_month.replace(day=calendar.monthrange(start_of_month.year, start_of_month.month)[1])
+        
+        # Filter events for the current month only
+        events = Event.objects.filter(
+            forum=forum, 
+            single_events__date__gte=start_of_month, 
+            single_events__date__lt=end_of_month + timedelta(days=1)  # Filter out events occurring after the end of the month
+        ).distinct()
+        
+        events_data = EventListSerializer(events, many=True).data
+        
+        return Response({
+            'forum': {
+                'title': forum.title,
+                'description': forum.description,
+                'image': forum.image.url if forum.image else None,
+            },
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+
+
+class EventThisYearView(APIView):
+    def get(self, request, slug):
+        forum = get_object_or_404(Forum, slug=slug)
+        
+        today = timezone.now().date()
+        start_of_year = today.replace(month=1, day=1)
+        end_of_year = today.replace(month=12, day=31)
+        
+        # Filter events for the current year only
+        events = Event.objects.filter(
+            forum=forum, 
+            single_events__date__gte=start_of_year, 
+            single_events__date__lte=end_of_year
+        ).distinct()
+        
+        events_data = EventListSerializer(events, many=True).data
+        
+        return Response({
+            'forum': {
+                'title': forum.title,
+                'description': forum.description,
+                'image': forum.image.url if forum.image else None,
+            },
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+        
+class BlogDetailView(APIView):
+    def get(self, request, slug):
+        blog = get_object_or_404(Blogs, slug=slug)
+        serializer = BlogSerializer(blog)
+        print("ssss",serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)

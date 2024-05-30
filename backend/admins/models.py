@@ -18,10 +18,15 @@ class Forum(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     image = models.ImageField(upload_to='forum_images/', null=True, blank=True)
-             
+    slug = models.SlugField(unique=True, blank=True, null=True)
+
     def __str__(self):
         return self.title
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
  
 
 class Speaker(models.Model):
@@ -137,7 +142,15 @@ class Blogs(models.Model):
     date = models.DateField(null=True)
     blog_banner = models.ImageField(upload_to='blogs_banner/', null=True, blank=True)
     author_profile = models.ImageField(upload_to='author_profile/', null=True, blank=True)
-      
+    slug = models.SlugField(unique=True, blank=True, null=True)
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)  
     def __str__(self):
         return self.title  
     

@@ -14,13 +14,11 @@ class AdminSerializer(serializers.ModelSerializer):
         return Admin.objects.create_admin(**validated_data)
 
 class ForumSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(required=False)  
+    image = serializers.ImageField(required=False) 
 
     class Meta:
         model = Forum
-        fields = ['id','title', 'description', 'image']
-        
-  
+        fields = ['id', 'slug', 'title', 'description', 'image']
 
 class SpeakerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -211,10 +209,11 @@ class BlogSerializer(serializers.ModelSerializer):
     blog_contents = BlogContentsSerializer(many=True, required=False)
     blog_banner = serializers.ImageField(use_url=True)
     author_profile = serializers.ImageField(use_url=True)
+    forum_title = serializers.CharField(source='forum.title')
 
     class Meta:
         model = Blogs
-        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
+        fields = ['id', 'forum','slug', 'title', 'author','forum_title', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
 
 
 class BlogsFormSerializer(serializers.ModelSerializer):
