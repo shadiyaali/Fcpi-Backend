@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User,UserRole,UserProfile,Feedback
+from .models import User,UserRole,UserProfile,Feedback,Enrolled
 from admins.models import Event,Certificates,SingleEvent
 from admins.serializers import EventSerializer,SingleEventlistSerializer
     
@@ -57,7 +57,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-
+ 
  
  
 
@@ -71,8 +71,7 @@ class FeedbackSerializer(serializers.ModelSerializer):
         model = Feedback
         fields = [
             'id',
-            'single_event',  
-                                             
+            'single_event',                                               
             'presentation_content',
             'speaker_delivery',
             'presentation_duration',
@@ -142,4 +141,21 @@ class UserlistSerializer(serializers.ModelSerializer):
         fields = ['id', 'first_name','last_name' ,'email']
         
         
+
+
+class EnrolledSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Enrolled
+        fields = ['user', 'event']
+        
+
  
+class ChangePasswordSerializer(serializers.Serializer):
+   
+    new_password = serializers.CharField(required=True)
+    confirm_password = serializers.CharField(required=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError("The new password and confirm password must match.")
+        return data

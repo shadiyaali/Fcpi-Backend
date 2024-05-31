@@ -95,8 +95,9 @@ class Feedback(models.Model):
     class Meta:
         unique_together = ('single_event', 'created_at')
 
+class Enrolled(models.Model):    
+    user = models.ForeignKey(User, related_name='userevent', on_delete=models.CASCADE, null=True, blank=True)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='event_enrollments')
 
 
-
-
-    
+ 

@@ -1277,3 +1277,68 @@ class BlogDetailView(APIView):
         serializer = BlogSerializer(blog)
         print("ssss",serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+class EventUserToday(APIView):
+    def get(self, request):
+        current_date = timezone.now().date()
+        events = Event.objects.filter(single_events__date=current_date).distinct()
+
+        events_data = EventListSerializer(events, many=True).data
+
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+        
+class EventUserThisWeek(APIView):
+    def get(self, request):
+        today = now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        events = Event.objects.filter(single_events__date__range=[start_of_week, end_of_week]).distinct()
+        events_data = EventListSerializer(events, many=True).data
+        
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+class EventThisMonthUser(APIView):
+    def get(self, request):
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        
+        # Calculate the end of the month
+        end_of_month = start_of_month.replace(day=calendar.monthrange(start_of_month.year, start_of_month.month)[1])
+        
+        # Filter events for the current month only
+        events = Event.objects.filter(
+            single_events__date__gte=start_of_month, 
+            single_events__date__lt=end_of_month + timedelta(days=1)  # Filter out events occurring after the end of the month
+        ).distinct()
+        
+        events_data = EventListSerializer(events, many=True).data
+        
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+        
+class EventThisYearUser(APIView):
+    def get(self, request):
+        today = timezone.now().date()
+        start_of_year = today.replace(month=1, day=1)
+        end_of_year = today.replace(month=12, day=31)
+        
+        # Filter events for the current year only
+        events = Event.objects.filter(
+            single_events__date__gte=start_of_year, 
+            single_events__date__lte=end_of_year
+        ).distinct()
+        
+        events_data = EventListSerializer(events, many=True).data
+        
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)

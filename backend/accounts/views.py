@@ -23,6 +23,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from admins.models import Certificates,Event,SingleEvent
+from admins.serializers import EventListSerializer,SingleEventsSerializer
  
  
  
@@ -267,13 +268,13 @@ class UserProfileView(APIView):
             user_profile = UserProfile.objects.get(user=user)
             profile_serializer = UserProfileSerializer(user_profile)
             profile_data = profile_serializer.data  
-            print("Profile Data:", profile_data)
+            # print("Profile Data:", profile_data)
             
          
             user_instance = User.objects.get(pk=user.pk)
             user_serializer = UserSerializer(user_instance)
             user_data = user_serializer.data
-            print("User Data:", user_data)
+            # print("User Data:", user_data)
  
             response_data = {
                 'user': user_data,
@@ -285,7 +286,7 @@ class UserProfileView(APIView):
             user_instance = User.objects.get(pk=user.pk)
             user_serializer = UserSerializer(user_instance)
             user_data = user_serializer.data
-            print("User Data:", user_data)
+            # print("User Data:", user_data)
             return Response({'user': user_data}, status=status.HTTP_200_OK)
         except Exception as e:
             print("Error:", e)
@@ -412,18 +413,27 @@ class UserProfileAPIView(APIView):
         print("Request data:", request.data)
         try:
             user_profile = UserProfile.objects.get(user_id=user_id)
+            user = user_profile.user  # Get the related User object
 
             if request.data:
+                # Update UserProfile
                 serializer = UserProfileSerializer(user_profile, data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save()
+
+                    # Update User object with first name and last name
+                    user.first_name = request.data.get('first_name', user.first_name)
+                    user.last_name = request.data.get('last_name', user.last_name)
+                    user.save()
+
                     return Response(serializer.data, status=status.HTTP_200_OK)
                 else:
                     print("Serializer errors:", serializer.errors)
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             serializer = UserProfileSerializer(user_profile)
-            print("sss", serializer.data)
+            print("Profile Data:", serializer.data)
+            print("User Data:", {'id': user.id, 'first_name': user.first_name, 'last_name': user.last_name, 'email': user.email, 'phone': user.phone})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except UserProfile.DoesNotExist:
             return Response({"message": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -431,3 +441,126 @@ class UserProfileAPIView(APIView):
             print("EEE", e)
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+class EnrollEvent(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, event_id):
+        event = get_object_or_404(Event, id=event_id)
+        user = request.user
+        
+        if Enrolled.objects.filter(user=user, event=event).exists():
+            return Response({"detail": "You are already enrolled in this event."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        enrollment_data = {'user': user.id, 'event': event.id}
+        serializer = EnrolledSerializer(data=enrollment_data)
+        if serializer.is_valid():
+            serializer.save()
+            
+            event.is_enrolled = True
+            event.save()
+            
+            subject = 'Enrollment Confirmation'
+            message = f'Hello {user.first_name} {user.last_name}\n\nYou have successfully enrolled in the event: {event.event_name}.\n\nThank you!'
+            from_email = settings.EMAIL_HOST_USER   
+            to_email = [user.email]
+            send_mail(subject, message, from_email, to_email)
+            
+            return Response({"detail": "Successfully enrolled in the event."}, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class CheckEnrollmentView(APIView):
+    def get(self, request, event_id):
+       
+        if not request.user.is_authenticated:
+            return Response({"enrolled": False}, status=status.HTTP_401_UNAUTHORIZED)
+        
+      
+        event = get_object_or_404(Event, id=event_id)
+        user = request.user
+        is_enrolled = Enrolled.objects.filter(user=user, event=event).exists()
+        
+        return Response({"enrolled": is_enrolled})
+    
+from datetime import datetime  
+
+  
+
+
+class UserEnrolledEventListView(APIView):
+    def calculate_event_dates(self, event):
+        single_events = event.single_events.all()
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
+
+    def get_event_status(self, event):
+        current_date = datetime.now().date()
+        start_date, end_date = self.calculate_event_dates(event)
+        if start_date and end_date:
+            if current_date <= end_date:
+                return "Live" if current_date >= start_date else "Upcoming"
+            else:
+                return "Completed"
+        return "Upcoming"
+
+    def get(self, request, user_id):
+        user = get_object_or_404(User, id=user_id)
+
+        # Fetch enrolled events for the user
+        enrolled_events = Enrolled.objects.filter(user=user).select_related('event')
+
+        events_data = []
+
+        # Categorize events based on their status
+        for enrollment in enrolled_events:
+            event = enrollment.event
+            event_status = self.get_event_status(event)
+            event_data = EventListSerializer(event).data
+            event_data['status'] = event_status
+            events_data.append(event_data)
+
+        return Response({
+            'events': events_data
+        })
+from django.contrib.auth.hashers import make_password
+
+class ChangePasswordAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            new_password = serializer.validated_data.get('new_password')
+            confirm_password = serializer.validated_data.get('confirm_password')
+
+            # Check if the new password and confirmation password match
+            if new_password != confirm_password:
+                return Response({'error': 'New password and confirmation password do not match.'}, status=status.HTTP_400_BAD_REQUEST)
+
+           
+            request.user.password = make_password(new_password)
+            request.user.save()
+            
+            return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class EventPointsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user_feedback = Feedback.objects.filter(user=request.user)
+            single_events = [feedback.single_event for feedback in user_feedback]
+            serializer = SingleEventsSerializer(single_events, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

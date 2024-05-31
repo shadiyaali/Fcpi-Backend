@@ -3,6 +3,7 @@ from .manager import AdminManager
 from django.contrib.auth.models import AbstractUser
  
  
+ 
 class Admin(AbstractUser):
     is_admin = models.BooleanField(default=True)
     groups = models.ManyToManyField('auth.Group', related_name='admins_admin_set')
@@ -56,7 +57,7 @@ class Event(models.Model):
     date = models.DateField(null=True) 
     days = models.IntegerField(null=True)
     banner = models.ImageField(upload_to='event_banners/', null=True, blank=True)
-    
+   
     def __str__(self):
         return self.event_name
 
@@ -188,3 +189,27 @@ class Board(models.Model):
 class BoardMember(models.Model):    
     board = models.ForeignKey(Board, related_name='board', on_delete=models.CASCADE,null=True, blank=True)
     member = models.ManyToManyField(Member, related_name='board_members', blank=True)
+
+
+
+from rest_framework import serializers
+
+class EventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = ('id', 'event_name', 'speakers', 'date', 'days', 'banner')
+
+class SingleEventsSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+    highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+    youtube_link = serializers.URLField()
+    points = serializers.DecimalField(max_digits=5, decimal_places=2)
+    event = EventSerializer()
+
+    def create(self, validated_data):
+        # Implementation of create method
+        pass
+
+    class Meta:
+        model = SingleEvent
+        fields = ('id', 'highlights', 'youtube_link', 'points', 'event')

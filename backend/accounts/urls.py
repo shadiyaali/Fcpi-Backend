@@ -21,5 +21,9 @@ urlpatterns = [
     path('ecertificate/', CertificateView.as_view(), name='certificate-view'),
     path('usercertificate/', AuthenticatedUserView.as_view(), name='authenticated-user'),
     path('user/<int:user_id>/', UserProfileAPIView.as_view(), name='user_profile_api'),
- 
+    path('enroll/<int:event_id>/', EnrollEvent.as_view(), name='enroll_event'),
+    path('check-enrollment/<int:event_id>/', CheckEnrollmentView.as_view(), name='check_enrollment'),
+    path('users/<int:user_id>/enrolled-events/', UserEnrolledEventListView.as_view(), name='user_enrolled_events'),
+    path('change-password/', ChangePasswordAPIView.as_view(), name='change_password'),
+    path('event-points/', EventPointsAPIView.as_view(), name='event_points'),
 ]
