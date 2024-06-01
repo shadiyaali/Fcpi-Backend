@@ -446,8 +446,8 @@ class UserProfileAPIView(APIView):
 class EnrollEvent(APIView):
     permission_classes = [IsAuthenticated]
     
-    def post(self, request, event_id):
-        event = get_object_or_404(Event, id=event_id)
+    def post(self, request, slug):
+        event = get_object_or_404(Event, slug=slug)
         user = request.user
         
         if Enrolled.objects.filter(user=user, event=event).exists():
@@ -474,13 +474,11 @@ class EnrollEvent(APIView):
 
 
 class CheckEnrollmentView(APIView):
-    def get(self, request, event_id):
-       
+    def get(self, request, slug):
         if not request.user.is_authenticated:
             return Response({"enrolled": False}, status=status.HTTP_401_UNAUTHORIZED)
         
-      
-        event = get_object_or_404(Event, id=event_id)
+        event = get_object_or_404(Event, slug=slug)
         user = request.user
         is_enrolled = Enrolled.objects.filter(user=user, event=event).exists()
         
@@ -564,3 +562,17 @@ class EventPointsAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+class SingleUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.is_authenticated:
+       
+            user = request.user
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        else:
+            
+            return Response({'error': 'User is not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)

@@ -57,10 +57,13 @@ class Event(models.Model):
     date = models.DateField(null=True) 
     days = models.IntegerField(null=True)
     banner = models.ImageField(upload_to='event_banners/', null=True, blank=True)
-   
+    slug = models.SlugField(unique=True, blank=True, null=True)
     def __str__(self):
         return self.event_name
-
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.event_name)
+        super().save(*args, **kwargs)
 
 
 class SingleEvent(models.Model):

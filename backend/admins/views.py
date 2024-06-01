@@ -123,6 +123,13 @@ class EventListCreate(APIView):
             start_date = datetime.strptime(event_data['date'], '%Y-%m-%d') if event_data['date'] else None
             dates = [start_date + timedelta(days=i) for i in range(event_data['days'])] if start_date else []
 
+            print("Event Data before serialization:", event_data)
+
+            # Validate forum
+            forum_id = event_data.get('forum')
+            if not Forum.objects.filter(id=forum_id).exists():
+                return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
+
             event_serializer = EventSerializer(data=event_data)
             if event_serializer.is_valid():
                 event = event_serializer.save()
@@ -131,12 +138,11 @@ class EventListCreate(APIView):
                 return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             single_events_data = request.data.getlist('single_events[]')
-            print("Event Data:", event_data)
             print("Single Events Data:", single_events_data)
 
             for date_index, date in enumerate(dates):
                 single_event_data_dict = json.loads(single_events_data[date_index])
-                single_event_data_dict['date'] = date.strftime('%Y-%m-%d')    
+                single_event_data_dict['date'] = date.strftime('%Y-%m-%d')
                 single_event_data_dict['day'] = date_index + 1  # Assign day number
                 single_serializer = SingleEventSerializer(data=single_event_data_dict)
                 if single_serializer.is_valid():
@@ -168,7 +174,6 @@ class EventListCreate(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 
@@ -322,9 +327,9 @@ class SingleEventDetailView(APIView):
         end_date = datetime.strptime(end_date, '%Y-%m-%d')
         return end_date.strftime('%Y-%m-%d')
 
-    def get(self, request, event_id):
+    def get(self, request, slug):
         try:
-            event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), pk=event_id)
+            event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), slug=slug)
             serialized_data = EventListSerializer(event, context={'request': request}).data
             print(serialized_data)
 
@@ -357,16 +362,14 @@ class SingleEventDetailView(APIView):
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
  
 
 from django.utils import timezone
 
 class SingleDetailView(APIView):
-    def get(self, request, event_id):
+    def get(self, request, slug):
         try:
-            event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events'), pk=event_id)
+            event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events'), slug=slug)
             serialized_data = EventListSerializer(event, context={'request': request}).data
             
             serialized_single_events = []
@@ -392,15 +395,15 @@ class SingleDetailView(APIView):
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
+
      
             
 class EventSpeakersView(APIView):
-    def get(self, request, event_id):
-        event = get_object_or_404(Event, pk=event_id)
+    def get(self, request, slug):
+        event = get_object_or_404(Event, slug=slug)
         serializer = EventSpeakerSerializer(event)
         print("vvvvvvvvvvvvvvvvv",serializer.data)
         return Response(serializer.data)
-
 
 class EventListbannerView(APIView):
     def calculate_end_date(self, event):

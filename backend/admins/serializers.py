@@ -32,7 +32,7 @@ class EventSpeakerSerializer(serializers.ModelSerializer):
     speakers = SpeakerSerializer(many=True)  
     class Meta:
         model = Event
-        fields = ['id', 'speakers']
+        fields = ['id', 'slug','speakers']
   
 
  
@@ -104,7 +104,7 @@ class EventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['id', 'forum', 'event_name', 'speakers', 'date', 'days', 'banner', 'single_events']
+        fields = ['id', 'forum','slug', 'event_name', 'speakers', 'date', 'days', 'banner', 'single_events']
 
 
 
@@ -116,7 +116,7 @@ class EventListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['id', 'event_name', 'date', 'forum', 'forum_name', 'days', 'banner', 'single_events' ]
+        fields = ['id','slug', 'event_name', 'date', 'forum', 'forum_name', 'days', 'banner', 'single_events' ]
 
     def get_forum_name(self, obj):
         return obj.forum.title if obj.forum else None
@@ -294,7 +294,8 @@ from rest_framework import serializers
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = ('id', 'event_name', 'speakers', 'date', 'days', 'banner')
+        fields = ('id', 'event_name', 'slug', 'speakers', 'date', 'days', 'banner', 'forum')
+
 
 class SingleEventsSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
