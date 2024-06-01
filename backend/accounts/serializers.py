@@ -159,3 +159,5 @@ class ChangePasswordSerializer(serializers.Serializer):
         if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError("The new password and confirm password must match.")
         return data
+
+

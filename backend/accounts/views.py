@@ -564,15 +564,33 @@ class EventPointsAPIView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         
-class SingleUserView(APIView):
-    permission_classes = [IsAuthenticated]
+# views.py
+class UserDetailView(APIView):
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            user_profile = UserProfile.objects.get(user=user)
+            serializer_user = UserSerializer(user)
+            serializer_profile = UserProfileSerializer(user_profile)
+            return Response({"user": serializer_user.data, "profile": serializer_profile.data})
+        except (User.DoesNotExist, UserProfile.DoesNotExist):
+            return Response({'error': 'User profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-    def get(self, request):
-        if request.user.is_authenticated:
-       
-            user = request.user
-            serializer = UserSerializer(user)
-            return Response(serializer.data)
+
+        
+        
+
+class UserProfileUpdateView(APIView):
+    def put(self, request, user_id):
+        try:
+            user_profile = UserProfile.objects.get(user__id=user_id)
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'User profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+        print('Request Data:', request.data)  # Log request data
+        serializer = UserProfileSerializer(user_profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            
-            return Response({'error': 'User is not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

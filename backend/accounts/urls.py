@@ -26,5 +26,6 @@ urlpatterns = [
     path('users/<int:user_id>/enrolled-events/', UserEnrolledEventListView.as_view(), name='user_enrolled_events'),
     path('change-password/', ChangePasswordAPIView.as_view(), name='change_password'),
     path('event-points/', EventPointsAPIView.as_view(), name='event_points'),
-    path('singleuser/', SingleUserView.as_view(), name='single_user'),
+    path('singleuser/<int:user_id>/', UserDetailView.as_view(), name='user-detail'),
+    path('user/userprofile/<int:user_id>/',UserProfileUpdateView.as_view(), name='user-profile-update'),
 ]
