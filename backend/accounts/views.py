@@ -564,7 +564,7 @@ class EventPointsAPIView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         
-# views.py
+ 
 class UserDetailView(APIView):
     def get(self, request, user_id):
         try:
@@ -587,7 +587,7 @@ class UserProfileUpdateView(APIView):
         except UserProfile.DoesNotExist:
             return Response({'error': 'User profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-        print('Request Data:', request.data)  # Log request data
+        print('Request Data:', request.data)   
         serializer = UserProfileSerializer(user_profile, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

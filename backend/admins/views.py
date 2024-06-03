@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
@@ -178,12 +178,19 @@ class EventListCreate(APIView):
 
 
 
-
-
-
+class EventListSingleView(APIView):
+    def get(self, request, pk):   
+        try:
+            event = Event.objects.get(id=pk)   
+            serializer = EventSingleSerializer(event)   
+            return Response(serializer.data)
+        except Event.DoesNotExist:  
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:   
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     
-class EventListView(APIView):
+class EventListAllView(APIView):
     def get(self, request):
         events = Event.objects.all()
         serializer = EventListSerializer(events, many=True)
@@ -191,35 +198,81 @@ class EventListView(APIView):
         return Response(serializer.data)
     
     
-class EditEventAPIView(APIView):
-    
-    def put(self, request, pk):
+class EventUpdateView(APIView):
+    @transaction.atomic
+    def put(self, request, event_id):
         try:
-           
-            event = Event.objects.get(pk=pk)
+            print("Request Data:", request.data)
             
-           
-            serializer = EventSerializer(event, data=request.data, partial=True)
+            # Fetch existing event
+            try:
+                event = Event.objects.get(id=event_id)
+            except Event.DoesNotExist:
+                return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            print(request.data)   
-      
-            if serializer.is_valid():
-          
-                serializer.save()
-                print(serializer.data,'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwww')  
-                
- 
-                return Response(serializer.data)
+            # Extract event data from request
+            event_data = {
+                'event_name': request.data.get('event_name'),
+                'date': None,
+                'days': int(request.data.get('days')),  
+                'forum': request.data.get('forum'),
+                'speakers': [speaker.strip('"') for speaker in request.data.getlist('speakers[]')],
+                'banner': request.data.get('banner')
+            }
+
+            # Handle date format conversion
+            date_str = request.data.get('date')
+            if date_str:
+                event_data['date'] = datetime.strptime(date_str, '%d-%m-%Y').strftime('%Y-%m-%d')
+
+            start_date = datetime.strptime(event_data['date'], '%Y-%m-%d') if event_data['date'] else None
+            dates = [start_date + timedelta(days=i) for i in range(event_data['days'])] if start_date else []
+
+            print("Event Data before serialization:", event_data)
+
+            # Validate forum
+            forum_id = event_data.get('forum')
+            if not Forum.objects.filter(id=forum_id).exists():
+                return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
+
+            event_serializer = EventSerializer(event, data=event_data, partial=True)
+            if event_serializer.is_valid():
+                event = event_serializer.save()
             else:
-           
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Event.DoesNotExist:
-    
-            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+                print("Event Serializer Errors:", event_serializer.errors)
+                return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            single_events_data = request.data.getlist('single_events[]')
+            print("Single Events Data:", single_events_data)
+
+            # Clear existing single events and multi events
+            SingleEvent.objects.filter(event=event).delete()
+
+            for date_index, date in enumerate(dates):
+                single_event_data_dict = json.loads(single_events_data[date_index])
+                single_event_data_dict['date'] = date.strftime('%Y-%m-%d')
+                single_event_data_dict['day'] = date_index + 1  # Assign day number
+                single_serializer = SingleEventSerializer(data=single_event_data_dict)
+                if single_serializer.is_valid():
+                    single_instance = single_serializer.save(event=event, date=date, day=date_index + 1)
+                else:
+                    print("Single Event Serializer Errors:", single_serializer.errors)
+                    return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                multi_events_data = single_serializer.validated_data.get('multi_events', [])
+                for multi_event_data in multi_events_data:
+                    multi_event_data['single_event'] = single_instance.id
+                    multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
+                    if multi_serializer.is_valid():
+                        multi_serializer.save()
+                    else:
+                        print("Multi Event Serializer Errors:", multi_serializer.errors)
+                        return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({'message': 'Event and associated data updated successfully'}, status=status.HTTP_200_OK)
         except Exception as e:
- 
-            print(e)
-            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print("Error:", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -1345,3 +1398,82 @@ class EventThisYearUser(APIView):
         return Response({
             'events': events_data,
         }, status=status.HTTP_200_OK)
+        
+        
+        
+        
+class EventUpdateView(APIView):
+    @transaction.atomic
+    def put(self, request, event_id):
+        try:
+            print("Request Data:", request.data)
+            
+            # Fetch existing event
+            try:
+                event = Event.objects.get(id=event_id)
+            except Event.DoesNotExist:
+                return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Extract event data from request
+            event_data = {
+                'event_name': request.data.get('event_name'),
+                'date': None,
+                'days': int(request.data.get('days')),  
+                'forum': request.data.get('forum'),
+                'speakers': [speaker.strip('"') for speaker in request.data.getlist('speakers[]')],
+                'banner': request.data.get('banner')
+            }
+
+            # Handle date format conversion
+            date_str = request.data.get('date')
+            if date_str:
+                event_data['date'] = datetime.strptime(date_str, '%d-%m-%Y').strftime('%Y-%m-%d')
+
+            start_date = datetime.strptime(event_data['date'], '%Y-%m-%d') if event_data['date'] else None
+            dates = [start_date + timedelta(days=i) for i in range(event_data['days'])] if start_date else []
+
+            print("Event Data before serialization:", event_data)
+
+            # Validate forum
+            forum_id = event_data.get('forum')
+            if not Forum.objects.filter(id=forum_id).exists():
+                return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
+
+            event_serializer = EventSerializer(event, data=event_data, partial=True)
+            if event_serializer.is_valid():
+                event = event_serializer.save()
+            else:
+                print("Event Serializer Errors:", event_serializer.errors)
+                return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            single_events_data = request.data.getlist('single_events[]')
+            print("Single Events Data:", single_events_data)
+
+            # Clear existing single events and multi events
+            SingleEvent.objects.filter(event=event).delete()
+
+            for date_index, date in enumerate(dates):
+                single_event_data_dict = json.loads(single_events_data[date_index])
+                single_event_data_dict['date'] = date.strftime('%Y-%m-%d')
+                single_event_data_dict['day'] = date_index + 1  # Assign day number
+                single_serializer = SingleEventSerializer(data=single_event_data_dict)
+                if single_serializer.is_valid():
+                    single_instance = single_serializer.save(event=event, date=date, day=date_index + 1)
+                else:
+                    print("Single Event Serializer Errors:", single_serializer.errors)
+                    return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                multi_events_data = single_serializer.validated_data.get('multi_events', [])
+                for multi_event_data in multi_events_data:
+                    multi_event_data['single_event'] = single_instance.id
+                    multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
+                    if multi_serializer.is_valid():
+                        multi_serializer.save()
+                    else:
+                        print("Multi Event Serializer Errors:", multi_serializer.errors)
+                        return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({'message': 'Event and associated data updated successfully'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print("Error:", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

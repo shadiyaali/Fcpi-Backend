@@ -121,7 +121,7 @@ class EventListSerializer(serializers.ModelSerializer):
     def get_forum_name(self, obj):
         return obj.forum.title if obj.forum else None
 
-     
+    
     
 class EventBannerSerializer(serializers.ModelSerializer):
     banner_image = serializers.SerializerMethodField()
@@ -312,3 +312,35 @@ class SingleEventsSerializer(serializers.ModelSerializer):
     class Meta:
         model = SingleEvent
         fields = ('id', 'highlights', 'youtube_link', 'points', 'event', 'day')
+
+
+
+class MultiSingleSerializer(serializers.ModelSerializer):
+    speaker_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MultiEvent
+        fields = ['id', 'starting_time', 'ending_time', 'topics', 'single_speaker', 'speaker_name']
+
+    def create(self, validated_data):
+        single_event = self.context['single_event']
+        multi_event = MultiEvent.objects.create(single_event=single_event, **validated_data)
+        return multi_event
+
+    def get_speaker_name(self, obj):
+        return obj.single_speaker.name if obj.single_speaker else None
+
+class SingleSingleSerializer(serializers.ModelSerializer):
+    multi_events = MultiSingleSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SingleEvent
+        fields = ['id', 'date', 'day', 'multi_events','youtube_link','points', 'highlights']
+
+class EventSingleSerializer(serializers.ModelSerializer):
+    single_events = SingleSingleSerializer(many=True, read_only=True)
+    speakers = SpeakerSerializer(many=True)  
+
+    class Meta:
+        model = Event
+        fields = ['id', 'event_name', 'date', 'days', 'forum', 'speakers', 'banner', 'single_events']
