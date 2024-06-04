@@ -48,6 +48,8 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=100, null=True, blank=True)
     pharmacy_college_name = models.CharField(max_length=100, null=True, blank=True)
     pharmacy_college_degree = models.CharField(max_length=100, null=True, blank=True)
+    pincode = models.IntegerField(null=True)
+    current_work_institution = models.CharField(max_length=100, null=True, blank=True)
 
  
 

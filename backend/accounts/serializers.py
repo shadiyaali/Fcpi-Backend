@@ -35,7 +35,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'date_of_birth', 'image', 'primary_position', 'state', 
                   'primary_pharmacy_degree', 'secondary_pharmacy_degree', 
                   'additional_degrees', 'city', 'country', 'pharmacy_college_name', 
-                  'pharmacy_college_degree']
+                  'pharmacy_college_degree','pincode','current_work_institution']
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
