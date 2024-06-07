@@ -69,5 +69,6 @@ urlpatterns = [
     path('eventsweek/', EventUserThisWeek.as_view(), name='event-week-list'),
     path('eventsmonth/', EventThisMonthUser.as_view(), name='event-month-list'),
     path('eventsyear/', EventThisYearUser.as_view(), name='event-year-list'),
+ 
 ]     
  

@@ -12,6 +12,7 @@ urlpatterns = [
     path('user-roles/', UserRoleListView.as_view(), name='user_roles_list'),
     path('create-roles/', UserRoleCreateView.as_view(), name='create_roles_create'),
     path('userlist/', UserListView.as_view(), name='user-list'),
+    path('useralllist/', UserAllListView.as_view(), name='user-list'),
     path('userprofile/', UserProfileCreateView.as_view(), name='user_profile'),
     path('userprofilelist/',  UserprofileListView.as_view(), name='user_profile_list'),
     path('user/<int:pk>/update/', updateUser.as_view(), name='user-update'),
@@ -28,4 +29,6 @@ urlpatterns = [
     path('event-points/', EventPointsAPIView.as_view(), name='event_points'),
     path('singleuser/<int:user_id>/', UserDetailView.as_view(), name='user-detail'),
     path('user/userprofile/<int:user_id>/',UserProfileUpdateView.as_view(), name='user-profile-update'),
+    path('user-delete/<int:user_id>/', UserDeleteView.as_view(), name='user-delete'),
+    path('user-status/<int:user_id>/', UpdateUserStatusView.as_view(), name='update-user-status'),
 ]

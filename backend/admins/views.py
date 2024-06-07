@@ -530,8 +530,9 @@ class MemberListCreate(generics.ListCreateAPIView):
     serializer_class = MemeberSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def perform_create(self, serializer):        
+    def perform_create(self, serializer):
         serializer.save()
+
 
 class MemberUpdateView(generics.UpdateAPIView):
     queryset = Member.objects.all()
@@ -1024,18 +1025,15 @@ from django.db.models.functions import Lower
 
 class AllBoardMembersView(APIView):
     def get(self, request):
-        board_members = BoardMember.objects.all()
-        unique_members = {}
+        all_members = set()
+        board_members = BoardMember.objects.prefetch_related('member').all()
 
-     
-        for member in board_members:
-            unique_members[member.member.name] = member
+        for board_member in board_members:
+            all_members.update(board_member.member.all())
 
-     
-        unique_members_list = list(unique_members.values())
+        unique_members_list = list(all_members)
         
-        serializer = BoardMemberSerializer(unique_members_list, many=True)
-      
+        serializer = MemeberSerializer(unique_members_list, many=True)
         return Response(serializer.data)
     
     
@@ -1477,3 +1475,5 @@ class EventUpdateView(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+ 

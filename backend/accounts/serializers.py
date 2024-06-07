@@ -26,6 +26,24 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+class UserAllSerializer(serializers.ModelSerializer):
+    date_joined = serializers.DateTimeField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'date_joined', 'last_name', 'email', 'password', 'phone']
+
+    def create(self, validated_data):
+        print(validated_data)
+        user = User.objects.create(
+            email=validated_data['email'],
+            phone=validated_data['phone'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
 
 class UserProfileSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)

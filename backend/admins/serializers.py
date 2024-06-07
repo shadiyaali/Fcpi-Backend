@@ -137,12 +137,17 @@ class EventBannerSerializer(serializers.ModelSerializer):
     
     
 class MemeberSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(required=False)  
-    slug = serializers.SlugField() 
+    image = serializers.ImageField(required=False)
+    slug = serializers.SlugField(required=False)  # Slug should not be required if it's not provided in the form
+
     class Meta:
         model = Member
-        fields = ['id','name','slug', 'qualification', 'recent_job_title','additional_job_titles','image','previous_work_experience','publications','current_research','conference','additional_information','achievements','areas']
-        
+        fields = [
+            'id', 'name', 'slug', 'qualification', 'recent_job_title', 'additional_job_titles',
+            'image', 'previous_work_experience', 'publications', 'current_research', 'conference',
+            'additional_information', 'achievements', 'areas'
+        ]
+
         
 class ForumMemberSerializer(serializers.ModelSerializer):
     member = MemeberSerializer(many=True, read_only=True)

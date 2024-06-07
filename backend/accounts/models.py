@@ -21,7 +21,7 @@ class User(AbstractUser):
     email_verification_token = models.CharField(max_length=200, null=True, blank=True)
     forget_password_token = models.CharField(max_length=200, null=True, blank=True)
     userrole = models.ForeignKey(UserRole, on_delete=models.SET_NULL, null=True, blank=True)
-
+     
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['phone']   

@@ -221,7 +221,27 @@ class UserListView(APIView):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
     
-    
+class UserAllListView(APIView):
+    def get(self, request):
+        try:
+            users = User.objects.filter(is_staff=False)
+            user_profiles = UserProfile.objects.filter(user__in=users)
+            user_profiles_serializer = UserProfileSerializer(user_profiles, many=True)
+            user_profiles_data = user_profiles_serializer.data
+            
+            # Fetch user data and serialize
+            users_serializer = UserAllSerializer(users, many=True)
+            users_data = users_serializer.data
+
+            # Combine user and user profile data
+            for user_data in users_data:
+                user_profile_data = next((profile for profile in user_profiles_data if profile['user'] == user_data['id']), None)
+                user_data['user_profile'] = user_profile_data
+
+            return Response(users_data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+  
 class UserProfileCreateView(APIView):
   
     def post(self, request, *args, **kwargs):
@@ -594,3 +614,19 @@ class UserProfileUpdateView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+class UserDeleteView(APIView):
+    def delete(self, request, user_id):
+        user = get_object_or_404(User, id=user_id)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class UpdateUserStatusView(APIView):
+    def patch(self, request, user_id):
+        user = get_object_or_404(User, id=user_id)
+        new_status = request.data.get('status')
+        if new_status in ['Active', 'Inactive']:
+            user.status = new_status
+            user.save()
+            return Response({'status': 'success'}, status=status.HTTP_200_OK)
+        return Response({'status': 'error', 'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
