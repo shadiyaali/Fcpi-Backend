@@ -226,12 +226,11 @@ USE_I18N = True
 USE_TZ = True
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://hoztox.in",
-    "https://fcpi-shadiyaalis-projects.vercel.app",
-    "https://fcpi.vercel.app"
-  
- ]
+    "http://localhost:3000", 
+    "https://fcpi.vercel.app",
+    "https://main.d2z17962vx991z.amplifyapp.com",
+]
+
 CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_ALL_METHODS = True
 
