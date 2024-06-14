@@ -109,7 +109,7 @@ class EventListCreate(APIView):
             event_data = {
                 'event_name': request.data.get('event_name'),
                 'date': None,
-                'days': int(request.data.get('days')),  
+                'days': int(request.data.get('days', 1)),  
                 'forum': request.data.get('forum'),
                 'speakers': [speaker.strip('"') for speaker in request.data.getlist('speakers[]')],
                 'banner': request.data.get('banner')
@@ -118,7 +118,10 @@ class EventListCreate(APIView):
             # Handle date format conversion
             date_str = request.data.get('date')
             if date_str:
-                event_data['date'] = datetime.strptime(date_str, '%d-%m-%Y').strftime('%Y-%m-%d')
+                try:
+                    event_data['date'] = datetime.strptime(date_str, '%d-%m-%Y').strftime('%Y-%m-%d')
+                except ValueError:
+                    return Response({'error': 'Invalid date format. Use DD-MM-YYYY.'}, status=status.HTTP_400_BAD_REQUEST)
 
             start_date = datetime.strptime(event_data['date'], '%Y-%m-%d') if event_data['date'] else None
             dates = [start_date + timedelta(days=i) for i in range(event_data['days'])] if start_date else []
@@ -174,8 +177,6 @@ class EventListCreate(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 
 class EventListSingleView(APIView):

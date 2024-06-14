@@ -40,7 +40,8 @@ class Speaker(models.Model):
     def __str__(self):
         return self.name
     
-    
+from django.utils.text import slugify as django_slugify
+import re   
 class Event(models.Model):
     forum = models.ForeignKey(Forum, related_name='events', on_delete=models.CASCADE) 
     EVENT_TYPE_CHOICES = (
@@ -58,12 +59,20 @@ class Event(models.Model):
     days = models.IntegerField(null=True)
     banner = models.ImageField(upload_to='event_banners/', null=True, blank=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
+    
     def __str__(self):
         return self.event_name
+    
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.event_name)
+            self.slug = self.custom_slugify(self.event_name)
         super().save(*args, **kwargs)
+    
+    def custom_slugify(self, value):
+        # Replace any character that is not alphanumeric, underscore, or hyphen with a hyphen
+        value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+        # Replace spaces with hyphens
+        return django_slugify(value)
 
 
 class SingleEvent(models.Model):

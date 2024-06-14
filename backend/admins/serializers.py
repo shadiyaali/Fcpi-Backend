@@ -128,7 +128,7 @@ class EventBannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['id', 'event_name', 'date', 'days', 'banner_image', 'forum', 'speakers']   
+        fields = ['id', 'event_name', 'date', 'slug','days', 'banner_image', 'forum', 'speakers']   
 
     def get_banner_image(self, obj):
         if obj.banner:
