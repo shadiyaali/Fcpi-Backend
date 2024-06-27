@@ -163,35 +163,40 @@ CHANNEL_LAYERS = {
     },
 }
 
-DATABASES = {
-       "default": {
-       "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-        "TEST": {
-             "NAME": BASE_DIR / "db.sqlite3",
-         },
-    }
-}
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'myproject',
-#         'USER': 'myprojectuser',
-#         'PASSWORD': 'password',
-#         'HOST': 'localhost',
-#         'PORT': '',
+#        "default": {
+#        "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#         "TEST": {
+#              "NAME": BASE_DIR / "db.sqlite3",
+#          },
 #     }
 # }
+ 
+DATABASES = {
+      'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'fcpi',
+        'USER': 'postgres',
+        'PASSWORD': '12345678',
+        'HOST': 'localhost',
+        'PORT': '5432',     
+    }
+  }
+
+
 # DATABASES = {
-#       'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'fcpi',
-#         'USER': 'postgres',
-#         'PASSWORD': '12345678',
-#         'HOST': 'localhost',
-#         'PORT': '5432',     
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'fcpi',       
+#         'USER': 'root',    
+#         'PASSWORD': '',  
+#         'HOST': 'localhost',   
+#         'PORT': '3306',       
+        
 #     }
-#   }
+# }
+ 
 
 
 # Password validation
@@ -228,7 +233,7 @@ USE_TZ = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", 
     "https://fcpi.vercel.app",
-    "https://main.d2z17962vx991z.amplifyapp.com",
+    "https://main.d1zsgaec906o5o.amplifyapp.com",
     "https://fcpi.in"
 ]
 

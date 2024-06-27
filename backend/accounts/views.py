@@ -73,29 +73,19 @@ class VerifyOtp(APIView):
             print("Received OTP:", otp)
             redis_conn = settings.REDIS
 
-        # Get the key from the request or wherever it's coming from
+       
             key =  email
 
-        # Retrieve the payload from Redis
+      
             payload = redis_conn.get(key)
             print("inside verify",payload) 
-            payload_str = payload.decode('utf-8')  # Decode bytes to string
-            payload_dict = json.loads(payload_str)  # Parse JSON string to dictionary
-
- 
-             
-         
-    
+            payload_str = payload.decode('utf-8')  
+            payload_dict = json.loads(payload_str)      
             otp = payload_dict.get('otp')
-
-         
-           
           
             cached_otp =  otp
             if cached_otp is None:
-                return Response({'status': 403, 'error': 'OTP expired or not found'})
-
-           
+                return Response({'status': 403, 'error': 'OTP expired or not found'})           
             if otp == cached_otp:                 
                 settings.REDIS.delete(email)             
                 try:
@@ -107,20 +97,14 @@ class VerifyOtp(APIView):
                         'password': payload_dict.get('password'),
                         'otp': otp
                     }
-
-                    # Create a serializer instance with the data
+          
                     serializer = UserSerializer(data=user_data)
-
-                    # Validate and save the data
                     if serializer.is_valid():
                         user = serializer.save()
                         user.is_email_verified = True
                         user.save()
                         print("User saved successfully")
-                        return Response({'status': 200, 'message': 'OTP verified successfully'})
-                 
-                   
-                       
+                        return Response({'status': 200, 'message': 'OTP verified successfully'})                                          
                     else:
                         print(serializer.errors)
                         return Response(serializer.errors)
@@ -170,20 +154,47 @@ class ResendOtp(APIView):
         
         
  
-
+from django.utils.translation import gettext_lazy as _ 
+import logging
+logger = logging.getLogger(__name__)
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        print("rrrrrrrrrrrrrr:",user)
-        token['user_id'] = user.id
-        print("user_id:", user.id)
-        token['username'] = user.first_name  
-        return token
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
 
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            logger.warning(f"No active account found with the given credentials for user {email}.")
+            raise serializers.ValidationError(
+                {"detail": _("No active account found with the given credentials")},
+                code=status.HTTP_404_NOT_FOUND
+            )
+
+        if user.password_is_null:
+            logger.warning(f"User {email} has null password. Password expired. Please reset your password.")
+            raise serializers.ValidationError(
+                {"detail": _("Password expired. Please reset your password.")},
+                code=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = authenticate(username=email, password=password)
+        if user is None:
+            logger.warning(f"Incorrect password attempt for user {email}.")
+            raise serializers.ValidationError(
+                {"detail": _("Incorrect password.")},
+                code=status.HTTP_401_UNAUTHORIZED
+            )
+
+        data = super().validate(attrs)
+        data['user_id'] = user.id
+        data['username'] = user.first_name
+        return data
+    
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
+ 
 
  
 class AddUser(APIView):
@@ -630,3 +641,148 @@ class UpdateUserStatusView(APIView):
             user.save()
             return Response({'status': 'success'}, status=status.HTTP_200_OK)
         return Response({'status': 'error', 'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+    
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+import traceback
+
+class SaveCsvDataView(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            csv_data = request.data.get('csvData', [])   
+
+            with transaction.atomic():
+                for data in csv_data:
+             
+                    username = data.get('username', '')  
+                    email = data.get('email', '')
+                    phone = data.get('phone', '')
+                    first_name = data.get('first_name','')
+                    last_name = data.get('last_name','')
+                    password = data.get('password','')
+                    date_joined = data.get('date_joined', None)  
+
+                 
+                    if email:
+                        user, created = get_user_model().objects.get_or_create(
+                            email=email,
+                            defaults={
+                                'username': username,
+                                'phone': phone,
+                                'first_name':first_name,
+                                'last_name':last_name,
+                                'password':password,
+                                'is_email_verified': True,  
+                                'is_phone_verified': True,
+                                'otp': None,
+                                'email_verification_token': None,
+                                'forget_password_token': None,
+                                'userrole': None
+                            }
+                        )
+                        if not created:
+                     
+                            user.username = username
+                            user.phone = phone
+                         
+                            user.save()
+
+            return Response({'message': 'Data saved successfully'}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            traceback.print_exc()   
+            return Response({'error': 'Failed to save data. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+import random
+import string
+import json
+import redis
+from django.conf import settings
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.cache import cache
+from django.core.mail import send_mail
+from django.contrib.auth import get_user_model
+import json
+import random
+
+User = get_user_model()
+
+
+
+class ForgotPasswordView(APIView):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+
+        if not email:
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate OTP
+        otp = str(random.randint(1000, 9999))  # Generate OTP here
+        cache.set(email, otp, timeout=300)  # Store OTP in cache for 5 minutes
+
+        # Send OTP to user's email
+        subject = 'Password Reset OTP'
+        message = f'Your OTP for password reset is: {otp}'
+        from_email = settings.EMAIL_HOST_USER
+        to_email = [email]
+        send_mail(subject, message, from_email, to_email)
+
+        return Response({'status': 200, 'message': 'An OTP has been sent to your email for password reset.'}, status=status.HTTP_200_OK)
+import logging
+
+logger = logging.getLogger(__name__)
+ 
+class VerifyForgotPasswordOtpView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = VerifyForgotPasswordOtpSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data.get('email')
+            otp = serializer.validated_data.get('otp')
+
+            cached_otp = cache.get(email)
+            if not cached_otp or cached_otp != otp:
+                logger.error(f"Invalid OTP for email '{email}'. Expected '{cached_otp}', received '{otp}'.")
+                return Response({'status': 403, 'error': 'Invalid OTP'}, status=status.HTTP_403_FORBIDDEN)
+
+            
+            cache.delete(email)
+
+            logger.info(f"OTP verified successfully for email '{email}'.")
+            return Response({'status': 200, 'message': 'OTP verified successfully'}, status=status.HTTP_200_OK)
+
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+from rest_framework.permissions import AllowAny
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not email or not new_password or not confirm_password:
+            return Response({'error': 'All fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != confirm_password:
+            return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+            user.password = make_password(new_password)
+            user.save()
+            return Response({'message': 'Password reset successfully.'}, status=status.HTTP_200_OK)
+        except ObjectDoesNotExist:
+            return Response({'error': 'User with this email does not exist.'}, status=status.HTTP_404_NOT_FOUND)

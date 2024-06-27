@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
+from .models import Admin,Forum,Speaker,Gallery,Event,GalleryImage,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -349,3 +349,102 @@ class EventSingleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ['id', 'event_name', 'date', 'days', 'forum', 'speakers', 'banner', 'single_events']
+
+
+# serializers.py
+
+ 
+ 
+
+class GalleryImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GalleryImage
+        fields = ('id', 'image')
+class GallerySerializer(serializers.ModelSerializer):
+    images = GalleryImageSerializer(many=True, required=False)
+
+    class Meta:
+        model = Gallery
+        fields = ('id', 'title', 'images')
+
+    def create(self, validated_data):
+        images_data = self.context.get('request').FILES.getlist('images')
+
+        gallery = Gallery.objects.create(title=validated_data['title'])
+
+        for image_data in images_data:
+            GalleryImage.objects.create(gallery=gallery, image=image_data)
+
+        return gallery
+
+
+from urllib.parse import unquote
+import urllib.parse
+  
+class GalleryUpdateSerializer(serializers.ModelSerializer):
+    images = GalleryImageSerializer(many=True, required=False)
+    existing_images = serializers.ListField(child=serializers.CharField(), required=False, default=[])
+
+    class Meta:
+        model = Gallery
+        fields = ('id', 'title', 'images', 'existing_images')
+
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get('title', instance.title)
+
+        # Process existing images to keep or delete
+        existing_images_urls = validated_data.get('existing_images', [])
+        current_images = instance.images.all()
+
+        # Extract IDs of existing images from URLs
+        existing_image_ids = []
+        for url in existing_images_urls:
+            try:
+                # Assuming URL format: http://127.0.0.1:8000/media/gallery/BoardofDirectors_p7xQUZ5.jpg
+                image_name = unquote(url).split('/')[-1]
+                image = current_images.filter(image__icontains=image_name).first()
+                if image:
+                    existing_image_ids.append(image.id)
+            except (ValueError, IndexError, GalleryImage.DoesNotExist):
+                continue
+
+        # Delete images not in existing_image_ids
+        for image in current_images:
+            if image.id not in existing_image_ids:
+                image.delete()
+
+        # Process new images to add
+        new_images_data = self.context['request'].FILES.getlist('images', [])
+        for image_data in new_images_data:
+            GalleryImage.objects.create(gallery=instance, image=image_data)
+
+        # Save updated title
+        instance.save()
+
+        # Refresh instance to get updated relationships
+        instance.refresh_from_db()
+
+        # Return updated instance
+        return instance
+
+    def to_representation(self, instance):
+        # Override to_representation to ensure correct serialization
+        data = super().to_representation(instance)
+        
+        # Build images list with full URLs
+        data['images'] = [
+            {
+                'id': image.id,
+                'image': self.context['request'].build_absolute_uri(image.image.url)
+            }
+            for image in instance.images.all()
+        ]
+        
+        # Return the modified representation
+        return data
+
+    def validate(self, data):
+        if 'images' in self.context['request'].FILES or data.get('existing_images'):
+            return data
+        raise serializers.ValidationError("Either 'images' or 'existing_images' must be provided.")
+ 

@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,BlogSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GalleryUpdateSerializer,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -1477,4 +1477,62 @@ class EventUpdateView(APIView):
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+
+
+class AddGalleryView(generics.CreateAPIView):
+    queryset = Gallery.objects.all()
+    serializer_class = GallerySerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class GetGalleryView(generics.ListAPIView):
+    serializer_class = GallerySerializer
+    queryset = Gallery.objects.all()
+
+    def get_queryset(self):
+        title = self.request.query_params.get('title', None)
+        if title:
+            return Gallery.objects.filter(title=title)
+        return Gallery.objects.all()
+    
+    
  
+
+class UpdateGalleryView(generics.UpdateAPIView):
+    queryset = Gallery.objects.all()
+    serializer_class = GalleryUpdateSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def put(self, request, *args, **kwargs):
+        print("request data:", request.data)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            print("updated serializer data:", serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        print("serializer errors:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class DeleteGalleryView(generics.DestroyAPIView):
+    queryset = Gallery.objects.all()
+    serializer_class = GallerySerializer
+    lookup_url_kwarg = 'gallery_id'  # URL keyword argument name for the gallery ID
+
+    def delete(self, request, *args, **kwargs):
+        gallery_id = kwargs.get(self.lookup_url_kwarg)
+        try:
+            gallery = self.get_queryset().get(id=gallery_id)
+        except Gallery.DoesNotExist:
+            return Response({'error': 'Gallery not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        gallery.delete()
+        return Response({'message': 'Gallery deleted successfully'}, status=status.HTTP_204_NO_CONTENT)

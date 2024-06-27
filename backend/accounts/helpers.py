@@ -14,10 +14,7 @@ def send_otp_to_email(email,data):
 
     try:
         otp_to_sent = random.randint(1000, 9999)
-        # cache.set(email, otp_to_sent, timeout=60)
-        # user_obj.email = email  
-        # user_obj.otp = otp_to_sent
-        # user_obj.save()
+    
         payload = {
                         'phone_number': data['phone'],
                         'first_name': data['first_name'],
@@ -36,4 +33,36 @@ def send_otp_to_email(email,data):
         return True
     except Exception as e:
         print(e)
+        return False
+
+
+def forgot_otp_to_email(email, user):
+    if cache.get(email):
+        return False  
+
+    try:
+        otp_to_sent = random.randint(1000, 9999)
+
+        payload = {
+            'phone': user.phone,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'password': user.password,  
+            'otp': otp_to_sent
+        }
+
+        serialized_payload = json.dumps(payload)
+
+        key = payload['email']
+        settings.REDIS.set(key, serialized_payload)
+
+        subject = "OTP Verification"
+        message = f"Your OTP for email verification is: {otp_to_sent}"
+
+        send_mail(subject, message, None, [email])
+
+        return True
+    except Exception as e:
+        print(f"Error sending OTP to {email}: {e}")
         return False

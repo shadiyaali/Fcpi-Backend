@@ -225,3 +225,14 @@ class SingleEventsSerializer(serializers.ModelSerializer):
     class Meta:
         model = SingleEvent
         fields = ('id', 'highlights', 'youtube_link', 'points', 'event')
+
+
+class Gallery(models.Model):
+    title = models.CharField(max_length=100)
+
+class GalleryImage(models.Model):
+    gallery = models.ForeignKey(Gallery, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='gallery/', null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.gallery.title} "

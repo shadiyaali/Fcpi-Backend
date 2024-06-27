@@ -31,4 +31,9 @@ urlpatterns = [
     path('user/userprofile/<int:user_id>/',UserProfileUpdateView.as_view(), name='user-profile-update'),
     path('user-delete/<int:user_id>/', UserDeleteView.as_view(), name='user-delete'),
     path('user-status/<int:user_id>/', UpdateUserStatusView.as_view(), name='update-user-status'),
+    path('save-csv-data/', SaveCsvDataView.as_view(), name='save_csv_data'),
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('verify-forgot-password-otp/', VerifyForgotPasswordOtpView.as_view(), name='forgot-password'),
+    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+
 ]

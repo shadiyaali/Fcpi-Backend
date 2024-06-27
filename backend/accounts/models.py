@@ -18,21 +18,23 @@ class User(AbstractUser):
     is_email_verified = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
     otp = models.CharField(max_length=4, null=True, blank=True)
-    email_verification_token = models.CharField(max_length=200, null=True, blank=True)
-    forget_password_token = models.CharField(max_length=200, null=True, blank=True)
+    email_verification_token = models.CharField(max_length=191, null=True, blank=True)
+    forget_password_token = models.CharField(max_length=191, null=True, blank=True)
     userrole = models.ForeignKey(UserRole, on_delete=models.SET_NULL, null=True, blank=True)
-     
+    password_is_null = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['phone']   
+    REQUIRED_FIELDS = ['phone']
 
-    objects = UserManager()   
+    objects = UserManager()
 
-    def name(self):
-        return f"{self.first_name} {self.last_name}"
-
-    def __str__(self):
-        return self.email
+    def save(self, *args, **kwargs):
+        if not self.pk:   
+            if not self.password:
+                self.password_is_null = False
+            else:
+                self.password_is_null = True
+        super().save(*args, **kwargs)
 
 class UserProfile(models.Model):
     

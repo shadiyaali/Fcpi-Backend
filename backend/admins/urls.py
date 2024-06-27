@@ -69,6 +69,10 @@ urlpatterns = [
     path('eventsweek/', EventUserThisWeek.as_view(), name='event-week-list'),
     path('eventsmonth/', EventThisMonthUser.as_view(), name='event-month-list'),
     path('eventsyear/', EventThisYearUser.as_view(), name='event-year-list'),
+    path('add-gallery/', AddGalleryView.as_view(), name='add-gallery'),
+    path('gallery/', GetGalleryView.as_view(), name='get_gallery_images'),
+    path('update-gallery/<int:pk>/', UpdateGalleryView.as_view(), name='update_gallery'),
+    path('delete-gallery/<int:gallery_id>/', DeleteGalleryView.as_view(), name='delete_gallery'),
  
 ]     
  

@@ -12,10 +12,9 @@ class UserRoleSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id','first_name', 'last_name', 'email', 'password', 'phone']
+        fields = ['id', 'first_name', 'last_name', 'email', 'password', 'phone']
 
     def create(self, validated_data):
-        print(validated_data)
         user = User.objects.create(
             email=validated_data['email'],
             phone=validated_data['phone'],
@@ -178,4 +177,10 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("The new password and confirm password must match.")
         return data
 
+class VerifyForgotPasswordOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField()
 
+    def validate(self, data):
+        # No need for password-related validation here
+        return data
