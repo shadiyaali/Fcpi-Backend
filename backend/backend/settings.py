@@ -234,7 +234,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", 
     "https://fcpi.vercel.app",
     "https://main.d1zsgaec906o5o.amplifyapp.com",
-    "https://fcpi.in"
+    "https://fcpi.in",
+    "https://flynextglobal.in"
 ]
 
 CORS_ALLOW_ALL_HEADERS = True
