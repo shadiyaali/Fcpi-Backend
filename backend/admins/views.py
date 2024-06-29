@@ -99,19 +99,24 @@ class SpeakerDeleteView(generics.DestroyAPIView):
  
 logger = logging.getLogger(__name__) 
 
+# Adjusting EventListCreate view
 class EventListCreate(APIView):
     @transaction.atomic
     def post(self, request):
         try:
             print("Request Data:", request.data)
 
+            # Extract speakers list from request data
+            speakers_list = [request.data.get('speakers')]
+            print("Extracted Speakers List:", speakers_list)
+
             # Extract event data from request
             event_data = {
                 'event_name': request.data.get('event_name'),
                 'date': None,
-                'days': int(request.data.get('days', 1)),  
+                'days': int(request.data.get('days', 1)),
                 'forum': request.data.get('forum'),
-                'speakers': [speaker.strip('"') for speaker in request.data.getlist('speakers[]')],
+                'speakers': speakers_list,
                 'banner': request.data.get('banner')
             }
 
@@ -135,48 +140,54 @@ class EventListCreate(APIView):
 
             event_serializer = EventSerializer(data=event_data)
             if event_serializer.is_valid():
+                print("ppppp",event_serializer)
                 event = event_serializer.save()
+
+                single_events_data = request.data.getlist('single_events[]')
+                print("Single Events Data:", single_events_data)
+
+                for date_index, date in enumerate(dates):
+                    single_event_data_dict = json.loads(single_events_data[date_index])
+                    single_event_data_dict['date'] = date.strftime('%Y-%m-%d')
+                    single_event_data_dict['day'] = date_index + 1  # Assign day number
+                    single_serializer = SingleEventSerializer(data=single_event_data_dict)
+                    if single_serializer.is_valid():
+                        single_instance = single_serializer.save(event=event, date=date, day=date_index + 1)
+
+                        multi_events_data = single_serializer.validated_data.get('multi_events', [])
+                        for multi_event_data in multi_events_data:
+                            existing_multi_event = MultiEvent.objects.filter(
+                                single_event=single_instance,
+                                starting_time=multi_event_data['starting_time'],
+                                ending_time=multi_event_data['ending_time']
+                            ).first()
+
+                            if not existing_multi_event:
+                                multi_event_data['single_event'] = single_instance.id
+                                multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
+                                if multi_serializer.is_valid():
+                                    multi_serializer.save()
+                                else:
+                                    print("Multi Event Serializer Errors:", multi_serializer.errors)
+                                    return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                    else:
+                        print("Single Event Serializer Errors:", single_serializer.errors)
+                        return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                return Response({'message': 'Event and associated data created successfully'}, status=status.HTTP_201_CREATED)
+
             else:
                 print("Event Serializer Errors:", event_serializer.errors)
                 return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            single_events_data = request.data.getlist('single_events[]')
-            print("Single Events Data:", single_events_data)
-
-            for date_index, date in enumerate(dates):
-                single_event_data_dict = json.loads(single_events_data[date_index])
-                single_event_data_dict['date'] = date.strftime('%Y-%m-%d')
-                single_event_data_dict['day'] = date_index + 1  # Assign day number
-                single_serializer = SingleEventSerializer(data=single_event_data_dict)
-                if single_serializer.is_valid():
-                    single_instance = single_serializer.save(event=event, date=date, day=date_index + 1)
-                else:
-                    print("Single Event Serializer Errors:", single_serializer.errors)
-                    return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-                multi_events_data = single_serializer.validated_data.get('multi_events', [])
-                for multi_event_data in multi_events_data:
-                    existing_multi_event = MultiEvent.objects.filter(
-                        single_event=single_instance,
-                        starting_time=multi_event_data['starting_time'],
-                        ending_time=multi_event_data['ending_time']
-                    ).first()
-
-                    if existing_multi_event:
-                        print("Multi Event already exists:", existing_multi_event)
-                    else:
-                        multi_event_data['single_event'] = single_instance.id
-                        multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
-                        if multi_serializer.is_valid():
-                            multi_serializer.save()
-                        else:
-                            print("Multi Event Serializer Errors:", multi_serializer.errors)
-                            return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            return Response({'message': 'Event and associated data created successfully'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Adjusting EventSerializer
+ 
+
 
 
 class EventListSingleView(APIView):

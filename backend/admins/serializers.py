@@ -297,6 +297,8 @@ class BoardMemberSerializer(serializers.ModelSerializer):
 from rest_framework import serializers
 
 class EventSerializer(serializers.ModelSerializer):
+     
+    speakers = serializers.PrimaryKeyRelatedField(many=True, queryset=Speaker.objects.all(), required=False)
     class Meta:
         model = Event
         fields = ('id', 'event_name', 'slug', 'speakers', 'date', 'days', 'banner', 'forum')
@@ -311,7 +313,7 @@ class SingleEventsSerializer(serializers.ModelSerializer):
     event = EventSerializer()
 
     def create(self, validated_data):
-        # Implementation of create method
+        
         pass
 
     class Meta:

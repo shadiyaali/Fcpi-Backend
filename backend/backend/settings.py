@@ -174,17 +174,28 @@ CHANNEL_LAYERS = {
 # }
  
 DATABASES = {
-    'default': {
-        'ENGINE': config('DATABASE_ENGINE'),
-        'NAME': config('DATABASE_NAME'),
-        'USER': config('DATABASE_USER'),
-        'PASSWORD': config('DATABASE_PASSWORD'),
-        'HOST': config('DATABASE_HOST'),
-        'PORT': config('DATABASE_PORT'),
+      'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'fcpi',
+        'USER': 'postgres',
+        'PASSWORD': '12345678',
+        'HOST': 'localhost',
+        'PORT': '5432',     
     }
-}
+  }
 
- 
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'fcpi',       
+#         'USER': 'root',    
+#         'PASSWORD': '',  
+#         'HOST': 'localhost',   
+#         'PORT': '3306',       
+        
+#     }
+# }
  
 
 
@@ -218,27 +229,24 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_ALL_METHODS = True
-
-CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", 
     "https://fcpi.vercel.app",
     "https://main.d1zsgaec906o5o.amplifyapp.com",
-    "https://fcpi.in"
+    "https://fcpi.in",
+   
 ]
- 
+
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

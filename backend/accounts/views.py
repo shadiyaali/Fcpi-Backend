@@ -167,14 +167,14 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         except User.DoesNotExist:
             logger.warning(f"No active account found with the given credentials for user {email}.")
             raise serializers.ValidationError(
-                {"detail": _("No active account found with the given credentials")},
+                {"message": "No active account found with the given credentials"},
                 code=status.HTTP_404_NOT_FOUND
             )
 
         if user.password_is_null:
             logger.warning(f"User {email} has null password. Password expired. Please reset your password.")
             raise serializers.ValidationError(
-                {"detail": _("Password expired. Please reset your password.")},
+                {"message": "Password expired. Please reset your password."},
                 code=status.HTTP_400_BAD_REQUEST
             )
 
@@ -182,7 +182,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         if user is None:
             logger.warning(f"Incorrect password attempt for user {email}.")
             raise serializers.ValidationError(
-                {"detail": _("Incorrect password.")},
+                {"message": "Incorrect password."},
                 code=status.HTTP_401_UNAUTHORIZED
             )
 
