@@ -174,28 +174,17 @@ CHANNEL_LAYERS = {
 # }
  
 DATABASES = {
-      'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'fcpi',
-        'USER': 'postgres',
-        'PASSWORD': '12345678',
-        'HOST': 'localhost',
-        'PORT': '5432',     
+    'default': {
+        'ENGINE': config('DATABASE_ENGINE'),
+        'NAME': config('DATABASE_NAME'),
+        'USER': config('DATABASE_USER'),
+        'PASSWORD': config('DATABASE_PASSWORD'),
+        'HOST': config('DATABASE_HOST'),
+        'PORT': config('DATABASE_PORT'),
     }
-  }
+}
 
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'fcpi',       
-#         'USER': 'root',    
-#         'PASSWORD': '',  
-#         'HOST': 'localhost',   
-#         'PORT': '3306',       
-        
-#     }
-# }
+ 
  
 
 
@@ -235,7 +224,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://fcpi.vercel.app",
     "https://main.d1zsgaec906o5o.amplifyapp.com",
     "https://fcpi.in",
-    "https://flynextglobal.in"
+    
 ]
 
 CORS_ALLOW_ALL_HEADERS = True
