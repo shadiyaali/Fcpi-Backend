@@ -385,7 +385,7 @@ class EventListView(APIView):
 class SingleEventDetailView(APIView):
     def get(self, request, slug):
         try:
-            # Fetch the event object based on slug
+ 
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), slug=slug)
             
             # Serialize the main event details
