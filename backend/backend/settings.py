@@ -185,17 +185,7 @@ DATABASES = {
   }
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'fcpi',       
-#         'USER': 'root',    
-#         'PASSWORD': '',  
-#         'HOST': 'localhost',   
-#         'PORT': '3306',       
-        
-#     }
-# }
+ 
  
 
 
