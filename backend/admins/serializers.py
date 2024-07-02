@@ -52,14 +52,17 @@ class MultiEventSerializer(serializers.ModelSerializer):
     def get_speaker_name(self, obj):
         return obj.single_speaker.name if obj.single_speaker else None
 
-    
 
-class SingleEventSerializer(serializers.Serializer):
+class SingleEventSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
     youtube_link = serializers.URLField()
     points = serializers.DecimalField(max_digits=5, decimal_places=2)
     multi_events = MultiEventSerializer(many=True)
+
+    class Meta:
+        model = SingleEvent
+        fields = ['id', 'highlights', 'youtube_link', 'points', 'multi_events']
 
     def create(self, validated_data):
         multi_events_data = validated_data.pop('multi_events', [])

@@ -75,6 +75,8 @@ class Event(models.Model):
         return django_slugify(value)
 
 
+
+
 class SingleEvent(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='single_events')          
     youtube_link = models.URLField(null=True, blank=True)
@@ -102,11 +104,14 @@ class SingleEvent(models.Model):
     
 class MultiEvent(models.Model):
     single_event = models.ForeignKey(SingleEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='multi_events')
-    starting_time = models.TimeField(null=True, blank=True)
-    ending_time = models.TimeField(null=True, blank=True)
+    starting_time = models.CharField(max_length=8, null=True, blank=True)  # Change to CharField to store hh:mm
+    ending_time = models.CharField(max_length=8, null=True, blank=True)
     topics = models.TextField(null=True, blank=True)
     single_speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='selected_events', default=None)
-
+   
+   
+    def __str__(self):
+        return f"{self.single_event.event.event_name} - {self.starting_time} to {self.ending_time}"
     
 import itertools 
 from django.utils.text import slugify
