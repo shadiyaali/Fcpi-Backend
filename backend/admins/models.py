@@ -33,7 +33,7 @@ class Forum(models.Model):
 class Speaker(models.Model):
     name = models.CharField(max_length=100)
     qualification = models.CharField(max_length=100)
-    designation = models.CharField(max_length=1000)
+    designation = models.TextField()
     description = models.TextField()
     photo = models.ImageField(upload_to='speakers/', null=True, blank=True)
 
