@@ -388,27 +388,25 @@ class SingleEventDetailView(APIView):
     def get(self, request, slug):
         try:
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), slug=slug)
-            
-            # Serialize the main event details
+        
             serialized_data = EventListSerializer(event, context={'request': request}).data
 
             serialized_single_events = []
             single_events = event.single_events.all().order_by('day')
 
-            # Process each single event
+     
             for single_event in single_events:
                 single_event_dict = RetrieveSingleEventSerializer(single_event).data
                 single_event_dict['day'] = single_event.day
 
-                # Fetch multi-events for the current single event
+   
                 multi_events = single_event.multi_events.all()
 
                 if multi_events.exists():
-                    # Get the first multi-event starting time and last multi-event ending time
+              
                     first_multi_event_start = multi_events.first().starting_time
                     last_multi_event_end = multi_events.last().ending_time
-
-                    # Format the times if they exist
+ 
                     if first_multi_event_start:
                         try:
                             formatted_first_start = datetime.strptime(first_multi_event_start, '%I:%M %p').strftime('%I:%M %p')
