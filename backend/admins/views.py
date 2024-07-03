@@ -106,7 +106,7 @@ class EventListCreate(APIView):
         try:
             print("Request Data:", request.data)
 
-            speakers_list = [request.data.get('speakers')]
+            speakers_list = request.data.getlist('speakers')   
             print("Extracted Speakers List:", speakers_list)
 
             event_data = {
@@ -378,11 +378,9 @@ class EventListView(APIView):
         })
 
 
-
  
  
  
-from datetime import datetime
 
 from datetime import datetime
 
