@@ -39,9 +39,10 @@ class Speaker(models.Model):
 
     def __str__(self):
         return self.name
-    
+import re
+import logging    
 from django.utils.text import slugify as django_slugify
-import re   
+   
 class Event(models.Model):
     forum = models.ForeignKey(Forum, related_name='events', on_delete=models.CASCADE) 
     EVENT_TYPE_CHOICES = (
@@ -69,11 +70,15 @@ class Event(models.Model):
         super().save(*args, **kwargs)
     
     def custom_slugify(self, value):
+        logger = logging.getLogger(__name__)
+        logger.info(f"Original event_name: {value}")
+        
         # Replace any character that is not alphanumeric, underscore, or hyphen with a hyphen
         value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+        logger.info(f"Slugified value: {value}")
+        
         # Replace spaces with hyphens
         return django_slugify(value)
-
 
 
 
