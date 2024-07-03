@@ -39,10 +39,9 @@ class Speaker(models.Model):
 
     def __str__(self):
         return self.name
-import re
-import logging    
+    
 from django.utils.text import slugify as django_slugify
-   
+import re   
 class Event(models.Model):
     forum = models.ForeignKey(Forum, related_name='events', on_delete=models.CASCADE) 
     EVENT_TYPE_CHOICES = (
@@ -54,7 +53,7 @@ class Event(models.Model):
         ('Live', 'Live'),
         ('Completed', 'Completed'),
     )
-    event_name = models.TextField(max_length=100, null=True)    
+    event_name = models.CharField(max_length=100, null=True)    
     speakers = models.ManyToManyField(Speaker, related_name='events', blank=True)
     date = models.DateField(null=True) 
     days = models.IntegerField(null=True)
@@ -70,15 +69,17 @@ class Event(models.Model):
         super().save(*args, **kwargs)
     
     def custom_slugify(self, value):
-        logger = logging.getLogger(__name__)
-        logger.info(f"Original event_name: {value}")
-        
-        # Replace any character that is not alphanumeric, underscore, or hyphen with a hyphen
-        value = re.sub(r'[^\w\s-]', '', value).strip().lower()
-        logger.info(f"Slugified value: {value}")
-        
-        # Replace spaces with hyphens
+        # Replace any character that is not alphanumeric with an underscore
+        value = re.sub(r'[^\w\s]', '', value).strip().lower()
+        # Replace spaces with underscores
+        value = value.replace(' ', '_')
+        # Remove hyphens
+        value = value.replace('-', '')
+        # Ensure the slug is not empty after processing
+        if not value:
+            value = 'default_slug'  # Provide a default slug if necessary
         return django_slugify(value)
+
 
 
 
