@@ -382,44 +382,43 @@ class EventListView(APIView):
  
  
  
-from datetime import datetime
-
 class SingleEventDetailView(APIView):
     def get(self, request, slug):
         try:
+            # Retrieve the event object with related data prefetched
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), slug=slug)
-        
+            
+            # Serialize the main event details
             serialized_data = EventListSerializer(event, context={'request': request}).data
 
             serialized_single_events = []
             single_events = event.single_events.all().order_by('day')
 
-     
+            # Process each single event
             for single_event in single_events:
                 single_event_dict = RetrieveSingleEventSerializer(single_event).data
                 single_event_dict['day'] = single_event.day
 
-   
+                # Fetch multi-events for the current single event
                 multi_events = single_event.multi_events.all()
 
                 if multi_events.exists():
-              
-                    first_multi_event_start = multi_events.first().starting_time
-                    last_multi_event_end = multi_events.last().ending_time
- 
-                    if first_multi_event_start:
-                        try:
-                            formatted_first_start = datetime.strptime(first_multi_event_start, '%I:%M %p').strftime('%I:%M %p')
-                            single_event_dict['first_multi_event_start'] = formatted_first_start
-                        except ValueError:
-                            single_event_dict['first_multi_event_start'] = first_multi_event_start  # Handle as needed
+                    # Initialize lists to store formatted times
+                    first_multi_event_start_times = []
+                    last_multi_event_end_times = []
 
-                    if last_multi_event_end:
-                        try:
-                            formatted_last_end = datetime.strptime(last_multi_event_end, '%I:%M %p').strftime('%I:%M %p')
-                            single_event_dict['last_multi_event_end'] = formatted_last_end
-                        except ValueError:
-                            single_event_dict['last_multi_event_end'] = last_multi_event_end  # Handle as needed
+                    # Iterate through multi-events to collect times
+                    for multi_event in multi_events:
+                        if multi_event.starting_time:
+                            first_multi_event_start_times.append(multi_event.starting_time.strftime('%I:%M %p'))
+                        if multi_event.ending_time:
+                            last_multi_event_end_times.append(multi_event.ending_time.strftime('%I:%M %p'))
+
+                    # Assign formatted times if available
+                    if first_multi_event_start_times:
+                        single_event_dict['first_multi_event_start'] = first_multi_event_start_times[0]
+                    if last_multi_event_end_times:
+                        single_event_dict['last_multi_event_end'] = last_multi_event_end_times[-1]
 
                 serialized_single_events.append(single_event_dict)
 
@@ -438,7 +437,6 @@ class SingleEventDetailView(APIView):
 
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
-
 
  
 

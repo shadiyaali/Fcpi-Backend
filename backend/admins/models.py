@@ -110,8 +110,8 @@ class SingleEvent(models.Model):
     
 class MultiEvent(models.Model):
     single_event = models.ForeignKey(SingleEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='multi_events')
-    starting_time = models.CharField(max_length=8, null=True, blank=True)  # Change to CharField to store hh:mm
-    ending_time = models.CharField(max_length=8, null=True, blank=True)
+    starting_time = models.TimeField(max_length=8, null=True, blank=True)  # Change to CharField to store hh:mm
+    ending_time = models.TimeField(max_length=8, null=True, blank=True)
     topics = models.TextField(null=True, blank=True)
     single_speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='selected_events', default=None)
    
