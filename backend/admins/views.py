@@ -382,10 +382,11 @@ class EventListView(APIView):
  
  
  
+from datetime import datetime
+
 class SingleEventDetailView(APIView):
     def get(self, request, slug):
         try:
- 
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), slug=slug)
             
             # Serialize the main event details
@@ -409,9 +410,18 @@ class SingleEventDetailView(APIView):
 
                     # Format the times if they exist
                     if first_multi_event_start:
-                        single_event_dict['first_multi_event_start'] = datetime.strptime(first_multi_event_start, '%I:%M %p').strftime('%I:%M %p')
+                        try:
+                            formatted_first_start = datetime.strptime(first_multi_event_start, '%I:%M %p').strftime('%I:%M %p')
+                            single_event_dict['first_multi_event_start'] = formatted_first_start
+                        except ValueError:
+                            single_event_dict['first_multi_event_start'] = first_multi_event_start  # Handle as needed
+
                     if last_multi_event_end:
-                        single_event_dict['last_multi_event_end'] = datetime.strptime(last_multi_event_end, '%I:%M %p').strftime('%I:%M %p')
+                        try:
+                            formatted_last_end = datetime.strptime(last_multi_event_end, '%I:%M %p').strftime('%I:%M %p')
+                            single_event_dict['last_multi_event_end'] = formatted_last_end
+                        except ValueError:
+                            single_event_dict['last_multi_event_end'] = last_multi_event_end  # Handle as needed
 
                 serialized_single_events.append(single_event_dict)
 
@@ -430,6 +440,7 @@ class SingleEventDetailView(APIView):
 
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
  
 
