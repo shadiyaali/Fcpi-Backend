@@ -382,61 +382,51 @@ class EventListView(APIView):
  
  
  
+from datetime import datetime
+
+from datetime import datetime
+
 class SingleEventDetailView(APIView):
     def get(self, request, slug):
         try:
-            # Retrieve the event object with related data prefetched
             event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), slug=slug)
-            
-            # Serialize the main event details
             serialized_data = EventListSerializer(event, context={'request': request}).data
-
             serialized_single_events = []
             single_events = event.single_events.all().order_by('day')
 
-            # Process each single event
             for single_event in single_events:
                 single_event_dict = RetrieveSingleEventSerializer(single_event).data
                 single_event_dict['day'] = single_event.day
 
-                # Fetch multi-events for the current single event
-                multi_events = single_event.multi_events.all()
+                multi_events = single_event.multi_events.all().order_by('starting_time')
 
                 if multi_events.exists():
-                    # Initialize lists to store formatted times
-                    first_multi_event_start_times = []
-                    last_multi_event_end_times = []
+                    first_multi_event = multi_events.first()
+                    last_multi_event = multi_events.last()
 
-                    # Iterate through multi-events to collect times
-                    for multi_event in multi_events:
-                        if multi_event.starting_time:
-                            first_multi_event_start_times.append(multi_event.starting_time.strftime('%I:%M %p'))
-                        if multi_event.ending_time:
-                            last_multi_event_end_times.append(multi_event.ending_time.strftime('%I:%M %p'))
-
-                    # Assign formatted times if available
-                    if first_multi_event_start_times:
-                        single_event_dict['first_multi_event_start'] = first_multi_event_start_times[0]
-                    if last_multi_event_end_times:
-                        single_event_dict['last_multi_event_end'] = last_multi_event_end_times[-1]
+                    # Assign start and end times directly from MultiEvent
+                    if first_multi_event.starting_time:
+                        single_event_dict['first_multi_event_start'] = str(first_multi_event.starting_time)
+                    if last_multi_event.ending_time:
+                        single_event_dict['last_multi_event_end'] = str(last_multi_event.ending_time)
 
                 serialized_single_events.append(single_event_dict)
+                print("serialized_single_events",serialized_single_events)
 
-            # Add start and end dates to serialized data
             if single_events.exists():
                 serialized_data['start_date'] = single_events.first().date.strftime('%Y-%m-%d')
                 serialized_data['end_date'] = single_events.last().date.strftime('%Y-%m-%d')
             else:
                 serialized_data['start_date'] = None
                 serialized_data['end_date'] = None
-            
-            # Add serialized single events data
+
             serialized_data['single_events'] = serialized_single_events
 
             return Response(serialized_data)
 
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
  
 
