@@ -13,7 +13,7 @@ urlpatterns = [
     path('eventcreate/', EventListCreate.as_view() , name='event_create'),
     path('events/', EventListView.as_view(), name='events-list'),  
     path('allevents/', EventListAllView.as_view(), name='allevents-list'),   
-    path('events/<int:pk>/update/', EventUpdateView.as_view(), name='edit_event'),
+    path('events/<int:event_id>/update/', EventUpdateAPIView.as_view(), name='event-update'),
     path('events/<int:pk>/list/', EventListSingleView.as_view(), name='event-detail'),
     path('eventslist/', EventListView.as_view(), name='event-list'),
     path('events/<slug:slug>/', SingleEventDetailView.as_view(), name='single-events-detail'),
@@ -73,6 +73,6 @@ urlpatterns = [
     path('gallery/', GetGalleryView.as_view(), name='get_gallery_images'),
     path('update-gallery/<int:pk>/', UpdateGalleryView.as_view(), name='update_gallery'),
     path('delete-gallery/<int:gallery_id>/', DeleteGalleryView.as_view(), name='delete_gallery'),
- 
+    path('events/<int:event_id>/delete/', EventDeleteAPIView.as_view(), name='event-delete'),
 ]     
  

@@ -35,5 +35,6 @@ urlpatterns = [
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('verify-forgot-password-otp/', VerifyForgotPasswordOtpView.as_view(), name='forgot-password'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+    path('contact/', ContactMessageAPIView.as_view(), name='contact-message'),
 
 ]

@@ -115,11 +115,19 @@ class EventSerializer(serializers.ModelSerializer):
 class EventListSerializer(serializers.ModelSerializer):
     forum_name = serializers.SerializerMethodField()
     single_events = SingleEventSerializer(many=True, read_only=True)
-     
+    speakers = serializers.SerializerMethodField()  # Define this method to serialize speakers
 
     class Meta:
         model = Event
-        fields = ['id','slug', 'event_name', 'date', 'forum', 'forum_name', 'days', 'banner', 'single_events' ]
+        fields = ['id', 'slug', 'event_name', 'date', 'forum', 'forum_name', 'days', 'banner', 'single_events', 'speakers']
+
+    def get_forum_name(self, obj):
+        return obj.forum.title if obj.forum else None
+
+    def get_speakers(self, obj):
+        # Assuming SpeakerSerializer is defined correctly for Speaker model
+        speakers_queryset = obj.speakers.all()  # Retrieve all speakers related to this event
+        return SpeakerSerializer(speakers_queryset, many=True).data  
 
     def get_forum_name(self, obj):
         return obj.forum.title if obj.forum else None
@@ -166,20 +174,7 @@ class BlogsContentsSerializer(serializers.ModelSerializer):
         model = BlogsContents
         fields = ['id', 'topic', 'description', 'image']
 
-    def create(self, validated_data):
-        # Extract the image data
-        image_data = validated_data.pop('image', None)
-
-        # Create the BlogsContents instance
-        blog_content = super().create(validated_data)
-
-        # If there is image data, save it
-        if image_data:
-            blog_content.image = image_data
-            blog_content.save()
-
-        return blog_content
-
+    
 
 class BlogsSerializer(serializers.ModelSerializer):
     blog_contents = BlogsContentsSerializer(many=True, required=False)

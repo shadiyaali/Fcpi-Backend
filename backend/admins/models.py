@@ -46,7 +46,7 @@ class Event(models.Model):
     forum = models.ForeignKey(Forum, related_name='events', on_delete=models.CASCADE) 
     EVENT_TYPE_CHOICES = (
         ('Single Day', 'Single Day'),
-        ('Multi Day', 'Multi Day'),
+        ('Multi Day', 'Multi Day'),  
     )
     STATUS_CHOICES = (
         ('Upcoming', 'Upcoming'),
@@ -186,6 +186,8 @@ class BlogsContents(models.Model):
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to='blogs/', null=True, blank=True)   
     
+    def __str__(self):
+        return f"{self.blog.title}"
 
 class Certificates(models.Model):    
     event = models.ForeignKey(Event, related_name='certificates', on_delete=models.CASCADE,null=True, blank=True)     

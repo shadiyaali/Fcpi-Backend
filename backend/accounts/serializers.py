@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User,UserRole,UserProfile,Feedback,Enrolled
+from .models import User,UserRole,UserProfile,Feedback,Enrolled,ContactMessage
 from admins.models import Event,Certificates,SingleEvent
 from admins.serializers import EventSerializer,SingleEventlistSerializer
     
@@ -184,3 +184,9 @@ class VerifyForgotPasswordOtpSerializer(serializers.Serializer):
     def validate(self, data):
         # No need for password-related validation here
         return data
+    
+    
+class ContactMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactMessage
+        fields = ['name', 'email', 'phone', 'message', 'created_at']

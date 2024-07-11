@@ -206,78 +206,66 @@ class EventListAllView(APIView):
         return Response(serializer.data)
     
     
-class EventUpdateView(APIView):
+class EventUpdateAPIView(APIView):
     @transaction.atomic
     def put(self, request, event_id):
         try:
-            print("Request Data:", request.data)
-            
-            # Fetch existing event
-            try:
-                event = Event.objects.get(id=event_id)
-            except Event.DoesNotExist:
-                return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+            event_instance = Event.objects.get(id=event_id)
+        except Event.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Extract event data from request
+        try:
+            # Update the event data
+            speakers_list = request.data.get('speakers', [])   
             event_data = {
-                'event_name': request.data.get('event_name'),
-                'date': None,
-                'days': int(request.data.get('days')),  
-                'forum': request.data.get('forum'),
-                'speakers': [speaker.strip('"') for speaker in request.data.getlist('speakers[]')],
-                'banner': request.data.get('banner')
+                'event_name': request.data.get('event_name', event_instance.event_name),
+                'date': event_instance.date.strftime('%d-%m-%Y') if event_instance.date else '',
+                'days': int(request.data.get('days', event_instance.days)),
+                'forum': request.data.get('forum', event_instance.forum_id),
+                'speakers': speakers_list,
+                'banner': request.data.get('banner', event_instance.banner),
             }
 
-            # Handle date format conversion
             date_str = request.data.get('date')
             if date_str:
-                event_data['date'] = datetime.strptime(date_str, '%d-%m-%Y').strftime('%Y-%m-%d')
+                try:
+                    event_data['date'] = datetime.strptime(date_str, '%d-%m-%Y').strftime('%Y-%m-%d')
+                except ValueError:
+                    return Response({'error': 'Invalid date format. Use DD-MM-YYYY.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            start_date = datetime.strptime(event_data['date'], '%Y-%m-%d') if event_data['date'] else None
-            dates = [start_date + timedelta(days=i) for i in range(event_data['days'])] if start_date else []
-
-            print("Event Data before serialization:", event_data)
-
-            # Validate forum
-            forum_id = event_data.get('forum')
-            if not Forum.objects.filter(id=forum_id).exists():
-                return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
-
-            event_serializer = EventSerializer(event, data=event_data, partial=True)
+            event_serializer = EventSerializer(instance=event_instance, data=event_data)
             if event_serializer.is_valid():
-                event = event_serializer.save()
+                updated_event = event_serializer.save()
+
+            
+                SingleEvent.objects.filter(event=updated_event).delete()
+                single_events_data = request.data.get('single_events', [])   
+
+                for date_index, single_event_data in enumerate(single_events_data):
+                    single_event_data_dict = json.loads(single_event_data)
+                    single_event_data_dict['date'] = (datetime.strptime(single_event_data_dict['date'], '%d-%m-%Y')
+                                                      .strftime('%Y-%m-%d'))
+                    single_event_data_dict['day'] = date_index + 1
+                    single_event_data_dict['event'] = updated_event.id
+                    single_serializer = SingleEventSerializer(data=single_event_data_dict)
+                    if single_serializer.is_valid():
+                        single_serializer.save()
+ 
+                        multi_events_data = single_event_data_dict.get('multi_events', [])
+                        for multi_event_data in multi_events_data:
+                            multi_event_data['single_event'] = single_serializer.instance.id
+                            multi_serializer = MultiEventSerializer(data=multi_event_data)
+                            if multi_serializer.is_valid():
+                                multi_serializer.save()
+                            else:
+                                return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                return Response({'message': 'Event updated successfully'}, status=status.HTTP_200_OK)
             else:
-                print("Event Serializer Errors:", event_serializer.errors)
                 return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            single_events_data = request.data.getlist('single_events[]')
-            print("Single Events Data:", single_events_data)
-
-            # Clear existing single events and multi events
-            SingleEvent.objects.filter(event=event).delete()
-
-            for date_index, date in enumerate(dates):
-                single_event_data_dict = json.loads(single_events_data[date_index])
-                single_event_data_dict['date'] = date.strftime('%Y-%m-%d')
-                single_event_data_dict['day'] = date_index + 1  # Assign day number
-                single_serializer = SingleEventSerializer(data=single_event_data_dict)
-                if single_serializer.is_valid():
-                    single_instance = single_serializer.save(event=event, date=date, day=date_index + 1)
-                else:
-                    print("Single Event Serializer Errors:", single_serializer.errors)
-                    return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-                multi_events_data = single_serializer.validated_data.get('multi_events', [])
-                for multi_event_data in multi_events_data:
-                    multi_event_data['single_event'] = single_instance.id
-                    multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
-                    if multi_serializer.is_valid():
-                        multi_serializer.save()
-                    else:
-                        print("Multi Event Serializer Errors:", multi_serializer.errors)
-                        return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            return Response({'message': 'Event and associated data updated successfully'}, status=status.HTTP_200_OK)
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -313,6 +301,9 @@ from .serializers import EventListSerializer
 
 class EventListView(APIView):
     def calculate_end_date(self, event):
+        """
+        Calculates the start and end dates of the event based on its single events.
+        """
         single_events = event.single_events.all()
         if single_events.exists():
             start_date = single_events.first().date
@@ -320,7 +311,24 @@ class EventListView(APIView):
             return start_date, end_date
         return None, None
 
+    def calculate_multi_event_times(self, event):
+        """
+        Calculates the starting time of the first MultiEvent and ending time of the last MultiEvent
+        when days = 1 for the given event.
+        """
+        single_event = event.single_events.filter(day=1).first()
+        if single_event:
+            multi_events = single_event.multi_events.all()
+            if multi_events.exists():
+                start_time = multi_events.first().starting_time
+                end_time = multi_events.last().ending_time
+                return start_time, end_time
+        return None, None
+
     def get_event_status(self, event):
+        """
+        Determines the status of the event based on current date and event dates.
+        """
         current_date = datetime.now().date()
         start_date, end_date = self.calculate_end_date(event)
         if start_date and end_date:
@@ -330,54 +338,47 @@ class EventListView(APIView):
                 return "Completed"
         return "Upcoming"
 
-
     def get(self, request):
+        """
+        Retrieves all events, categorizes them based on status, and returns serialized data.
+        """
         events = Event.objects.all()
-        live_events = []
-        upcoming_events = []
-        completed_events = []
-
-        for event in events:
-            status = self.get_event_status(event)
-            if status == "Live":
-                live_events.append(event)
-            elif status == "Upcoming":
-                upcoming_events.append(event)
-            else:
-                completed_events.append(event)
-
         live_events_data = []
         upcoming_events_data = []
         completed_events_data = []
 
-        for event in live_events:
-            start_date, end_date = self.calculate_end_date(event)
-            live_event_data = EventListSerializer(event).data
-            live_event_data['start_date'] = start_date
-            live_event_data['end_date'] = end_date
-            live_events_data.append(live_event_data)
+        for event in events:
+            # Determine event status
+            status = self.get_event_status(event)
 
-        for event in upcoming_events:
+            # Calculate start and end dates
             start_date, end_date = self.calculate_end_date(event)
-            upcoming_event_data = EventListSerializer(event).data
-            upcoming_event_data['start_date'] = start_date
-            upcoming_event_data['end_date'] = end_date
-            upcoming_events_data.append(upcoming_event_data)
 
-        for event in completed_events:
-            start_date, end_date = self.calculate_end_date(event)
-            completed_event_data = EventListSerializer(event).data
-            completed_event_data['start_date'] = start_date
-            completed_event_data['end_date'] = end_date
-            completed_events_data.append(completed_event_data)
+            # Calculate start and end times of MultiEvent for days = 1
+            start_time, end_time = self.calculate_multi_event_times(event)
+
+            # Serialize event data
+            event_data = EventListSerializer(event).data
+            event_data['start_date'] = start_date
+            event_data['end_date'] = end_date
+            event_data['times'] = {
+                'start_time': start_time,
+                'end_time': end_time
+            }
+
+            # Append to appropriate list based on status
+            if status == "Live":
+                live_events_data.append(event_data)
+            elif status == "Upcoming":
+                upcoming_events_data.append(event_data)
+            else:
+                completed_events_data.append(event_data)
 
         return Response({
             'live_events': live_events_data,
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
-
-
  
  
  
@@ -737,19 +738,33 @@ class BlogUpdateView(UpdateAPIView):
     serializer_class = BlogsFormSerializer
 
     def put(self, request, *args, **kwargs):
-        print("request",request.data)
+        print("Request data:", request.data)
         try:
+            mutable_data = request.data.copy()
+            blog_contents_data = []
+
+            for key, value in mutable_data.items():
+                if key.startswith('blog_contents'):
+                    index = int(key.split('[')[1].split(']')[0])
+                    field = key.split('[')[2].split(']')[0]
+
+                    while len(blog_contents_data) <= index:
+                        blog_contents_data.append({})
+
+                    blog_contents_data[index][field] = value
+
+            mutable_data['blog_contents'] = blog_contents_data
+            mutable_data.pop('csrfmiddlewaretoken', None)  # If CSRF token is present, remove it
+
             blog = self.get_object()
-            serializer = self.get_serializer(blog, data=request.data)
+            serializer = self.get_serializer(blog, data=mutable_data)
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
-            print("updated data",serializer.data)
+            print("Updated data:", serializer.data)
             return Response(serializer.data)
         except Exception as e:
-            print("eeee",e)
+            print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 
 
@@ -1546,3 +1561,15 @@ class DeleteGalleryView(generics.DestroyAPIView):
 
         gallery.delete()
         return Response({'message': 'Gallery deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+class EventDeleteAPIView(APIView):
+    def delete(self, request, event_id):
+        try:
+            event = Event.objects.get(pk=event_id)
+            event.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Event.DoesNotExist:
+            return Response({'error': 'Event not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

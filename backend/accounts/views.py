@@ -789,3 +789,36 @@ class ResetPasswordView(APIView):
             return Response({'message': 'Password reset successfully.'}, status=status.HTTP_200_OK)
         except ObjectDoesNotExist:
             return Response({'error': 'User with this email does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+
+class ContactMessageAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ContactMessageSerializer(data=request.data)
+        if serializer.is_valid():
+            # Optionally associate the message with the authenticated user
+            serializer.validated_data['user'] = self.request.user
+
+            try:
+                # Save the contact message
+                message = serializer.save()
+
+                # Send email notification
+                subject = f"New Contact Message from {message.name}"
+                message_body = f"Name: {message.name}\nEmail: {message.email}\nPhone: {message.phone}\nMessage:\n{message.message}"
+                recipient_email = settings.EMAIL_HOST_USER
+
+                try:
+                    send_mail(subject, message_body, settings.EMAIL_HOST_USER, [recipient_email])
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                except Exception as e:
+                    print(f"Error sending email: {e}")
+                    return Response({'status': 500, 'error': 'Failed to send email notification. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+            except Exception as e:
+                print(f"Error saving contact message: {e}")
+                return Response({'status': 500, 'error': 'Failed to save contact message. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
