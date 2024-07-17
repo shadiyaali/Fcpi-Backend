@@ -160,7 +160,7 @@ class ForumMember(models.Model):
 
 class Blogs(models.Model):    
     forum = models.ForeignKey(Forum, related_name='blogs', on_delete=models.CASCADE,null=True, blank=True)
-    title = models.CharField(max_length=100)     
+    title = models.TextField( null=True, blank=True)     
     author = models.CharField(max_length=100)
     qualification = models.CharField(max_length=100)
     date = models.DateField(null=True)
@@ -182,7 +182,7 @@ class Blogs(models.Model):
     
 class BlogsContents(models.Model): 
     blog =  models.ForeignKey(Blogs, related_name='blog_contents', on_delete=models.CASCADE, null=True, blank=True) 
-    topic = models.CharField(max_length=100,null=True, blank=True)
+    topic = models.TextField( null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to='blogs/', null=True, blank=True)   
     

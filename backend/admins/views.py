@@ -730,42 +730,26 @@ class BlogDeleteView(generics.DestroyAPIView):
 
  
  
- 
+from rest_framework.status import HTTP_500_INTERNAL_SERVER_ERROR
 
  
-class BlogUpdateView(UpdateAPIView):
-    queryset = Blogs.objects.all()
-    serializer_class = BlogsFormSerializer
-
+class BlogUpdateView(APIView):
     def put(self, request, *args, **kwargs):
-        print("Request data:", request.data)
+        print("requsetdata",request.data)
         try:
-            mutable_data = request.data.copy()
-            blog_contents_data = []
-
-            for key, value in mutable_data.items():
-                if key.startswith('blog_contents'):
-                    index = int(key.split('[')[1].split(']')[0])
-                    field = key.split('[')[2].split(']')[0]
-
-                    while len(blog_contents_data) <= index:
-                        blog_contents_data.append({})
-
-                    blog_contents_data[index][field] = value
-
-            mutable_data['blog_contents'] = blog_contents_data
-            mutable_data.pop('csrfmiddlewaretoken', None)  # If CSRF token is present, remove it
-
-            blog = self.get_object()
-            serializer = self.get_serializer(blog, data=mutable_data)
+            blog = Blogs.objects.get(pk=kwargs.get('pk'))
+            serializer = BlogsFormSerializer(blog, data=request.data)
             serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-            print("Updated data:", serializer.data)
-            return Response(serializer.data)
+            serializer.save()
+
+            updated_data = serializer.data
+            print("Updated data:", updated_data)
+            return Response(updated_data)
+        except Blogs.DoesNotExist:
+            return Response({'error': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
         
