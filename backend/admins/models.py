@@ -126,17 +126,17 @@ from django.utils.crypto import get_random_string
 class Member(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True, blank=True)
-    qualification = models.CharField(max_length=100)
-    recent_job_title = models.CharField(max_length=100)
-    additional_job_titles = models.CharField(max_length=100)
+    qualification = models.TextField( null=True, blank=True) 
+    recent_job_title = models.TextField( null=True, blank=True) 
+    additional_job_titles = models.TextField( null=True, blank=True) 
     image = models.ImageField(upload_to='members/', null=True, blank=True)
-    previous_work_experience = models.CharField(max_length=100)
-    publications = models.CharField(max_length=100)
-    current_research = models.CharField(max_length=100)
-    conference = models.CharField(max_length=100)
-    additional_information = models.CharField(max_length=100)
-    achievements = models.CharField(max_length=100)
-    areas = models.CharField(max_length=100)
+    previous_work_experience = models.TextField( null=True, blank=True) 
+    publications = models.TextField( null=True, blank=True) 
+    current_research = models.TextField( null=True, blank=True) 
+    conference = models.TextField( null=True, blank=True) 
+    additional_information = models.TextField( null=True, blank=True) 
+    achievements = models.TextField( null=True, blank=True) 
+    areas = models.TextField( null=True, blank=True) 
 
     def save(self, *args, **kwargs):
         if not self.slug:

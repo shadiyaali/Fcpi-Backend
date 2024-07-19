@@ -219,85 +219,53 @@ class BlogSerializer(serializers.ModelSerializer):
         fields = ['id', 'forum','slug', 'title', 'author','forum_title', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
 
 
- 
-
-class BlogsContentsSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = BlogsContents
-        fields = ['id', 'topic', 'description', 'image']
+# serializers.py
 
  
-
-from rest_framework import serializers
-from .models import Blogs, BlogsContents
 
 class BlogsContentsSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False)
+
     class Meta:
         model = BlogsContents
         fields = ['id', 'topic', 'description', 'image']
 
+   
+
+
 class BlogsFormSerializer(serializers.ModelSerializer):
-    blog_contents = BlogsContentsSerializer(many=True, required=False)
+    blog_contents = BlogsContentsSerializer(many=True)
 
     class Meta:
         model = Blogs
-        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
+        fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_banner', 'author_profile', 'blog_contents']
 
     def update(self, instance, validated_data):
-        blog_contents_data = validated_data.get('blog_contents', [])
-        print("blog_contents_data",blog_contents_data)
-
-        # Update instance fields
-        instance.title = validated_data.get('title', instance.title)
-        instance.author = validated_data.get('author', instance.author)
-        instance.qualification = validated_data.get('qualification', instance.qualification)
-        instance.date = validated_data.get('date', instance.date)
-        instance.forum = validated_data.get('forum', instance.forum)
-        instance.blog_banner = validated_data.get('blog_banner', instance.blog_banner)
-        instance.author_profile = validated_data.get('author_profile', instance.author_profile)
-        instance.save()
-
-        # Keep track of existing blog_contents IDs to delete those not in the updated data
-        existing_ids = set()
+        blog_contents_data = validated_data.pop('blog_contents', [])
+        blog_contents_ids = [content['id'] for content in blog_contents_data if 'id' in content]
+        
+        # Delete any blog_contents that are not in the request
+        for content in instance.blog_contents.all():
+            if content.id not in blog_contents_ids:
+                content.delete()
 
         # Update or create blog_contents
         for content_data in blog_contents_data:
-            content_id = content_data.get('id')
+            content_id = content_data.pop('id', None)
             if content_id:
-                # Update existing blog_content
-                try:
-                    blog_content = instance.blog_contents.get(pk=content_id)
-                    blog_content.topic = content_data.get('topic', blog_content.topic)
-                    blog_content.description = content_data.get('description', blog_content.description)
-                    image_data = content_data.get('image')
-                    if image_data:
-                        blog_content.image = image_data
-                    blog_content.save()
-                    existing_ids.add(content_id)
-                except BlogsContents.DoesNotExist:
-                    pass
+                blog_content = BlogsContents.objects.get(id=content_id, blog=instance)
+                for key, value in content_data.items():
+                    setattr(blog_content, key, value)
+                blog_content.save()
             else:
-                # Create new blog_content
-                BlogsContents.objects.create(
-                    blog=instance,
-                    topic=content_data.get('topic'),
-                    description=content_data.get('description'),
-                    image=content_data.get('image')
-                )
+                BlogsContents.objects.create(blog=instance, **content_data)
 
-        # Delete blog_contents not included in updated data
-        for blog_content in instance.blog_contents.all():
-            if blog_content.id not in existing_ids:
-                blog_content.delete()
-
-        # Refresh instance to fetch updated blog_contents
-        instance.refresh_from_db()
+        # Update blog instance
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
 
         return instance
-
-
-
-
 
 
 

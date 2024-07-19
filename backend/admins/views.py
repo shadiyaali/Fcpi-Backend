@@ -730,26 +730,63 @@ class BlogDeleteView(generics.DestroyAPIView):
 
  
  
-from rest_framework.status import HTTP_500_INTERNAL_SERVER_ERROR
+ 
 
  
-class BlogUpdateView(APIView):
-    def put(self, request, *args, **kwargs):
-        print("requsetdata",request.data)
-        try:
-            blog = Blogs.objects.get(pk=kwargs.get('pk'))
-            serializer = BlogsFormSerializer(blog, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+# views.py
 
-            updated_data = serializer.data
-            print("Updated data:", updated_data)
-            return Response(updated_data)
-        except Blogs.DoesNotExist:
-            return Response({'error': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
+from rest_framework.parsers import MultiPartParser, FormParser
+class BlogUpdateView(UpdateAPIView):
+    queryset = Blogs.objects.all()
+    serializer_class = BlogsFormSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def put(self, request, *args, **kwargs):
+        print("Request data:", request.data)
+        blog_contents_data = []
+
+        # Extract and format blog_contents data
+        for key, value in request.data.items():
+            if key.startswith('blog_contents'):
+                parts = key.split('[')
+                index = int(parts[1][:-1])
+                field = parts[2][:-1]
+
+                while len(blog_contents_data) <= index:
+                    blog_contents_data.append({})
+
+                if isinstance(value, list):
+                    blog_contents_data[index][field] = value[0]
+                else:
+                    blog_contents_data[index][field] = value
+
+        # Create a new data dictionary to pass to the serializer
+        data = {
+            'forum': request.data.get('forum'),
+            'title': request.data.get('title'),
+            'author': request.data.get('author'),
+            'qualification': request.data.get('qualification'),
+            'date': request.data.get('date'),
+            'blog_banner': request.data.get('blog_banner'),
+            'author_profile': request.data.get('author_profile'),
+            'blog_contents': blog_contents_data,
+        }
+
+        print("Formatted data:", data)
+
+        try:
+            blog = self.get_object()
+            serializer = self.get_serializer(blog, data=data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            print("Updated data:", serializer.data)
+            return Response(serializer.data)
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 
 
         
