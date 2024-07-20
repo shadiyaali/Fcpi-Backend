@@ -290,37 +290,29 @@ class UserprofileListView(APIView):
     
 
 class UserProfileView(APIView):
-    def get(self, request):
-        user = request.user
+    def get(self, request, user_id=None):
+        user = get_object_or_404(User, pk=user_id) if user_id else request.user
 
         try:
             user_profile = UserProfile.objects.get(user=user)
             profile_serializer = UserProfileSerializer(user_profile)
-            profile_data = profile_serializer.data  
-            # print("Profile Data:", profile_data)
-            
-         
-            user_instance = User.objects.get(pk=user.pk)
-            user_serializer = UserSerializer(user_instance)
+            profile_data = profile_serializer.data
+
+            user_serializer = UserSerializer(user)
             user_data = user_serializer.data
-            # print("User Data:", user_data)
- 
+
             response_data = {
                 'user': user_data,
                 'profile': profile_data
             }
             return Response(response_data, status=status.HTTP_200_OK)
         except UserProfile.DoesNotExist:
-          
-            user_instance = User.objects.get(pk=user.pk)
-            user_serializer = UserSerializer(user_instance)
+            user_serializer = UserSerializer(user)
             user_data = user_serializer.data
-            # print("User Data:", user_data)
             return Response({'user': user_data}, status=status.HTTP_200_OK)
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
  
 from rest_framework.exceptions import ValidationError
 
@@ -438,10 +430,13 @@ from rest_framework.response import Response
 from rest_framework import status
 
 class UserProfileAPIView(APIView):
-    def post(self, request, user_id):
+    
+    def put(self, request, user_id):
+        print("userid",user_id)
         print("Request data:", request.data)
         try:
             user_profile = UserProfile.objects.get(user_id=user_id)
+
             user = user_profile.user  # Get the related User object
 
             if request.data:
