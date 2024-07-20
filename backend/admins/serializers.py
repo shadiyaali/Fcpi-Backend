@@ -230,8 +230,6 @@ class BlogsContentsSerializer(serializers.ModelSerializer):
         model = BlogsContents
         fields = ['id', 'topic', 'description', 'image']
 
-   
-
 
 class BlogsFormSerializer(serializers.ModelSerializer):
     blog_contents = BlogsContentsSerializer(many=True)
@@ -243,7 +241,7 @@ class BlogsFormSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         blog_contents_data = validated_data.pop('blog_contents', [])
         blog_contents_ids = [content['id'] for content in blog_contents_data if 'id' in content]
-        
+
         # Delete any blog_contents that are not in the request
         for content in instance.blog_contents.all():
             if content.id not in blog_contents_ids:
@@ -266,6 +264,7 @@ class BlogsFormSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
 
 
 

@@ -787,8 +787,6 @@ class BlogUpdateView(UpdateAPIView):
 
 
 
-
-
         
         
 class certificatesCreate(generics.ListCreateAPIView):
