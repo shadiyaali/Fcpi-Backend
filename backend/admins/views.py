@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GalleryUpdateSerializer,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GalleryUpdateSerializer,SingleEventUpdateSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,Gallery,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
@@ -200,75 +200,110 @@ class EventListSingleView(APIView):
     
 class EventListAllView(APIView):
     def get(self, request):
+       
         events = Event.objects.all()
         serializer = EventListSerializer(events, many=True)
-        print(serializer.data)
+ 
         return Response(serializer.data)
     
     
+ 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from .models import Event, SingleEvent, MultiEvent, Forum, Speaker
+import json
+
 class EventUpdateAPIView(APIView):
-    @transaction.atomic
-    def put(self, request, event_id):
+    def put(self, request, *args, **kwargs):
+        print("Received data:", request.data)  # Print the entire request data
+        
+        event_id = kwargs.get('event_id')
+        print("Event ID:", event_id)
+        
         try:
-            event_instance = Event.objects.get(id=event_id)
+            event = Event.objects.get(id=event_id)
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
-
+        
+        # Update Event fields
+        event.event_name = request.data.get('event_name')
+        event.date = request.data.get('date')
+        event.days = request.data.get('days')
+        event.forum = get_object_or_404(Forum, id=request.data.get('forum'))
+        
+        print("Updated event fields:", {
+            "event_name": event.event_name,
+            "date": event.date,
+            "days": event.days,
+            "forum": event.forum
+        })
+        
+        if 'banner' in request.FILES:
+            event.banner = request.FILES['banner']
+        
+        event.speakers.set(Speaker.objects.filter(id__in=request.data.getlist('speakers')))
+        print("Updated speakers:", event.speakers.all())
+        
         try:
-            # Update the event data
-            speakers_list = request.data.get('speakers', [])   
-            event_data = {
-                'event_name': request.data.get('event_name', event_instance.event_name),
-                'date': event_instance.date.strftime('%d-%m-%Y') if event_instance.date else '',
-                'days': int(request.data.get('days', event_instance.days)),
-                'forum': request.data.get('forum', event_instance.forum_id),
-                'speakers': speakers_list,
-                'banner': request.data.get('banner', event_instance.banner),
+            highlights = json.loads(request.data.get('highlights', '[]'))
+            multi_events_data = json.loads(request.data.get('multi_events', '[]'))
+            
+            print("Highlights:", highlights)
+            print("Multi Events Data:", multi_events_data)
+            
+            event.youtube_link = request.data.get('youtube_link')
+            event.points = request.data.get('points')
+            
+            event.save()
+            print("Event saved:", event)
+            
+            # Update or create SingleEvent instances
+            single_event_data = {
+                'event': event,
+                'youtube_link': request.data.get('youtube_link'),
+                'points': request.data.get('points'),
+                'highlights': highlights,
+                'date': request.data.get('date'),
+                'day': request.data.get('days'),
             }
 
-            date_str = request.data.get('date')
-            if date_str:
-                try:
-                    event_data['date'] = datetime.strptime(date_str, '%d-%m-%Y').strftime('%Y-%m-%d')
-                except ValueError:
-                    return Response({'error': 'Invalid date format. Use DD-MM-YYYY.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            event_serializer = EventSerializer(instance=event_instance, data=event_data)
-            if event_serializer.is_valid():
-                updated_event = event_serializer.save()
-
+            single_event, created = SingleEvent.objects.update_or_create(
+                event=event, defaults=single_event_data)
+            print("SingleEvent saved:", single_event)
             
-                SingleEvent.objects.filter(event=updated_event).delete()
-                single_events_data = request.data.get('single_events', [])   
+            # Delete existing MultiEvent instances
+            MultiEvent.objects.filter(single_event=single_event).delete()
+            
+            # Create new MultiEvent instances
+            for multi_event_data in multi_events_data:
+                print("Processing multi event data:", multi_event_data)
+                
+                # Get the Speaker instance for single_speaker
+                single_speaker = get_object_or_404(Speaker, id=multi_event_data.get('single_speaker'))
+                
+                multi_event = MultiEvent.objects.create(
+                    single_event=single_event,
+                    starting_time=multi_event_data.get('starting_time'),
+                    ending_time=multi_event_data.get('ending_time'),
+                    topics=multi_event_data.get('topics'),
+                    single_speaker=single_speaker
+                )
+                
+                print("MultiEvent saved:", multi_event)
+        
+        except json.JSONDecodeError:
+            return Response({'error': 'Invalid JSON data'}, status=status.HTTP_400_BAD_REQUEST)
 
-                for date_index, single_event_data in enumerate(single_events_data):
-                    single_event_data_dict = json.loads(single_event_data)
-                    single_event_data_dict['date'] = (datetime.strptime(single_event_data_dict['date'], '%d-%m-%Y')
-                                                      .strftime('%Y-%m-%d'))
-                    single_event_data_dict['day'] = date_index + 1
-                    single_event_data_dict['event'] = updated_event.id
-                    single_serializer = SingleEventSerializer(data=single_event_data_dict)
-                    if single_serializer.is_valid():
-                        single_serializer.save()
- 
-                        multi_events_data = single_event_data_dict.get('multi_events', [])
-                        for multi_event_data in multi_events_data:
-                            multi_event_data['single_event'] = single_serializer.instance.id
-                            multi_serializer = MultiEventSerializer(data=multi_event_data)
-                            if multi_serializer.is_valid():
-                                multi_serializer.save()
-                            else:
-                                return Response(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                    else:
-                        return Response(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Event updated successfully'}, status=status.HTTP_200_OK)
 
-                return Response({'message': 'Event updated successfully'}, status=status.HTTP_200_OK)
-            else:
-                return Response(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        except Exception as e:
-            print("Error:", e)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
 
 
 

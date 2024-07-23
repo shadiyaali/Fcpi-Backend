@@ -84,13 +84,13 @@ class Event(models.Model):
 
 
 class SingleEvent(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='single_events')          
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True, related_name='single_events')
     youtube_link = models.URLField(null=True, blank=True)
-    points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)    
+    points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     highlights = models.TextField(null=True, blank=True)
-    date = models.DateField(null=True) 
+    date = models.DateField(null=True)
     day = models.IntegerField(null=True)
-      
+
     def save(self, *args, **kwargs):
         if self._state.adding or (self.pk is not None and getattr(self, '_original_highlights', None) != self.highlights):
             if isinstance(self.highlights, list):
@@ -102,10 +102,13 @@ class SingleEvent(models.Model):
         self._original_highlights = self.highlights
 
     class Meta:
-        unique_together = ('event', 'day')   
+        unique_together = ('event', 'day')
 
     def __str__(self):
-        return f"{self.event.event_name}  day {self.day}"
+        if self.event:
+            return f"{self.event.event_name}  day {self.day}"
+        return f"Day {self.day} (Event not set)"
+
   
     
 class MultiEvent(models.Model):
