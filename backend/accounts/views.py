@@ -23,7 +23,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from admins.models import Certificates,Event,SingleEvent
-from admins.serializers import EventListSerializer,SingleEventsSerializer
+from admins.serializers import EventListSerializer,SingleEventsSerializer 
  
  
  
@@ -229,7 +229,30 @@ class UserListView(APIView):
         users = User.objects.filter(is_staff=False)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
-    
+
+
+class UserALLListView(APIView):
+    def get(self, request):
+        try:
+            users = User.objects.all()
+            profiles = UserProfile.objects.all()
+            
+            # Create dictionaries for efficient lookups
+            user_profiles = {profile.user.id: profile for profile in profiles}
+            
+            user_data = []
+            for user in users:
+                user_profile = user_profiles.get(user.id)
+                serializer_user = UserSerializer(user)
+                serializer_profile = UserProfileSerializer(user_profile) if user_profile else None
+                user_data.append({
+                    "user": serializer_user.data,
+                    "profile": serializer_profile.data if serializer_profile else None
+                })
+            
+            return Response(user_data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
 class UserAllListView(APIView):
     def get(self, request):
         try:
@@ -395,13 +418,18 @@ class CertificateView(APIView):
 
         for feedback in feedbacks:
             single_event = feedback.single_event
-            event_name = single_event.event.event_name
-            certificates = Certificates.objects.filter(event__event_name=event_name)
+            event = single_event.event
+            certificates = Certificates.objects.filter(event=event)
 
             if certificates.exists():
                 certificate = certificates.first()
+                event_name = event.event_name
+                if event.days > 1:
+                    event_name += f" (Day {single_event.day})"
+
                 serialized_certificates.append({
                     "event_name": event_name,
+                    "days": event.days,
                     "event_date": single_event.date,
                     "single_event": {
                         "points": single_event.points,
@@ -410,9 +438,7 @@ class CertificateView(APIView):
                     "certificate_image": certificate.image.url
                 })
 
-        print("pppp", serialized_certificates)
         return Response(serialized_certificates, status=status.HTTP_200_OK)
-
 
 
 
@@ -510,10 +536,12 @@ class CheckEnrollmentView(APIView):
     
 from datetime import datetime  
 
-  
+ 
 
 
 class UserEnrolledEventListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def calculate_event_dates(self, event):
         single_events = event.single_events.all()
         if single_events.exists():
@@ -532,15 +560,11 @@ class UserEnrolledEventListView(APIView):
                 return "Completed"
         return "Upcoming"
 
-    def get(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
-
-        # Fetch enrolled events for the user
+    def get(self, request):
+        user = request.user
         enrolled_events = Enrolled.objects.filter(user=user).select_related('event')
 
         events_data = []
-
-        # Categorize events based on their status
         for enrollment in enrolled_events:
             event = enrollment.event
             event_status = self.get_event_status(event)
@@ -548,9 +572,7 @@ class UserEnrolledEventListView(APIView):
             event_data['status'] = event_status
             events_data.append(event_data)
 
-        return Response({
-            'events': events_data
-        })
+        return Response({'events': events_data})
 from django.contrib.auth.hashers import make_password
 
 class ChangePasswordAPIView(APIView):
@@ -599,25 +621,50 @@ class UserDetailView(APIView):
             return Response({"user": serializer_user.data, "profile": serializer_profile.data})
         except (User.DoesNotExist, UserProfile.DoesNotExist):
             return Response({'error': 'User profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
-
-
         
         
+ 
 
+        
+from django.http import QueryDict        
+ 
 class UserProfileUpdateView(APIView):
     def put(self, request, user_id):
+        print("Request data:", request.data)
+
         try:
             user_profile = UserProfile.objects.get(user__id=user_id)
+            print("user_profile", user_profile)
         except UserProfile.DoesNotExist:
             return Response({'error': 'User profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-        print('Request Data:', request.data)   
-        serializer = UserProfileSerializer(user_profile, data=request.data, partial=True)
+        
+        user_data = request.data.get('user', None)
+        print("Extracted user_data:", user_data)
+
+     
+        data = request.data.copy()
+        if isinstance(data, QueryDict):
+            data = data.dict()  
+
+        
+        if user_data:
+            data['user'] = user_data
+
+        print("Prepared data for serializer:", data)
+
+        serializer = UserProfileSerializer(user_profile, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            print("Updated serializer data:", serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
+            print("Serializer errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
         
 class UserDeleteView(APIView):
     def delete(self, request, user_id):
@@ -815,3 +862,34 @@ class ContactMessageAPIView(APIView):
                 return Response({'status': 500, 'error': 'Failed to save contact message. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class EnrolledUserCountView(APIView):
+    def get(self, request, slug):
+        try:
+            event = Event.objects.get(slug=slug)
+            user_count = Enrolled.objects.filter(event=event).count()
+            return Response({'user_count': user_count}, status=status.HTTP_200_OK)
+        except Event.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+class UserDataView(View):
+    def get(self, request, *args, **kwargs):
+        users = User.objects.select_related('userprofile').all()
+
+        data = [
+            {
+                'id': user.id,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'date_of_birth': user.userprofile.date_of_birth.strftime('%Y-%m-%d') if user.userprofile.date_of_birth else '',
+                'phone': user.phone,
+                'email': user.email,
+                'state': user.userprofile.state if user.userprofile.state else '',
+                'city': user.userprofile.city if user.userprofile.city else '',
+            }
+            for user in users
+        ]
+
+        return JsonResponse(data, safe=False)

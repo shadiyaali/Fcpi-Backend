@@ -19,4 +19,5 @@ admin.site.register(BoardMember)
 admin.site.register(Board)
 admin.site.register(Gallery)
 admin.site.register(GalleryImage)
+admin.site.register(Attachment)
  

@@ -103,8 +103,8 @@ class Enrolled(models.Model):
     user = models.ForeignKey(User, related_name='userevent', on_delete=models.CASCADE, null=True, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='event_enrollments')
 
-
-
+    
+    
 
 class ContactMessage(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE,default = True)

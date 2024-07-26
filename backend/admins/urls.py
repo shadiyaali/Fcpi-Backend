@@ -8,6 +8,7 @@ urlpatterns = [
     path('forums/<int:pk>/update/', ForumUpdateView.as_view(), name='forum-update'),
     path('forums/<int:pk>/delete/', ForumDeleteView.as_view(), name='forum-delete'),
     path('speakers/', SpeakerListCreate.as_view(), name='speaker-list-create'),
+    path('speakers/<int:pk>/', SpeakerRetrieve.as_view(), name='speaker-detail'),
     path('speakers/<int:pk>/update/', SpeakerUpdateView.as_view(), name='speaker-update'),
     path('speakers/<int:pk>/delete/', SpeakerDeleteView.as_view(), name='speaker-delete'), 
     path('eventcreate/', EventListCreate.as_view() , name='event_create'),
@@ -74,5 +75,11 @@ urlpatterns = [
     path('update-gallery/<int:pk>/', UpdateGalleryView.as_view(), name='update_gallery'),
     path('delete-gallery/<int:gallery_id>/', DeleteGalleryView.as_view(), name='delete_gallery'),
     path('events/<int:event_id>/delete/', EventDeleteAPIView.as_view(), name='event-delete'),
+    path('upload/', UploadAttachmentView.as_view(), name='upload_attachment'),
+    path('single-events-all/', SingleEventListAllView.as_view(), name='single-event-list'),
+    path('attachments/<int:pk>/update/', UpdateAttachmentView.as_view(), name='update-attachment'),
+    path('attachments/', AttachmentsBySingleEventView.as_view(), name='retrieve-attachment'),
+    path('attachments-all/', ListAttachmentsView.as_view(), name='list-attachments'),
+    path('attachments/<int:pk>/delete/', AttachmentDeleteAPIView.as_view(), name='attachment-delete'),
 ]     
  

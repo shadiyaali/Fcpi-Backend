@@ -30,12 +30,26 @@ class Forum(models.Model):
         super().save(*args, **kwargs)
  
 
+# class Speaker(models.Model):
+#     name = models.CharField(max_length=100)
+#     qualification = models.CharField(max_length=100)
+#     designation = models.TextField()
+#     description = models.TextField()
+#     photo = models.ImageField(upload_to='speakers/', null=True, blank=True)
+
+#     def __str__(self):
+#         return self.name
 class Speaker(models.Model):
     name = models.CharField(max_length=100)
     qualification = models.CharField(max_length=100)
     designation = models.TextField()
     description = models.TextField()
     photo = models.ImageField(upload_to='speakers/', null=True, blank=True)
+    facebook = models.URLField(max_length=200, blank=True, null=True)
+    twitter = models.URLField(max_length=200, blank=True, null=True)
+    linkedin = models.URLField(max_length=200, blank=True, null=True)
+    instagram = models.URLField(max_length=200, blank=True, null=True)
+    youtube = models.URLField(max_length=200, blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -67,6 +81,8 @@ class Event(models.Model):
         if not self.slug:
             self.slug = self.custom_slugify(self.event_name)
         super().save(*args, **kwargs)
+    
+ 
     
     def custom_slugify(self, value):
         # Replace any character that is not alphanumeric with an underscore
@@ -220,28 +236,9 @@ class BoardMember(models.Model):
 
 
 
-from rest_framework import serializers
+ 
 
-class EventSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Event
-        fields = ('id', 'event_name', 'speakers', 'date', 'days', 'banner')
-
-class SingleEventsSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-    highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
-    youtube_link = serializers.URLField()
-    points = serializers.DecimalField(max_digits=5, decimal_places=2)
-    event = EventSerializer()
-
-    def create(self, validated_data):
-        # Implementation of create method
-        pass
-
-    class Meta:
-        model = SingleEvent
-        fields = ('id', 'highlights', 'youtube_link', 'points', 'event')
-
+ 
 
 class Gallery(models.Model):
     title = models.CharField(max_length=100)
@@ -252,3 +249,11 @@ class GalleryImage(models.Model):
     
     def __str__(self):
         return f"{self.gallery.title} "
+    
+    
+class Attachment(models.Model):
+    single_event = models.ForeignKey(SingleEvent, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='attachments/')
+
+    def __str__(self):
+        return f"Attachment for Event {self.single_event.id}"

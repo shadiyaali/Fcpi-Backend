@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GalleryUpdateSerializer,SingleEventUpdateSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GalleryUpdateSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,Attachment,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -75,6 +75,10 @@ class SpeakerListCreate(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
+
+class SpeakerRetrieve(generics.RetrieveAPIView):
+    queryset = Speaker.objects.all()
+    serializer_class = SpeakerSerializer
 
 class SpeakerUpdateView(generics.UpdateAPIView):
     queryset = Speaker.objects.all()
@@ -474,8 +478,11 @@ class SingleDetailView(APIView):
             
             serialized_single_events = []
             current_date = timezone.now().date()  # Get current date
+
+            # Sort single_events by date before processing
+            sorted_single_events = sorted(event.single_events.all(), key=lambda se: se.date)
             
-            for index, single_event in enumerate(event.single_events.all(), start=1):
+            for index, single_event in enumerate(sorted_single_events, start=1):
                 serialized_single_event = SingleEventSerializer(single_event).data
                 serialized_single_event['day'] = index  
                 serialized_single_event['date'] = single_event.date.strftime('%Y-%m-%d')
@@ -502,7 +509,7 @@ class EventSpeakersView(APIView):
     def get(self, request, slug):
         event = get_object_or_404(Event, slug=slug)
         serializer = EventSpeakerSerializer(event)
-        print("vvvvvvvvvvvvvvvvv",serializer.data)
+       
         return Response(serializer.data)
 
 class EventListbannerView(APIView):
@@ -1627,3 +1634,69 @@ class EventDeleteAPIView(APIView):
             return Response({'error': 'Event not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from rest_framework.permissions import IsAuthenticated      
+ 
+class SingleEventListAllView(APIView):
+    def get(self, request):
+        single_events = SingleEvent.objects.all()
+        serializer = SingleAllEventSerializer(single_events, many=True)
+        return Response(serializer.data)
+    
+    
+    
+class UploadAttachmentView(APIView):
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        single_event_id = request.data.get('single_event')
+
+        if not file or not single_event_id:
+            return Response({'error': 'File and Single Event are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create a new Attachment instance
+        attachment = Attachment.objects.create(single_event_id=single_event_id, file=file)
+
+        serializer = AttachmentSerializer(attachment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class UpdateAttachmentView(APIView):
+    def put(self, request, pk, format=None):
+        try:
+            attachment = Attachment.objects.get(pk=pk)
+        except Attachment.DoesNotExist:
+            return Response({'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AttachmentSerializer(attachment, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+from rest_framework.generics import RetrieveAPIView
+class AttachmentsBySingleEventView(generics.ListAPIView):
+    serializer_class = AttachmentSerializer
+
+    def get_queryset(self):
+        single_event_id = self.request.query_params.get('single_event')
+        if single_event_id:
+            return Attachment.objects.filter(single_event=single_event_id)
+        return Attachment.objects.none()
+    
+class ListAttachmentsView(generics.ListAPIView):
+    queryset = Attachment.objects.all()
+    serializer_class = AttachmentSerializer
+
+
+
+class AttachmentDeleteAPIView(APIView):
+    def delete(self, request, *args, **kwargs):
+        try:
+            attachment = Attachment.objects.get(id=kwargs['pk'])
+        except Attachment.DoesNotExist:
+            return Response({'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        attachment.delete()
+        return Response({'message': 'Attachment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)

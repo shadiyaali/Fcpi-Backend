@@ -24,7 +24,7 @@ urlpatterns = [
     path('user/<int:user_id>/', UserProfileAPIView.as_view(), name='user_profile_api'),
     path('enroll/<slug:slug>/', EnrollEvent.as_view(), name='enroll_event'),
     path('check-enrollment/<slug:slug>/', CheckEnrollmentView.as_view(), name='check_enrollment'),
-    path('users/<int:user_id>/enrolled-events/', UserEnrolledEventListView.as_view(), name='user_enrolled_events'),
+    path('users/enrolled-events/', UserEnrolledEventListView.as_view(), name='user_enrolled_events'),
     path('change-password/', ChangePasswordAPIView.as_view(), name='change_password'),
     path('event-points/', EventPointsAPIView.as_view(), name='event_points'),
     path('singleuser/<int:user_id>/', UserDetailView.as_view(), name='user-detail'),
@@ -36,5 +36,8 @@ urlpatterns = [
     path('verify-forgot-password-otp/', VerifyForgotPasswordOtpView.as_view(), name='forgot-password'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
     path('contact/', ContactMessageAPIView.as_view(), name='contact-message'),
+    path('events/<slug:slug>/enrollment-count/', EnrolledUserCountView.as_view(), name='event-enrollment-count'),
+    path('usersall/', UserALLListView.as_view(), name='user-list'),
+   
 
 ]

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Event,GalleryImage,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
+from .models import Admin,Forum,Speaker,Gallery,Attachment,Event,GalleryImage,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,7 +23,7 @@ class ForumSerializer(serializers.ModelSerializer):
 class SpeakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Speaker
-        fields = ['id', 'name', 'qualification', 'designation', 'description', 'photo']
+        fields = ['id', 'name', 'qualification', 'designation', 'description', 'photo','facebook','twitter','linkedin','instagram','youtube']
       
 
 
@@ -94,10 +94,14 @@ class SingleEventSerializer(serializers.ModelSerializer):
     youtube_link = serializers.URLField()
     points = serializers.DecimalField(max_digits=5, decimal_places=2)
     multi_events = MultiEventSerializer(many=True)
+    single_event_name = serializers.SerializerMethodField()
 
     class Meta:
         model = SingleEvent
-        fields = ['id', 'highlights', 'youtube_link', 'points', 'multi_events']
+        fields = ['id', 'highlights', 'youtube_link', 'points', 'multi_events', 'single_event_name']
+
+    def get_single_event_name(self, obj):
+        return str(obj)
 
     def create(self, validated_data):
         multi_events_data = validated_data.pop('multi_events', [])
@@ -110,6 +114,12 @@ class SingleEventSerializer(serializers.ModelSerializer):
             MultiEvent.objects.create(**multi_event_data)
 
         return single_event
+    
+    
+    
+    
+    
+    
 class SingleEventGEtSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     highlights = serializers.CharField()  # Changed from ListField to CharField
@@ -634,4 +644,31 @@ class GalleryUpdateSerializer(serializers.ModelSerializer):
         if 'images' in self.context['request'].FILES or data.get('existing_images'):
             return data
         raise serializers.ValidationError("Either 'images' or 'existing_images' must be provided.")
- 
+
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    event_name = serializers.SerializerMethodField()
+    event_day = serializers.SerializerMethodField()  # Add field for day
+
+    class Meta:
+        model = Attachment
+        fields = ['id', 'single_event', 'file', 'event_name', 'event_day']
+
+    def get_event_name(self, obj):
+        if obj.single_event and obj.single_event.event:
+            return obj.single_event.event.event_name
+        return 'No event'
+
+    def get_event_day(self, obj):
+        if obj.single_event:
+            return obj.single_event.day
+        return 'No day'
+        
+
+class SingleAllEventSerializer(serializers.ModelSerializer):
+    event_name = serializers.CharField(source='event.event_name', read_only=True)
+
+    class Meta:
+        model = SingleEvent
+        fields = ['id', 'youtube_link', 'points', 'highlights', 'date', 'day', 'event_name']
