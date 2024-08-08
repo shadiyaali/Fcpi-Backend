@@ -38,6 +38,7 @@ urlpatterns = [
     path('contact/', ContactMessageAPIView.as_view(), name='contact-message'),
     path('events/<slug:slug>/enrollment-count/', EnrolledUserCountView.as_view(), name='event-enrollment-count'),
     path('usersall/', UserALLListView.as_view(), name='user-list'),
+    path('user-countweek/', UserCountView.as_view(), name='user-count'),
    
 
 ]

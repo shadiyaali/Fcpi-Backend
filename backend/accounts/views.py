@@ -227,10 +227,12 @@ class UserRoleListView(ListAPIView):
 class UserListView(APIView):
     def get(self, request):
         users = User.objects.filter(is_staff=False)
-        serializer = UserSerializer(users, many=True)
+        serializer = UsersprofileSerializer(users, many=True)
         return Response(serializer.data)
 
-
+ 
+    
+    
 class UserALLListView(APIView):
     def get(self, request):
         try:
@@ -369,28 +371,22 @@ class FeedbackCreateView(APIView):
         single_event_instance = single_event_queryset.first()
         print("SingleEvent ID:", single_event_instance.id)
 
-         
         request.data['single_event'] = single_event_instance.id
+
+        # Check if the user has already submitted feedback for this single event
+        existing_feedback = Feedback.objects.filter(user=request.user, single_event=single_event_instance).first()
+        if existing_feedback:
+            return Response({'error': 'You have already submitted feedback for this event.'}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = FeedbackSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-
-            existing_feedback = Feedback.objects.filter(user=request.user, single_event=single_event_instance).first()
-            print("Existing feedback:", existing_feedback)
-
-            if existing_feedback:
-                serializer = FeedbackSerializer(existing_feedback, data=request.data, partial=True)
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-            else:
-               
-                serializer.save(user=request.user, single_event=single_event_instance)
-
+            serializer.save(user=request.user, single_event=single_event_instance)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
                                                                                                                                                               
 
@@ -550,6 +546,16 @@ class UserEnrolledEventListView(APIView):
             return start_date, end_date
         return None, None
 
+    def calculate_event_times(self, event):
+        single_events = event.single_events.filter(day=1)
+        if single_events.exists():
+            multi_events = single_events.first().multi_events.all()
+            if multi_events.exists():
+                start_time = multi_events.first().starting_time
+                end_time = multi_events.last().ending_time
+                return start_time, end_time
+        return None, None
+
     def get_event_status(self, event):
         current_date = datetime.now().date()
         start_date, end_date = self.calculate_event_dates(event)
@@ -570,6 +576,28 @@ class UserEnrolledEventListView(APIView):
             event_status = self.get_event_status(event)
             event_data = EventListSerializer(event).data
             event_data['status'] = event_status
+
+            start_date, end_date = self.calculate_event_dates(event)
+            if start_date and end_date:
+                event_data['start_date'] = start_date.strftime('%Y-%m-%d')
+                event_data['end_date'] = end_date.strftime('%Y-%m-%d')
+            else:
+                event_data['start_date'] = "Invalid date"
+                event_data['end_date'] = "Invalid date"
+
+            if event.days == 1:
+                start_time, end_time = self.calculate_event_times(event)
+                if start_time and end_time:
+                    event_data['start_time'] = start_time.strftime('%H:%M:%S')
+                    event_data['end_time'] = end_time.strftime('%H:%M:%S')
+                else:
+                    event_data['start_time'] = "Invalid time"
+                    event_data['end_time'] = "Invalid time"
+                event_data['end_date'] = None
+            else:
+                event_data['start_time'] = None
+                event_data['end_time'] = None
+
             events_data.append(event_data)
 
         return Response({'events': events_data})
@@ -584,7 +612,7 @@ class ChangePasswordAPIView(APIView):
             new_password = serializer.validated_data.get('new_password')
             confirm_password = serializer.validated_data.get('confirm_password')
 
-            # Check if the new password and confirmation password match
+        
             if new_password != confirm_password:
                 return Response({'error': 'New password and confirmation password do not match.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -767,6 +795,12 @@ class ForgotPasswordView(APIView):
         if not email:
             return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            # Check if user with the provided email exists
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'The account does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+
         # Generate OTP
         otp = str(random.randint(1000, 9999))  # Generate OTP here
         cache.set(email, otp, timeout=300)  # Store OTP in cache for 5 minutes
@@ -893,3 +927,21 @@ class UserDataView(View):
         ]
 
         return JsonResponse(data, safe=False)
+    
+    
+    
+class UserCountView(APIView):
+    permission_classes = [AllowAny]  # No authentication required
+
+    def get(self, request, format=None):
+        now = timezone.now()
+        start_of_week = now - timezone.timedelta(days=now.weekday())
+        start_of_month = now.replace(day=1)
+
+        users_this_week = User.objects.filter(date_joined__gte=start_of_week).count()
+        users_this_month = User.objects.filter(date_joined__gte=start_of_month).count()
+
+        return Response({
+            'this_week': users_this_week,
+            'this_month': users_this_month
+        })

@@ -81,5 +81,7 @@ urlpatterns = [
     path('attachments/', AttachmentsBySingleEventView.as_view(), name='retrieve-attachment'),
     path('attachments-all/', ListAttachmentsView.as_view(), name='list-attachments'),
     path('attachments/<int:pk>/delete/', AttachmentDeleteAPIView.as_view(), name='attachment-delete'),
+    path('user-file-interaction/', AssociateFileWithUserView.as_view(), name='user-file-interaction'),
+    path('user-attachments/', UserAttachmentsView.as_view(), name='user-attachments'),
 ]     
  

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Attachment,Event,GalleryImage,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
+from .models import Admin,Forum,Speaker,Gallery,Attachment,UserFileAssociation,Event,GalleryImage,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -500,11 +500,9 @@ class EventSerializerss(serializers.ModelSerializer):
     
     
 class SingleEventsSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
+   
     highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
-    youtube_link = serializers.URLField()
-    points = serializers.DecimalField(max_digits=5, decimal_places=2)
-    day = serializers.IntegerField() 
+   
     event = EventSerializer()
 
     def create(self, validated_data):
@@ -513,7 +511,7 @@ class SingleEventsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SingleEvent
-        fields = ('id', 'highlights', 'youtube_link', 'points', 'event', 'day')
+        fields = ('id', 'highlights', 'youtube_link', 'points','date', 'event', 'day')
 
 
 
@@ -548,8 +546,7 @@ class EventSingleSerializer(serializers.ModelSerializer):
         fields = ['id', 'event_name', 'date', 'days', 'forum', 'speakers', 'banner', 'single_events']
 
 
-# serializers.py
-
+ 
  
  
 
@@ -649,7 +646,7 @@ class GalleryUpdateSerializer(serializers.ModelSerializer):
 
 class AttachmentSerializer(serializers.ModelSerializer):
     event_name = serializers.SerializerMethodField()
-    event_day = serializers.SerializerMethodField()  # Add field for day
+    event_day = serializers.SerializerMethodField()   
 
     class Meta:
         model = Attachment
@@ -665,10 +662,33 @@ class AttachmentSerializer(serializers.ModelSerializer):
             return obj.single_event.day
         return 'No day'
         
+class AttachmentSerializerss(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
 
+    class Meta:
+        model = Attachment
+        fields = ['id', 'file', 'file_url']  # Ensure you include any fields you want to serialize
+
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file:
+            return request.build_absolute_uri(obj.file.url)
+        return None
 class SingleAllEventSerializer(serializers.ModelSerializer):
     event_name = serializers.CharField(source='event.event_name', read_only=True)
 
     class Meta:
         model = SingleEvent
         fields = ['id', 'youtube_link', 'points', 'highlights', 'date', 'day', 'event_name']
+        
+ 
+
+class UserFileAssociationSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserFileAssociation
+        fields = ['user', 'attachment', 'file_url', 'created_at']
+
+    def get_file_url(self, obj):
+        return obj.file_url

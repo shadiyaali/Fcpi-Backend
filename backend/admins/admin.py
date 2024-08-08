@@ -20,4 +20,6 @@ admin.site.register(Board)
 admin.site.register(Gallery)
 admin.site.register(GalleryImage)
 admin.site.register(Attachment)
+admin.site.register(UserFileAssociation)
+ 
  

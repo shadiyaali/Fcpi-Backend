@@ -1,7 +1,7 @@
 # users/urls.py
 
 from django.urls import path
-from .views import SecondUserCreateView,SecondUserListView,SecondUserStatusChangeView,SecondUserLoginView,SendMessageAPIView,MessageListView,DeactivateUserView,MessageUpdateView,ToggleUserStatus,DeleteUser 
+from .views import SecondUserCreateView,UserMessageListView,SecondUserListView,SecondUserStatusChangeView,SecondUserLoginView,SendMessageAPIView,MessageListView,DeactivateUserView,MessageUpdateView,ToggleUserStatus,DeleteUser 
  
 
 urlpatterns = [
@@ -15,7 +15,7 @@ urlpatterns = [
     path('second-users/<int:user_id>/toggle-status/', ToggleUserStatus.as_view(), name='toggle_user_status'),
     path('second-users/<int:user_id>/', DeleteUser.as_view(), name='delete_user'),
     path('deactivate-user/<int:user_id>/', DeactivateUserView.as_view(), name='deactivate_user'),
- 
+    path('user/messages/', UserMessageListView.as_view(), name='message-list'),
 ]
  
  

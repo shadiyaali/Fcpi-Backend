@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GalleryUpdateSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer, GalleryUpdateSerializer,AttachmentSerializerss,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,Attachment,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,Attachment,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -785,9 +785,9 @@ class BlogUpdateView(UpdateAPIView):
 
     def put(self, request, *args, **kwargs):
         print("Request data:", request.data)
-        blog_contents_data = []
-
+        
         # Extract and format blog_contents data
+        blog_contents_data = []
         for key, value in request.data.items():
             if key.startswith('blog_contents'):
                 parts = key.split('[')
@@ -797,10 +797,7 @@ class BlogUpdateView(UpdateAPIView):
                 while len(blog_contents_data) <= index:
                     blog_contents_data.append({})
 
-                if isinstance(value, list):
-                    blog_contents_data[index][field] = value[0]
-                else:
-                    blog_contents_data[index][field] = value
+                blog_contents_data[index][field] = value[0] if isinstance(value, list) else value
 
         # Create a new data dictionary to pass to the serializer
         data = {
@@ -809,15 +806,27 @@ class BlogUpdateView(UpdateAPIView):
             'author': request.data.get('author'),
             'qualification': request.data.get('qualification'),
             'date': request.data.get('date'),
-            'blog_banner': request.data.get('blog_banner'),
-            'author_profile': request.data.get('author_profile'),
+            'blog_banner': request.FILES.get('blog_banner'),
+            'author_profile': request.FILES.get('author_profile'),
             'blog_contents': blog_contents_data,
         }
+
+        # Preserve existing images if no new images are provided
+        blog = self.get_object()
+        if not data['blog_banner']:
+            data['blog_banner'] = blog.blog_banner
+        if not data['author_profile']:
+            data['author_profile'] = blog.author_profile
+        
+        for index, content in enumerate(data['blog_contents']):
+            if not content.get('image'):
+                existing_content = blog.blog_contents.filter(id=content.get('id')).first()
+                if existing_content:
+                    content['image'] = existing_content.image
 
         print("Formatted data:", data)
 
         try:
-            blog = self.get_object()
             serializer = self.get_serializer(blog, data=data, partial=True)
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
@@ -826,7 +835,6 @@ class BlogUpdateView(UpdateAPIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
         
@@ -1700,3 +1708,48 @@ class AttachmentDeleteAPIView(APIView):
         
         attachment.delete()
         return Response({'message': 'Attachment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+  
+class AssociateFileWithUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        print("Received request data:", request.data)  # Ensure you print the correct fields
+        attachment_id = request.data.get('attachmentId')
+        single_event_id = request.data.get('singleEventId')  # Change to singleEventId
+
+        if not attachment_id or not single_event_id:
+            print("Missing attachmentId or singleEventId")  # Debug message
+            return Response({'error': 'attachmentId and singleEventId are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            attachment = Attachment.objects.get(id=attachment_id)
+            single_event = SingleEvent.objects.get(id=single_event_id)
+        except Attachment.DoesNotExist:
+            return Response({'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
+        except SingleEvent.DoesNotExist:
+            return Response({'error': 'SingleEvent not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        association, created = UserFileAssociation.objects.get_or_create(
+            user=request.user,
+            attachment=attachment
+        )
+        
+        return Response({'message': 'File associated with user successfully'}, status=status.HTTP_200_OK)
+
+class UserAttachmentsView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AttachmentSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        # Get attachment IDs associated with the user
+        attachment_ids = UserFileAssociation.objects.filter(user=user).values_list('attachment_id', flat=True)
+        # Fetch the full Attachment instances
+        return Attachment.objects.filter(id__in=attachment_ids)
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({'attachments': serializer.data}, status=status.HTTP_200_OK)

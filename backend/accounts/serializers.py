@@ -45,10 +45,10 @@ class UserAllSerializer(serializers.ModelSerializer):
         return user
 
  
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'password', 'phone']
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['id', 'first_name', 'last_name', 'email', 'password', 'phone']
 
 class UserProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -63,7 +63,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
 
  
- 
+class UsersprofileSerializer(serializers.ModelSerializer):
+    profile = UserProfileSerializer(source='userprofile', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'email', 'phone', 'profile']
  
  
 

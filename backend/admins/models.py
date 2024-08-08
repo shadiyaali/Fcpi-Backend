@@ -1,6 +1,8 @@
 from django.db import models
 from .manager import AdminManager 
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings
+ 
  
  
  
@@ -257,3 +259,15 @@ class Attachment(models.Model):
 
     def __str__(self):
         return f"Attachment for Event {self.single_event.id}"
+    
+class UserFileAssociation(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    attachment = models.ForeignKey(Attachment, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"User {self.user.id} - Attachment {self.attachment.id}"
+
+    @property
+    def file_url(self):
+        return self.attachment.file.url if self.attachment and self.attachment.file else None

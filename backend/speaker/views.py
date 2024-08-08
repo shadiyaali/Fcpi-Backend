@@ -17,7 +17,7 @@ from .serializers import MessageSerializer
 from .models import SecondUser 
 from django.contrib.auth import get_user_model
 from .models import Message
-from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer 
+from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer ,MessageSerializersChat
 from django.shortcuts import get_object_or_404
 User = get_user_model()
 
@@ -92,55 +92,59 @@ class SecondUserStatusChangeView(APIView):
  
 from datetime import date
 
+from django.http import JsonResponse
+from .models import Message
+from .serializers import MessageSerializersChat
+
 class MessageListView(APIView):
     def get(self, request, event_name=None, forum_name=None, format=None):
-        # Get the current date
         current_date = date.today()
-
         if event_name and forum_name:
-            messages = Message.objects.select_related('event', 'forum').filter(
+            messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(
                 event__event_name=event_name,
                 forum__title=forum_name,
-                timestamp__date=current_date  
+                timestamp__date=current_date
             )
         elif event_name:
-            messages = Message.objects.select_related('event', 'forum').filter(
+            messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(
                 event__event_name=event_name,
-                timestamp__date=current_date  
+                timestamp__date=current_date
             )
         elif forum_name:
-            messages = Message.objects.select_related('event', 'forum').filter(
+            messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(
                 forum__title=forum_name,
-                timestamp__date=current_date  
+                timestamp__date=current_date
             )
         else:
-            messages = Message.objects.select_related('event', 'forum').filter(
-                timestamp__date=current_date   
+            messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(
+                timestamp__date=current_date
             )
 
-        serialized_messages = MessageSerializerChat(messages, many=True).data
-        print("kkkkkk", serialized_messages)
-        return Response(serialized_messages)
+        # Log the serialized data
+        serializer = MessageSerializersChat(messages, many=True)
+        data = serializer.data
+        print('Serialized Messages Data:', data)
+
+        return JsonResponse(data, safe=False)
 
 
         
  
  
  
-
 class SendMessageAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        print("ppppp", request.data)
+        print("Received data:", request.data)
         content = request.data.get('content')
-        author_id = request.data.get('author')
-        event_name = request.data.get('event_name')  
-        forum_name = request.data.get('forum_name')   
+        event_name = request.data.get('event_name')
+        forum_name = request.data.get('forum_name')
 
-        if content and author_id:
+        if content:
             try:
-                author = User.objects.get(id=author_id)
+                author = request.user  # Fetch the author from the authenticated user
+                print("Author found:", author)
 
                 event = None
                 if event_name:
@@ -158,33 +162,36 @@ class SendMessageAPIView(APIView):
                 )
 
                 serializer = MessageSerializer(message)
-                print("lllll", serializer.data)
+                print("Serialized message data:", serializer.data)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-            except User.DoesNotExist:
-                return Response({'error': 'Invalid author ID'}, status=status.HTTP_400_BAD_REQUEST)
             except Event.DoesNotExist:
+                print("Invalid event name:", event_name)
                 return Response({'error': 'Invalid event name'}, status=status.HTTP_400_BAD_REQUEST)
             except Forum.DoesNotExist:
+                print("Invalid forum name:", forum_name)
                 return Response({'error': 'Invalid forum name'}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
+                print("General error:", str(e))
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
-            return Response({'error': 'Content and author ID are required'}, status=status.HTTP_400_BAD_REQUEST)
+            print("Missing content")
+            return Response({'error': 'Content is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
         
         
 class MessageUpdateView(APIView):
     def put(self, request, pk):
-        print("kkkkkk",request.data)
         try:
             message = Message.objects.get(pk=pk)
         except Message.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # Update the 'answered' field based on the request data
-        message.answered = request.data.get('answered', False)
+        # Toggle the 'answered' field
+        message.answered = not message.answered
         message.save()
 
         serializer = MessageSerializer(message)
@@ -234,3 +241,31 @@ class DeactivateUserView(APIView):
             return Response({'message': 'User deactivated successfully'}, status=status.HTTP_200_OK)
         except SecondUser.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+ 
+
+
+ 
+class UserMessageListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, event_name=None, format=None):
+        user = request.user  # Ensure user is authenticated
+
+        # Check if the user is authenticated
+        if not user.is_authenticated:
+            return JsonResponse({'error': 'User not authenticated'}, status=403)
+
+        # Filter messages based on event_name and user
+        filters = {'author': user}
+        if event_name:
+            filters['event__event_name'] = event_name
+
+        messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(**filters)
+
+        # Serialize the data
+        serializer = MessageSerializersChat(messages, many=True)
+        data = serializer.data
+
+        return JsonResponse(data, safe=False)

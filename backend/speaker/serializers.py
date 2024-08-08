@@ -7,6 +7,9 @@ from .models import SecondUser
 from django.contrib.auth import get_user_model
 from admins.serializers import SingleEventSerializer
 from admins.models import Forum,Event
+from accounts.models import UserProfile
+from accounts.serializers import UserProfileSerializer
+from admins.serializers import EventSerializer,ForumSerializer
 
 
 class SecondUserSerializer(serializers.ModelSerializer):
@@ -51,19 +54,17 @@ class MessageSerializerChat(serializers.ModelSerializer):
         fields = ['id', 'content', 'forum_name', 'event_name', 'author_name', 'timestamp']
 
     def get_author_name(self, obj):
-        return obj.author.name() if obj.author else None
+        # Combine first name and last name
+        if obj.author:
+            first_name = obj.author.first_name
+            last_name = obj.author.last_name
+            return f"{first_name} {last_name}".strip()  # Return combined name or just first_name if last_name is missing
+        return 'Unknown'
 
-    def get_timestamp(self, obj): 
-        # Convert the timestamp to Indian Standard Time (IST)
-        ist = pytz.timezone('Asia/Kolkata')
-        timestamp = obj.timestamp.astimezone(ist)
-        
-        # Format the timestamp as required
-        formatted_timestamp = timestamp.strftime('%b %d, %Y %I:%M%p').lower()
-        formatted_timestamp = formatted_timestamp[:-2] + formatted_timestamp[-2:].upper()
-        formatted_timestamp = formatted_timestamp[0].upper() + formatted_timestamp[1:]
-        return formatted_timestamp
 
+    def get_timestamp(self, obj):
+        # Format the timestamp as needed, e.g., 'YYYY-MM-DD HH:MM:SS'
+        return obj.timestamp.strftime('%Y-%m-%d %H:%M:%S')
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
@@ -76,4 +77,22 @@ class SecondUserSerializer(serializers.ModelSerializer):
 
 
 
+ 
 
+class MessageSerializersChat(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    event_name = serializers.CharField(source='event.event_name', read_only=True)
+    forum_name = serializers.CharField(source='forum.title', read_only=True)
+    author_profile = UserProfileSerializer(source='author.userprofile', read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'event_name', 'forum_name', 'content', 'timestamp', 'author_name', 'author_profile']
+
+    def get_author_name(self, obj):
+        # Combine first name and last name
+        if obj.author:
+            first_name = obj.author.first_name
+            last_name = obj.author.last_name
+            return f"{first_name} {last_name}".strip()   
+        return 'Unknown'
