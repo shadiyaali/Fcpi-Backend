@@ -381,45 +381,79 @@ class BlogSerializer(serializers.ModelSerializer):
 
 class BlogsContentsSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False)
+    
 
     class Meta:
         model = BlogsContents
         fields = ['id', 'topic', 'description', 'image']
 
+class BloggContentsSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = BlogsContents
+        fields = ['id', 'topic', 'description', 'image']
+
+        
+
+
+
+
+
 
 class BlogsFormSerializer(serializers.ModelSerializer):
-    blog_contents = BlogsContentsSerializer(many=True)
+    blog_contents = BloggContentsSerializer(many=True)
 
     class Meta:
         model = Blogs
         fields = ['id', 'forum', 'title', 'author', 'qualification', 'date', 'blog_banner', 'author_profile', 'blog_contents']
 
     def update(self, instance, validated_data):
+        # Update simple fields
+        instance.forum = validated_data.get('forum', instance.forum)
+        instance.title = validated_data.get('title', instance.title)
+        instance.author = validated_data.get('author', instance.author)
+        instance.qualification = validated_data.get('qualification', instance.qualification)
+        instance.date = validated_data.get('date', instance.date)
+        instance.blog_banner = validated_data.get('blog_banner', instance.blog_banner)
+        instance.author_profile = validated_data.get('author_profile', instance.author_profile)
+
+        # Update nested fields
         blog_contents_data = validated_data.pop('blog_contents', [])
-        blog_contents_ids = [content['id'] for content in blog_contents_data if 'id' in content]
 
-        # Delete any blog_contents that are not in the request
-        for content in instance.blog_contents.all():
-            if content.id not in blog_contents_ids:
-                content.delete()
+        # Get existing blog content ids
+        existing_content_ids = [content.id for content in instance.blog_contents.all()]
 
-        # Update or create blog_contents
         for content_data in blog_contents_data:
-            content_id = content_data.pop('id', None)
-            if content_id:
-                blog_content = BlogsContents.objects.get(id=content_id, blog=instance)
-                for key, value in content_data.items():
-                    setattr(blog_content, key, value)
-                blog_content.save()
+            content_id = content_data.get('id', None)
+            if content_id and content_id in existing_content_ids:
+                # Update existing instance
+                content_instance = BlogsContents.objects.get(id=content_id, blog=instance)
+                content_instance.topic = content_data.get('topic', content_instance.topic)
+                content_instance.description = content_data.get('description', content_instance.description)
+                
+                # Retain old image if no new image is provided or if it's set to None
+                new_image = content_data.get('image')
+                if new_image is not None:
+                    content_instance.image = new_image
+                
+                content_instance.save()
+                existing_content_ids.remove(content_id)  # Remove from list to track updated items
             else:
+                # Create new instance if no ID or ID not in existing content
                 BlogsContents.objects.create(blog=instance, **content_data)
 
-        # Update blog instance
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-        instance.save()
+        # Delete any remaining old BloggContents that were not updated
+        for old_id in existing_content_ids:
+            BlogsContents.objects.get(id=old_id, blog=instance).delete()
 
+        instance.save()
         return instance
+
+
+
+
+
 
 
 

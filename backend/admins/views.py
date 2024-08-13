@@ -775,18 +775,41 @@ class BlogDeleteView(generics.DestroyAPIView):
  
 
  
-# views.py
-
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
+from django.core.files.uploadedfile import UploadedFile
+from django.db.models import F
+
+from rest_framework.response import Response
+from rest_framework import status
+
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.files.uploadedfile import UploadedFile
+
+from django.core.files.base import ContentFile
+import requests
+
+from io import BytesIO
+
 class BlogUpdateView(UpdateAPIView):
     queryset = Blogs.objects.all()
     serializer_class = BlogsFormSerializer
     parser_classes = (MultiPartParser, FormParser)
 
     def put(self, request, *args, **kwargs):
-        print("Request data:", request.data)
-        
-        # Extract and format blog_contents data
+        blog = self.get_object()
+
+        # Print initial blog object data
+        print("Initial blog object:", blog)
+
+        # Print all request data
+        print("Request Data:", request.data)
+        print("Request Files:", request.FILES)
+
+        # Parse blog_contents data
         blog_contents_data = []
         for key, value in request.data.items():
             if key.startswith('blog_contents'):
@@ -799,7 +822,9 @@ class BlogUpdateView(UpdateAPIView):
 
                 blog_contents_data[index][field] = value[0] if isinstance(value, list) else value
 
-        # Create a new data dictionary to pass to the serializer
+        print("Parsed blog_contents data:", blog_contents_data)
+
+        # Construct data payload
         data = {
             'forum': request.data.get('forum'),
             'title': request.data.get('title'),
@@ -811,30 +836,60 @@ class BlogUpdateView(UpdateAPIView):
             'blog_contents': blog_contents_data,
         }
 
-        # Preserve existing images if no new images are provided
-        blog = self.get_object()
-        if not data['blog_banner']:
+        print("Constructed data payload:", data)
+
+        # Retain existing files if not provided in the request
+        if 'blog_banner' not in request.FILES:
             data['blog_banner'] = blog.blog_banner
-        if not data['author_profile']:
+        if 'author_profile' not in request.FILES:
             data['author_profile'] = blog.author_profile
-        
-        for index, content in enumerate(data['blog_contents']):
-            if not content.get('image'):
-                existing_content = blog.blog_contents.filter(id=content.get('id')).first()
-                if existing_content:
-                    content['image'] = existing_content.image
 
-        print("Formatted data:", data)
+        existing_blog_contents = blog.blog_contents.all()
+        existing_content_map = {content.topic: content for content in existing_blog_contents}
 
-        try:
-            serializer = self.get_serializer(blog, data=data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-            print("Updated data:", serializer.data)
-            return Response(serializer.data)
-        except Exception as e:
-            print("Error:", e)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        updated_blog_contents = []
+        for content in data['blog_contents']:
+            print("Processing content:", content)
+            topic = content.get('topic')
+            existing_content = existing_content_map.get(topic)
+
+            if 'image' in content:
+                image_url = content['image']
+                if isinstance(image_url, str) and image_url.startswith('http'):
+                    try:
+                        response = requests.get(image_url)
+                        response.raise_for_status()
+                        content['image'] = ContentFile(response.content, name=image_url.split('/')[-1])
+
+                    except requests.HTTPError:
+                        content['image'] = None
+                elif not isinstance(content['image'], UploadedFile):
+                    if existing_content and existing_content.image:
+                        content['image'] = existing_content.image
+                    else:
+                        content['image'] = None
+
+            updated_blog_contents.append(content)
+
+        print("Updated blog contents:", updated_blog_contents)
+        data['blog_contents'] = updated_blog_contents
+
+        # Serialize and save the updated blog data
+        serializer = self.get_serializer(blog, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
+
 
 
         
