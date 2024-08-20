@@ -190,6 +190,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['user_id'] = user.id
         data['username'] = user.first_name
         return data
+    
+    
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
  
@@ -935,13 +937,13 @@ class UserCountView(APIView):
 
     def get(self, request, format=None):
         now = timezone.now()
-        start_of_week = now - timezone.timedelta(days=now.weekday())
+        seven_days_ago = now - timezone.timedelta(days=7)
         start_of_month = now.replace(day=1)
 
-        users_this_week = User.objects.filter(date_joined__gte=start_of_week).count()
+        users_last_7_days = User.objects.filter(date_joined__gte=seven_days_ago).count()
         users_this_month = User.objects.filter(date_joined__gte=start_of_month).count()
 
         return Response({
-            'this_week': users_this_week,
+            'last_7_days': users_last_7_days,
             'this_month': users_this_month
         })

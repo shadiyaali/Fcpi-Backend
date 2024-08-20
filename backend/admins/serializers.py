@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Attachment,UserFileAssociation,Event,GalleryImage,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board
+from .models import Admin,Forum,Speaker,Gallery,Attachment,UserFileAssociation,Event,GalleryImage,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -305,14 +305,14 @@ class EventBannerSerializer(serializers.ModelSerializer):
     
 class MemeberSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False)
-    slug = serializers.SlugField(required=False)  # Slug should not be required if it's not provided in the form
+    slug = serializers.SlugField(required=False)  
 
     class Meta:
         model = Member
         fields = [
             'id', 'name', 'slug', 'qualification', 'recent_job_title', 'additional_job_titles',
-            'image', 'previous_work_experience', 'publications', 'current_research', 'conference',
-            'additional_information', 'achievements', 'areas'
+            'image', 'previous_work_experience', 'publications',  'conference',
+            'additional_information', 'achievements', 'areas','linkedin'
         ]
 
         
@@ -353,7 +353,31 @@ class BlogsSerializer(serializers.ModelSerializer):
 
         return blog
 
- 
+class GeneralBlogsContentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralBlogsContents
+        fields = ['id', 'topic', 'description', 'image']
+
+class GeneralBlogsSerializer(serializers.ModelSerializer):
+    blog_contents = GeneralBlogsContentsSerializer(many=True, required=False)
+    
+    class Meta:
+        model = GeneralBlogs
+        fields = ['id', 'title', 'author', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
+
+    def create(self, validated_data):
+        blog_contents_data = validated_data.pop('blog_contents', [])
+        blog = GeneralBlogs.objects.create(**validated_data)
+
+        for content_data in blog_contents_data:
+            image_data = content_data.pop('image', None)
+            blog_content = GeneralBlogsContents.objects.create(blog=blog, **content_data)
+            if image_data:
+                blog_content.image = image_data
+                blog_content.save()
+
+        return blog
+
 
  
 
@@ -376,7 +400,22 @@ class BlogSerializer(serializers.ModelSerializer):
 
 
 # serializers.py
+class GeneralBlogContentsSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(use_url=True)
 
+    class Meta:
+        model = BlogsContents
+        fields = ['id', 'topic', 'description', 'image']
+
+class GeneralBlogSerializer(serializers.ModelSerializer):
+    blog_contents = GeneralBlogContentsSerializer(many=True, required=False)
+    blog_banner = serializers.ImageField(use_url=True)
+    author_profile = serializers.ImageField(use_url=True)
+    forum_title = serializers.CharField(source='forum.title')
+
+    class Meta:
+        model = GeneralBlogs
+        fields = ['id', 'forum','slug', 'title', 'author','forum_title', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
  
 
 class BlogsContentsSerializer(serializers.ModelSerializer):
@@ -593,13 +632,19 @@ class GallerySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Gallery
-        fields = ('id', 'title', 'images')
+        fields = ('id', 'title', 'images', 'description')
 
     def create(self, validated_data):
+        # Extract images from request
         images_data = self.context.get('request').FILES.getlist('images')
 
-        gallery = Gallery.objects.create(title=validated_data['title'])
+        # Create Gallery instance with all validated data
+        gallery = Gallery.objects.create(
+            title=validated_data.get('title'),
+            description=validated_data.get('description')
+        )
 
+        # Create GalleryImage instances
         for image_data in images_data:
             GalleryImage.objects.create(gallery=gallery, image=image_data)
 
@@ -615,10 +660,12 @@ class GalleryUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Gallery
-        fields = ('id', 'title', 'images', 'existing_images')
+        fields = ('id', 'title', 'images', 'existing_images', 'description')
 
     def update(self, instance, validated_data):
+        # Update title and description
         instance.title = validated_data.get('title', instance.title)
+        instance.description = validated_data.get('description', instance.description)
 
         # Process existing images to keep or delete
         existing_images_urls = validated_data.get('existing_images', [])
@@ -646,7 +693,7 @@ class GalleryUpdateSerializer(serializers.ModelSerializer):
         for image_data in new_images_data:
             GalleryImage.objects.create(gallery=instance, image=image_data)
 
-        # Save updated title
+        # Save updated instance
         instance.save()
 
         # Refresh instance to get updated relationships
@@ -654,6 +701,7 @@ class GalleryUpdateSerializer(serializers.ModelSerializer):
 
         # Return updated instance
         return instance
+
 
     def to_representation(self, instance):
         # Override to_representation to ensure correct serialization

@@ -153,11 +153,11 @@ class Member(models.Model):
     image = models.ImageField(upload_to='members/', null=True, blank=True)
     previous_work_experience = models.TextField( null=True, blank=True) 
     publications = models.TextField( null=True, blank=True) 
-    current_research = models.TextField( null=True, blank=True) 
     conference = models.TextField( null=True, blank=True) 
     additional_information = models.TextField( null=True, blank=True) 
     achievements = models.TextField( null=True, blank=True) 
     areas = models.TextField( null=True, blank=True) 
+    linkedin = models.URLField(max_length=200, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -245,6 +245,8 @@ class BoardMember(models.Model):
 
 class Gallery(models.Model):
     title = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True)
+    
 
 class GalleryImage(models.Model):
     gallery = models.ForeignKey(Gallery, related_name='images', on_delete=models.CASCADE)
@@ -272,3 +274,35 @@ class UserFileAssociation(models.Model):
     @property
     def file_url(self):
         return self.attachment.file.url if self.attachment and self.attachment.file else None
+    
+class GeneralBlogs(models.Model):    
+    
+    title = models.TextField( null=True, blank=True)     
+    author = models.CharField(max_length=100)
+    qualification = models.CharField(max_length=100)
+    date = models.DateField(null=True)
+    blog_banner = models.ImageField(upload_to='blogs_banner/', null=True, blank=True)
+    author_profile = models.ImageField(upload_to='author_profile/', null=True, blank=True)
+    slug = models.SlugField(unique=True, blank=True, null=True)
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)  
+    def __str__(self):
+        return self.title  
+    
+ 
+    
+class GeneralBlogsContents(models.Model): 
+    blog =  models.ForeignKey(GeneralBlogs, related_name='general_blog_contents', on_delete=models.CASCADE, null=True, blank=True) 
+    topic = models.TextField( null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    image = models.ImageField(upload_to='blogs/', null=True, blank=True)  
+ 
+    
+    def __str__(self):
+        return f"{self.blog.title}"

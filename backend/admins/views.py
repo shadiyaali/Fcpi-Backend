@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer, GalleryUpdateSerializer,AttachmentSerializerss,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer, GalleryUpdateSerializer,GeneralBlogSerializer,AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,Attachment,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -473,36 +473,53 @@ from django.utils import timezone
 class SingleDetailView(APIView):
     def get(self, request, slug):
         try:
-            event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events'), slug=slug)
+            # Fetch the event with related data
+            event = get_object_or_404(Event.objects.prefetch_related('speakers', 'single_events__multi_events'), slug=slug)
             serialized_data = EventListSerializer(event, context={'request': request}).data
-            
-            serialized_single_events = []
-            current_date = timezone.now().date()  # Get current date
 
-            # Sort single_events by date before processing
+            serialized_single_events = []
+            current_date = timezone.now().date()  # Get the current date
+
+            # Sort single_events by date
             sorted_single_events = sorted(event.single_events.all(), key=lambda se: se.date)
-            
+
+            # Initialize start_date and end_date
+            start_date = None
+            end_date = None
+
             for index, single_event in enumerate(sorted_single_events, start=1):
                 serialized_single_event = SingleEventSerializer(single_event).data
                 serialized_single_event['day'] = index  
                 serialized_single_event['date'] = single_event.date.strftime('%Y-%m-%d')
                 
                 # Check if the event is live or completed
-                if single_event.date <= current_date:
-                    serialized_single_event['is_live_or_completed'] = True
-                else:
-                    serialized_single_event['is_live_or_completed'] = False
+                serialized_single_event['is_live_or_completed'] = single_event.date <= current_date
+                
+                # Handle multi-events within the single event
+                multi_events = single_event.multi_events.all().order_by('starting_time')
+                if multi_events.exists():
+                    first_multi_event = multi_events.first()
+                    last_multi_event = multi_events.last()
+
+                    # Assign start and end times directly from MultiEvent
+                    serialized_single_event['first_multi_event_start'] = str(first_multi_event.starting_time) if first_multi_event.starting_time else None
+                    serialized_single_event['last_multi_event_end'] = str(last_multi_event.ending_time) if last_multi_event.ending_time else None
                 
                 serialized_single_events.append(serialized_single_event)
-            
+
+            # Set start_date and end_date based on the earliest and latest single events
+            if sorted_single_events:
+                start_date = sorted_single_events[0].date.strftime('%Y-%m-%d')
+                end_date = sorted_single_events[-1].date.strftime('%Y-%m-%d')
+
+            serialized_data['start_date'] = start_date
+            serialized_data['end_date'] = end_date
             serialized_data['single_events'] = serialized_single_events
-            
+
             return Response(serialized_data)
                
         except Event.DoesNotExist:
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
      
             
 class EventSpeakersView(APIView):
@@ -748,6 +765,57 @@ class CreateBlog(APIView):
 
 
 
+class CreateGeneralBlog(APIView):
+    def post(self, request):
+        try:
+            print("Request data:", request.data)
+            with transaction.atomic():
+                title = request.data.get('title')
+                author = request.data.get('author')
+                qualification = request.data.get('qualification')
+                date = request.data.get('date')
+                blog_banner = request.data.get('blog_banner')
+                author_profile = request.data.get('author_profile')
+                
+                blog = GeneralBlogs.objects.create(
+                    title=title,
+                    author=author,
+                    qualification=qualification,
+                    date=date,
+                    blog_banner=blog_banner,
+                    author_profile=author_profile
+                )
+                
+                blog_contents = []
+                for key in request.data.keys():
+                    if key.startswith('blog_contents'):
+                        index = key.split('[')[1].split(']')[0]
+                        if len(blog_contents) <= int(index):
+                            blog_contents.append({})
+                        field = key.split('[')[2].split(']')[0]
+                        blog_contents[int(index)][field] = request.data.get(key)
+                
+                print("Extracted blog contents:", blog_contents)
+
+                for content_data in blog_contents:
+                    topic = content_data.get('topic')
+                    description = content_data.get('description')
+                    image = request.data.get(f'blog_contents[{blog_contents.index(content_data)}][image]')
+                    
+                    content = GeneralBlogsContents.objects.create(
+                        blog=blog,
+                        topic=topic,
+                        description=description,
+                        image=image
+                    )
+                        
+        except Exception as e:
+            print("Error:", e)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(status=status.HTTP_201_CREATED)
+
+
 class BlogListView(APIView):
     def get(self, request):
         blogs = Blogs.objects.all()
@@ -769,9 +837,16 @@ class BlogDeleteView(generics.DestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class GeneralBlogListViewall(generics.ListAPIView):
+    queryset = GeneralBlogs.objects.prefetch_related('general_blog_contents').all()
 
+    serializer_class = GeneralBlogsSerializer
  
- 
+class GeneralBlogListView(APIView):
+    def get(self, request):
+        blogs = GeneralBlogs.objects.all()
+        serializer = GeneralBlogSerializer(blogs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
  
 
  
@@ -1175,18 +1250,46 @@ from django.db.models.functions import Lower
 
 class AllBoardMembersView(APIView):
     def get(self, request):
-        all_members = set()
-        board_members = BoardMember.objects.prefetch_related('member').all()
+        # Assuming "Board of Directors" is the title for the Board of Directors
+        board = Board.objects.filter(title="Board of Directors").first()
 
+        if not board:
+            return Response({'detail': 'Board of Directors not found'}, status=404)
+
+        board_members = BoardMember.objects.filter(board=board).prefetch_related('member')
+
+        # Collect all members for the board
+        members = []
         for board_member in board_members:
-            all_members.update(board_member.member.all())
+            members.extend(board_member.member.all())
 
-        unique_members_list = list(all_members)
-        
-        serializer = MemeberSerializer(unique_members_list, many=True)
+        # Serialize the member data
+        serializer = MemeberSerializer(members, many=True)
         return Response(serializer.data)
-    
-    
+
+class CommitteeMembersView(APIView):
+    def get(self, request):
+        # Filter to find the specific board, e.g., "Committees"
+        board = Board.objects.filter(title="Committees").first()
+
+        if not board:
+            return Response({'detail': 'Committees board not found'}, status=404)
+
+        # Retrieve BoardMember objects related to the found board
+        board_members = BoardMember.objects.filter(board=board).prefetch_related('member')
+
+        # Collect all unique members related to the board
+        members = []
+        for board_member in board_members:
+            members.extend(board_member.member.all())
+
+        # Remove duplicates if there are any
+        unique_members = list({member.id: member for member in members}.values())
+
+        # Serialize the member data
+        serializer = MemeberSerializer(unique_members, many=True)
+        return Response(serializer.data)
+
 from django.http import JsonResponse
 from django.views import View
 from .models import Member  # Ensure you have the Member model
@@ -1204,11 +1307,11 @@ class MemberDetailViewBySlug(View):
                 'additionalJobTitles': member.additional_job_titles,
                 'previousWorkExperience': member.previous_work_experience,
                 'publications': member.publications,
-                'currentResearch': member.current_research,
                 'conference': member.conference,
                 'additionalInformation': member.additional_information,
                 'achievements': member.achievements,
                 'areasOfInterest': member.areas,
+                'linkedin' : member.linkedin, 
             }
         
             return JsonResponse(data)
@@ -1635,6 +1738,7 @@ class AddGalleryView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
+        
 
 
 class GetGalleryView(generics.ListAPIView):
@@ -1808,3 +1912,17 @@ class UserAttachmentsView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response({'attachments': serializer.data}, status=status.HTTP_200_OK)
+    
+    
+class AttachmentUpdateAPIView(APIView):
+    def put(self, request, *args, **kwargs):
+        try:
+            attachment = Attachment.objects.get(id=kwargs['pk'])
+        except Attachment.DoesNotExist:
+            return Response({'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AttachmentSerializer(attachment, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
