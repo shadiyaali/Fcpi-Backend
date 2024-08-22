@@ -352,6 +352,7 @@ class BlogsSerializer(serializers.ModelSerializer):
                 blog_content.save()
 
         return blog
+# serializers.py
 
 class GeneralBlogsContentsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -360,23 +361,20 @@ class GeneralBlogsContentsSerializer(serializers.ModelSerializer):
 
 class GeneralBlogsSerializer(serializers.ModelSerializer):
     blog_contents = GeneralBlogsContentsSerializer(many=True, required=False)
-    
+   
     class Meta:
         model = GeneralBlogs
-        fields = ['id', 'title', 'author', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
+        fields = ['id',  'title', 'author', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
 
     def create(self, validated_data):
         blog_contents_data = validated_data.pop('blog_contents', [])
-        blog = GeneralBlogs.objects.create(**validated_data)
+        general_blog = GeneralBlogs.objects.create(**validated_data)
 
         for content_data in blog_contents_data:
-            image_data = content_data.pop('image', None)
-            blog_content = GeneralBlogsContents.objects.create(blog=blog, **content_data)
-            if image_data:
-                blog_content.image = image_data
-                blog_content.save()
+            GeneralBlogsContents.objects.create(general_blog=general_blog, **content_data)
 
-        return blog
+        return general_blog
+
 
 
  
@@ -411,11 +409,11 @@ class GeneralBlogSerializer(serializers.ModelSerializer):
     blog_contents = GeneralBlogContentsSerializer(many=True, required=False)
     blog_banner = serializers.ImageField(use_url=True)
     author_profile = serializers.ImageField(use_url=True)
-    forum_title = serializers.CharField(source='forum.title')
+ 
 
     class Meta:
         model = GeneralBlogs
-        fields = ['id', 'forum','slug', 'title', 'author','forum_title', 'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
+        fields = ['id',  'slug', 'title', 'author',  'qualification', 'date', 'blog_contents', 'blog_banner', 'author_profile']
  
 
 class BlogsContentsSerializer(serializers.ModelSerializer):
@@ -488,6 +486,55 @@ class BlogsFormSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+class BlogsGeneralFormSerializer(serializers.ModelSerializer):
+    blog_contents = BloggContentsSerializer(many=True)
+
+    class Meta:
+        model = GeneralBlogs
+        fields = ['id', 'title', 'author', 'qualification', 'date', 'blog_banner', 'author_profile', 'blog_contents']
+
+    def update(self, instance, validated_data):
+        # Update simple fields
+        instance.title = validated_data.get('title', instance.title)
+        instance.author = validated_data.get('author', instance.author)
+        instance.qualification = validated_data.get('qualification', instance.qualification)
+        instance.date = validated_data.get('date', instance.date)
+        instance.blog_banner = validated_data.get('blog_banner', instance.blog_banner)
+        instance.author_profile = validated_data.get('author_profile', instance.author_profile)
+
+        # Update nested fields
+        blog_contents_data = validated_data.pop('blog_contents', [])
+
+        # Get existing blog content ids
+        existing_content_ids = [content.id for content in instance.blog_contents.all()]
+
+        for content_data in blog_contents_data:
+            content_id = content_data.get('id', None)
+            if content_id and content_id in existing_content_ids:
+                # Update existing instance
+                content_instance = GeneralBlogsContents.objects.get(id=content_id, blog=instance)
+                content_instance.topic = content_data.get('topic', content_instance.topic)
+                content_instance.description = content_data.get('description', content_instance.description)
+
+                # Retain old image if no new image is provided or if it's set to None
+                new_image = content_data.get('image')
+                if new_image is not None:
+                    content_instance.image = new_image
+
+                content_instance.save()
+                existing_content_ids.remove(content_id)  # Remove from list to track updated items
+            else:
+                # Create new instance if no ID or ID not in existing content
+                GeneralBlogsContents.objects.create(blog=instance, **content_data)
+
+        # Delete any remaining old GeneralBlogsContents that were not updated
+        for old_id in existing_content_ids:
+            GeneralBlogsContents.objects.get(id=old_id, blog=instance).delete()
+
+        instance.save()
+        return instance
+
 
 
 
@@ -774,3 +821,6 @@ class UserFileAssociationSerializer(serializers.ModelSerializer):
 
     def get_file_url(self, obj):
         return obj.file_url
+
+
+ 

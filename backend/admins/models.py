@@ -275,14 +275,14 @@ class UserFileAssociation(models.Model):
     def file_url(self):
         return self.attachment.file.url if self.attachment and self.attachment.file else None
     
+# models.py
 class GeneralBlogs(models.Model):    
-    
-    title = models.TextField( null=True, blank=True)     
+    title = models.TextField(null=True, blank=True)     
     author = models.CharField(max_length=100)
     qualification = models.CharField(max_length=100)
     date = models.DateField(null=True)
-    blog_banner = models.ImageField(upload_to='blogs_banner/', null=True, blank=True)
-    author_profile = models.ImageField(upload_to='author_profile/', null=True, blank=True)
+    blog_banner = models.ImageField(upload_to='general-blogs_banner/', null=True, blank=True)
+    author_profile = models.ImageField(upload_to='general-author_profile/', null=True, blank=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
 
     def __str__(self):
@@ -292,17 +292,14 @@ class GeneralBlogs(models.Model):
         if not self.slug:
             self.slug = slugify(self.title)
         super().save(*args, **kwargs)  
-    def __str__(self):
-        return self.title  
-    
  
-    
-class GeneralBlogsContents(models.Model): 
-    blog =  models.ForeignKey(GeneralBlogs, related_name='general_blog_contents', on_delete=models.CASCADE, null=True, blank=True) 
-    topic = models.TextField( null=True, blank=True)
+class GeneralBlogsContents(models.Model):
+    blog = models.ForeignKey(GeneralBlogs, related_name='blog_contents', on_delete=models.CASCADE, null=True)
+    topic = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
-    image = models.ImageField(upload_to='blogs/', null=True, blank=True)  
- 
-    
+    image = models.ImageField(upload_to='general-blogs/', null=True, blank=True)
+
     def __str__(self):
-        return f"{self.blog.title}"
+        if self.blog:
+            return f"{self.blog.title}"
+        return "No related blog"

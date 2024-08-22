@@ -191,7 +191,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['username'] = user.first_name
         return data
     
-    
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
  

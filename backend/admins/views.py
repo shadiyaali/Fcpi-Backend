@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer, GalleryUpdateSerializer,GeneralBlogSerializer,AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer, GalleryUpdateSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,Gallery,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
@@ -19,33 +19,57 @@ import logging
 from rest_framework.generics import UpdateAPIView 
  
 
+from rest_framework_simplejwt.tokens import RefreshToken
+
 class AdminLogin(APIView):
     def post(self, request):
         try:
             data = request.data
             email = data.get('email')
             password = data.get('password')
+
             if email is None or password is None:
                 raise ValueError("Email and password must be provided")
 
-            
             user = authenticate(request, email=email, password=password)
             if user is not None and user.is_staff and user.is_superuser:
-              
                 login(request, user)
-                return Response({'status': 200, 'message': 'Admin login successful'})
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'status': 200,
+                    'message': 'Admin login successful',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                })
             else:
                 return Response({'status': 400, 'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
+
         except ValueError as e:
             return Response({'status': 400, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             print("An error occurred:", e)
             return Response({'status': 500, 'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def get(self, request):
-        return Response({'status': 405, 'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+ 
+from django.views import View
+class CheckAuthView(View):
+    def get(self, request, *args, **kwargs):
+        is_authenticated_and_authorized = request.user.is_authenticated and request.user.is_staff and request.user.is_superuser
+        return JsonResponse({'isAuthenticated': is_authenticated_and_authorized})
+    
+    
+from django.contrib.auth import logout
+class AdminLogout(APIView):
+    def post(self, request):
+        try:
+            logout(request)  # Clear session data
+            return Response({'status': 200, 'message': 'Logged out successfully'})
+        except Exception as e:
+            print("An error occurred:", e)
+            return Response({'status': 500, 'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+ 
 
 class ForumListCreate(generics.ListCreateAPIView):
     queryset = Forum.objects.all()
@@ -823,6 +847,12 @@ class BlogListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class GeneralBlogListblog(APIView):
+    def get(self, request):
+        blogs = GeneralBlogs.objects.all()
+        serializer = GeneralBlogSerializer(blogs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class BlogListViewall(generics.ListAPIView):
     queryset = Blogs.objects.prefetch_related('blog_contents').all()
     serializer_class = BlogsSerializer
@@ -837,16 +867,32 @@ class BlogDeleteView(generics.DestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GeneralBlogListViewall(generics.ListAPIView):
-    queryset = GeneralBlogs.objects.prefetch_related('general_blog_contents').all()
-
+class GeneralBlogDeleteView(generics.DestroyAPIView):
+    queryset = GeneralBlogs.objects.all()
     serializer_class = GeneralBlogsSerializer
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+import logging
+logger = logging.getLogger(__name__)
+
+ 
+class GeneralBlogListViewall(generics.ListAPIView):
+    queryset = GeneralBlogs.objects.prefetch_related('blog_contents').all()
+    serializer_class = GeneralBlogsSerializer
+
+     
+
  
 class GeneralBlogListView(APIView):
     def get(self, request):
-        blogs = GeneralBlogs.objects.all()
-        serializer = GeneralBlogSerializer(blogs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK) 
+        blogs = GeneralBlogs.objects.prefetch_related('general_blog_contents').all()
+        serializer = GeneralBlogsSerializer(blogs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
  
 
  
@@ -877,14 +923,14 @@ class BlogUpdateView(UpdateAPIView):
     def put(self, request, *args, **kwargs):
         blog = self.get_object()
 
-        # Print initial blog object data
+      
         print("Initial blog object:", blog)
 
-        # Print all request data
+        
         print("Request Data:", request.data)
         print("Request Files:", request.FILES)
 
-        # Parse blog_contents data
+      
         blog_contents_data = []
         for key, value in request.data.items():
             if key.startswith('blog_contents'):
@@ -958,10 +1004,92 @@ class BlogUpdateView(UpdateAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class GeneralBlogUpdateView(UpdateAPIView):
+    queryset = GeneralBlogs.objects.all()
+    serializer_class = BlogsGeneralFormSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
+    def put(self, request, *args, **kwargs):
+        blog = self.get_object()
 
+        # Print initial blog object data
+        print("Initial blog object:", blog)
 
+        # Print all request data
+        print("Request Data:", request.data)
+        print("Request Files:", request.FILES)
 
+        # Parse blog_contents data
+        blog_contents_data = []
+        for key, value in request.data.items():
+            if key.startswith('blog_contents'):
+                parts = key.split('[')
+                index = int(parts[1][:-1])
+                field = parts[2][:-1]
+
+                while len(blog_contents_data) <= index:
+                    blog_contents_data.append({})
+
+                blog_contents_data[index][field] = value[0] if isinstance(value, list) else value
+
+        print("Parsed blog_contents data:", blog_contents_data)
+
+        # Construct data payload without 'forum'
+        data = {
+            'title': request.data.get('title'),
+            'author': request.data.get('author'),
+            'qualification': request.data.get('qualification'),
+            'date': request.data.get('date'),
+            'blog_banner': request.FILES.get('blog_banner'),
+            'author_profile': request.FILES.get('author_profile'),
+            'blog_contents': blog_contents_data,
+        }
+
+        print("Constructed data payload:", data)
+
+        # Retain existing files if not provided in the request
+        if 'blog_banner' not in request.FILES:
+            data['blog_banner'] = blog.blog_banner
+        if 'author_profile' not in request.FILES:
+            data['author_profile'] = blog.author_profile
+
+        existing_blog_contents = blog.blog_contents.all()
+        existing_content_map = {content.topic: content for content in existing_blog_contents}
+
+        updated_blog_contents = []
+        for content in data['blog_contents']:
+            print("Processing content:", content)
+            topic = content.get('topic')
+            existing_content = existing_content_map.get(topic)
+
+            if 'image' in content:
+                image_url = content['image']
+                if isinstance(image_url, str) and image_url.startswith('http'):
+                    try:
+                        response = requests.get(image_url)
+                        response.raise_for_status()
+                        content['image'] = ContentFile(response.content, name=image_url.split('/')[-1])
+
+                    except requests.HTTPError:
+                        content['image'] = None
+                elif not isinstance(content['image'], UploadedFile):
+                    if existing_content and existing_content.image:
+                        content['image'] = existing_content.image
+                    else:
+                        content['image'] = None
+
+            updated_blog_contents.append(content)
+
+        print("Updated blog contents:", updated_blog_contents)
+        data['blog_contents'] = updated_blog_contents
+
+        # Serialize and save the updated blog data
+        serializer = self.get_serializer(blog, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -969,7 +1097,7 @@ class BlogUpdateView(UpdateAPIView):
 
         
         
-class certificatesCreate(generics.ListCreateAPIView):
+class CertificatesCreate(generics.ListCreateAPIView):
     queryset = Certificates.objects.all()
     serializer_class = CertificatesSerializer
     parser_classes = (MultiPartParser, FormParser)
@@ -979,11 +1107,25 @@ class certificatesCreate(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         print("Request Data:", request.data)
+        
+        # Extract relevant fields for duplicate check
+        event_id = request.data.get('event')
+        # Add more fields if needed to uniquely identify a certificate
+
+        # Check for existing certificates
+        if Certificates.objects.filter(event_id=event_id).exists():
+            return Response(
+                {'error': 'A certificate for this event already exists.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
+            # Use the super().post() to handle the normal create operation
             response = super().post(request, *args, **kwargs)
         except Exception as e:
             print("Error:", e)
             response = Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
         return response
         
 class CertificatesList(generics.ListAPIView):
@@ -1585,7 +1727,14 @@ class BlogDetailView(APIView):
         print("ssss",serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    
+
+class BlogGeneralDetailView(APIView):
+    def get(self, request, slug):
+        blog = get_object_or_404(GeneralBlogs, slug=slug)
+        serializer = GeneralBlogSerializer(blog)
+        print("ssss",serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+   
 class EventUserToday(APIView):
     def get(self, request):
         current_date = timezone.now().date()
@@ -1842,6 +1991,10 @@ class UpdateAttachmentView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+
+
 from rest_framework.generics import RetrieveAPIView
 class AttachmentsBySingleEventView(generics.ListAPIView):
     serializer_class = AttachmentSerializer
@@ -1926,3 +2079,10 @@ class AttachmentUpdateAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+ 
+
+from rest_framework import viewsets    
+class GeneralBlogsViewSet(viewsets.ModelViewSet):
+    queryset = GeneralBlogs.objects.all()
+    serializer_class = GeneralBlogsSerializer

@@ -14,7 +14,7 @@ class UserRole(models.Model):
 class User(AbstractUser):
     username = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=12)
+    phone = models.CharField(max_length=15)
     is_email_verified = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
     otp = models.CharField(max_length=4, null=True, blank=True)
