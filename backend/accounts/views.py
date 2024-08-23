@@ -171,6 +171,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 code='authentication'
             )
 
+        if user.is_staff:  # Check if the user is an admin
+            logger.warning(f"Attempted admin login with user {email}.")
+            raise serializers.ValidationError(
+                {"error": _("Admin login is not allowed on this page.")},
+                code='admin_login'
+            )
+
         if user.password_is_null:
             logger.warning(f"User {email} has null password. Password expired. Please reset your password.")
             raise serializers.ValidationError(

@@ -17,54 +17,42 @@ from django.db import transaction
 import json 
 import logging 
 from rest_framework.generics import UpdateAPIView 
- 
-
 from rest_framework_simplejwt.tokens import RefreshToken
 
 class AdminLogin(APIView):
     def post(self, request):
-        try:
-            data = request.data
-            email = data.get('email')
-            password = data.get('password')
-
-            if email is None or password is None:
-                raise ValueError("Email and password must be provided")
-
-            user = authenticate(request, email=email, password=password)
-            if user is not None and user.is_staff and user.is_superuser:
-                login(request, user)
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'status': 200,
-                    'message': 'Admin login successful',
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh)
-                })
-            else:
-                return Response({'status': 400, 'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
-
-        except ValueError as e:
-            return Response({'status': 400, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            print("An error occurred:", e)
-            return Response({'status': 500, 'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        data = request.data
+        email = data.get('email')
+        password = data.get('password')
+        
+        if email is None or password is None:
+            return Response({'error': 'Email and password must be provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = authenticate(request, email=email, password=password)
+        
+        if user is not None and user.is_staff and user.is_superuser:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }, status=status.HTTP_200_OK)
+        
+        return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
 
 
  
 from django.views import View
 class CheckAuthView(View):
+   
     def get(self, request, *args, **kwargs):
-        is_authenticated_and_authorized = request.user.is_authenticated and request.user.is_staff and request.user.is_superuser
-        return JsonResponse({'isAuthenticated': is_authenticated_and_authorized})
-    
-    
+        if request.user.is_staff and request.user.is_superuser:
+            return JsonResponse({'isAuthenticated': True})
+        return JsonResponse({'isAuthenticated': False})
 from django.contrib.auth import logout
 class AdminLogout(APIView):
     def post(self, request):
         try:
-            logout(request)  # Clear session data
+            logout(request)
             return Response({'status': 200, 'message': 'Logged out successfully'})
         except Exception as e:
             print("An error occurred:", e)
