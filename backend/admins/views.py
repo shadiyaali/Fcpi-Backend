@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer, GalleryUpdateSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,Gallery,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
@@ -610,7 +610,7 @@ class EventListbannerView(APIView):
 
 class MemberListCreate(generics.ListCreateAPIView):
     queryset = Member.objects.all()
-    serializer_class = MemeberSerializer
+    serializer_class = MemeberAddSerializer
     parser_classes = (MultiPartParser, FormParser)
 
     def perform_create(self, serializer):
@@ -620,12 +620,24 @@ class MemberListCreate(generics.ListCreateAPIView):
 class MemberUpdateView(generics.UpdateAPIView):
     queryset = Member.objects.all()
     serializer_class = MemeberSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
     def update(self, request, *args, **kwargs):
-        print("Request Data:", request.data)
-        response = super().update(request, *args, **kwargs)
-        print("Response Data:", response.data)
-        return response 
+        print("Request Data:", request.data)  # Log incoming data
+        
+        try:
+            # Call the superclass's update method
+            response = super().update(request, *args, **kwargs)
+            
+            # Fetch and serialize the updated instance
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            print("Updated Data:", serializer.data)  # Log updated data
+            
+            return response
+        except Exception as e:
+            print(f"Error during update: {str(e)}")  # Log any errors
+            raise
 
 class MemberDeleteView(generics.DestroyAPIView):
     queryset = Member.objects.all()
@@ -1348,7 +1360,7 @@ class BoardMemberListView(APIView):
 
 
 class BoardMemberView(APIView):
-    def put(self, request, board_id, format=None):  # Corrected parameter name to board_id
+    def put(self, request, board_id, format=None):  
         print("request", request.data)
         try:
             board_member = BoardMember.objects.get(board_id=board_id)

@@ -302,10 +302,24 @@ class EventBannerSerializer(serializers.ModelSerializer):
             return obj.banner.url
         return None   
     
+
+class MemeberAddSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False)
+    slug = serializers.SlugField(required=False)  
     
+
+    class Meta:
+        model = Member
+        fields = [
+            'id', 'name', 'slug', 'qualification', 'recent_job_title', 'additional_job_titles',
+            'image', 'previous_work_experience', 'publications',  'conference',
+            'additional_information', 'achievements', 'areas','linkedin'
+        ]
+   
 class MemeberSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False)
     slug = serializers.SlugField(required=False)  
+    linkedin = serializers.URLField(required=False, allow_blank=True)
 
     class Meta:
         model = Member

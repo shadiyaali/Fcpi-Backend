@@ -324,16 +324,18 @@ class UserprofileListView(APIView):
 
 class UserProfileView(APIView):
     def get(self, request, user_id=None):
+        print('Received User ID:', user_id)  # Debug print statement
+
         user = get_object_or_404(User, pk=user_id) if user_id else request.user
 
         try:
             user_profile = UserProfile.objects.get(user=user)
             profile_serializer = UserProfileSerializer(user_profile)
             profile_data = profile_serializer.data
-
+            
             user_serializer = UserSerializer(user)
             user_data = user_serializer.data
-
+            
             response_data = {
                 'user': user_data,
                 'profile': profile_data
@@ -346,6 +348,7 @@ class UserProfileView(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
  
 from rest_framework.exceptions import ValidationError
 
