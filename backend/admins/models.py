@@ -69,7 +69,7 @@ class Event(models.Model):
         ('Live', 'Live'),
         ('Completed', 'Completed'),
     )
-    event_name = models.TextField(null=True)   
+    event_name = models.CharField(max_length=1000,null = True)   
     speakers = models.ManyToManyField(Speaker, related_name='events', blank=True)
     date = models.DateField(null=True) 
     days = models.IntegerField(null=True)
