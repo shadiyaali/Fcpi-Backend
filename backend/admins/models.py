@@ -84,19 +84,9 @@ class Event(models.Model):
             self.slug = self.custom_slugify(self.event_name)
         super().save(*args, **kwargs)
     
- 
-    
     def custom_slugify(self, value):
-        # Replace any character that is not alphanumeric with an underscore
-        value = re.sub(r'[^\w\s]', '', value).strip().lower()
-        # Replace spaces with underscores
-        value = value.replace(' ', '_')
-        # Remove hyphens
-        value = value.replace('-', '')
-        # Ensure the slug is not empty after processing
-        if not value:
-            value = 'default_slug'  # Provide a default slug if necessary
-        return django_slugify(value)
+        value = slugify(value, allow_unicode=True)  
+        return value if value else 'default_slug'
 
 
 
