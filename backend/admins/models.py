@@ -69,7 +69,7 @@ class Event(models.Model):
         ('Live', 'Live'),
         ('Completed', 'Completed'),
     )
-    event_name = models.CharField(max_length=1000,null = True)   
+    event_name = models.CharField(max_length=1000, null=True)    
     speakers = models.ManyToManyField(Speaker, related_name='events', blank=True)
     date = models.DateField(null=True) 
     days = models.IntegerField(null=True)
@@ -84,9 +84,19 @@ class Event(models.Model):
             self.slug = self.custom_slugify(self.event_name)
         super().save(*args, **kwargs)
     
+ 
+    
     def custom_slugify(self, value):
-        value = slugify(value, allow_unicode=True)  
-        return value if value else 'default_slug'
+        # Replace any character that is not alphanumeric with an underscore
+        value = re.sub(r'[^\w\s]', '', value).strip().lower()
+        # Replace spaces with underscores
+        value = value.replace(' ', '_')
+        # Remove hyphens
+        value = value.replace('-', '')
+        # Ensure the slug is not empty after processing
+        if not value:
+            value = 'default_slug'  # Provide a default slug if necessary
+        return django_slugify(value)
 
 
 
