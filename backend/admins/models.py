@@ -74,7 +74,7 @@ class Event(models.Model):
     date = models.DateField(null=True) 
     days = models.IntegerField(null=True)
     banner = models.ImageField(upload_to='event_banners/', null=True, blank=True)
-    slug = models.SlugField(unique=True, blank=True, null=True)
+    slug = models.SlugField(unique=True, blank=True, null=True, max_length=100)
     
     def __str__(self):
         return self.event_name
