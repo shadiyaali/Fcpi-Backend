@@ -410,7 +410,6 @@ from django.urls import reverse
 from django.utils import timezone
 
  
-
 class CertificateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -434,8 +433,11 @@ class CertificateView(APIView):
                 if event.days > 1:
                     event_name += f" (Day {single_event.day})"
 
+                forum_name = event.forum.title if event.forum else 'N/A'  # Ensure correct property name
+
                 serialized_certificates.append({
                     "event_name": event_name,
+                    "forum": forum_name,  # Ensure this matches the frontend
                     "days": event.days,
                     "event_date": single_event.date,
                     "single_event": {
@@ -446,6 +448,7 @@ class CertificateView(APIView):
                 })
 
         return Response(serialized_certificates, status=status.HTTP_200_OK)
+
 
 
 

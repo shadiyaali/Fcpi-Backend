@@ -303,3 +303,78 @@ class GeneralBlogsContents(models.Model):
         if self.blog:
             return f"{self.blog.title}"
         return "No related blog"
+
+
+
+class GeneralEvent(models.Model):
+    EVENT_TYPE_CHOICES = (
+        ('Single Day', 'Single Day'),
+        ('Multi Day', 'Multi Day'),
+    )
+    STATUS_CHOICES = (
+        ('Upcoming', 'Upcoming'),
+        ('Live', 'Live'),
+        ('Completed', 'Completed'),
+    )
+    event_name = models.CharField(max_length=1000, null=True)    
+    speakers = models.ManyToManyField(Speaker, related_name='general_events', blank=True)
+    date = models.DateField(null=True) 
+    days = models.IntegerField(null=True)
+    banner = models.ImageField(upload_to='event_banners/', null=True, blank=True)
+    slug = models.SlugField(unique=True, blank=True, null=True, max_length=1000)
+    
+    def __str__(self):
+        return self.event_name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self.custom_slugify(self.event_name)
+        super().save(*args, **kwargs)
+    
+    def custom_slugify(self, value):
+        value = re.sub(r'[^\w\s]', '', value).strip().lower()
+        value = value.replace(' ', '_')
+        value = value.replace('-', '')
+        if not value:
+            value = 'default_slug'
+        return django_slugify(value)
+
+
+class GeneralSingleEvent(models.Model):
+    event = models.ForeignKey(GeneralEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='general_single_events')
+    youtube_link = models.URLField(null=True, blank=True)
+    points = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    highlights = models.TextField(null=True, blank=True)
+    date = models.DateField(null=True)
+    day = models.IntegerField(null=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding or (self.pk is not None and getattr(self, '_original_highlights', None) != self.highlights):
+            if isinstance(self.highlights, list):
+                self.highlights = ', '.join(self.highlights)
+        super().save(*args, **kwargs)
+
+    def refresh_from_db(self, *args, **kwargs):
+        super().refresh_from_db(*args, **kwargs)
+        self._original_highlights = self.highlights
+
+    class Meta:
+        unique_together = ('event', 'day')
+
+    def __str__(self):
+        if self.event:
+            return f"{self.event.event_name}  day {self.day}"
+        return f"Day {self.day} (Event not set)"
+
+  
+    
+class GeneralMultiEvent(models.Model):
+    single_event = models.ForeignKey(GeneralSingleEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='general_multi_events')
+    starting_time = models.TimeField(max_length=8, null=True, blank=True)  # Change to CharField to store hh:mm
+    ending_time = models.TimeField(max_length=8, null=True, blank=True)
+    topics = models.TextField(null=True, blank=True)
+    single_speaker = models.ForeignKey(Speaker, on_delete=models.CASCADE, null=True, blank=True, related_name='general_selected_events', default=None)
+   
+   
+    def __str__(self):
+        return f"{self.single_event.event.event_name} - {self.starting_time} to {self.ending_time}"

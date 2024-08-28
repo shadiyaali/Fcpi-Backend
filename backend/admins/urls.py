@@ -94,5 +94,11 @@ urlpatterns = [
     path('attachments/<int:pk>/update/', AttachmentUpdateAPIView.as_view(), name='attachment-update'),
     path('check-auth/', CheckAuthView.as_view(), name='check_auth'),
     path('logout/', AdminLogout.as_view(), name='admin-logout'),
+    path('general_eventcreate/', GeneralEventListCreate.as_view() , name='event_create'),
+    path('general_allevents/', GeneralEventListAllView.as_view(), name='allevents-list'),
+    path('general_events/<int:event_id>/delete/', GeneralEventDeleteAPIView.as_view(), name='event-delete'),
+    path('general_events/<int:event_id>/update/', GeneralEventUpdateAPIView.as_view(), name='general-event-update'),
+    path('general_events/', GeneralEventListView.as_view(), name='general-events-list'),  
+    path('general_singleevents_all/', GeneralSingleEventListAllView.as_view(), name='general-single-event-list'),
 ]     
  

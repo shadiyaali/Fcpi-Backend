@@ -23,5 +23,9 @@ admin.site.register(Gallery)
 admin.site.register(GalleryImage)
 admin.site.register(Attachment)
 admin.site.register(UserFileAssociation)
+admin.site.register(GeneralEvent)
+admin.site.register(GeneralSingleEvent)
+admin.site.register(GeneralMultiEvent)
+
  
  
