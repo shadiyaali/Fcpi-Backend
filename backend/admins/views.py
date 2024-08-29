@@ -1392,20 +1392,20 @@ from django.db.models.functions import Lower
 
 class AllBoardMembersView(APIView):
     def get(self, request):
-     
         board = Board.objects.filter(title="Board of Directors").first()
+        logger.debug("Board: %s", board)  # Log board details
 
         if not board:
             return Response({'detail': 'Board of Directors not found'}, status=404)
 
         board_members = BoardMember.objects.filter(board=board).prefetch_related('member')
 
-     
         members = []
         for board_member in board_members:
             members.extend(board_member.member.all())
 
- 
+        logger.debug("Members: %s", members)  # Log members details
+
         serializer = MemeberSerializer(members, many=True)
         return Response(serializer.data)
 
