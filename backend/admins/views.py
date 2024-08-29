@@ -1392,7 +1392,7 @@ from django.db.models.functions import Lower
 
 class AllBoardMembersView(APIView):
     def get(self, request):
-        # Assuming "Board of Directors" is the title for the Board of Directors
+     
         board = Board.objects.filter(title="Board of Directors").first()
 
         if not board:
@@ -1400,35 +1400,34 @@ class AllBoardMembersView(APIView):
 
         board_members = BoardMember.objects.filter(board=board).prefetch_related('member')
 
-        # Collect all members for the board
+     
         members = []
         for board_member in board_members:
             members.extend(board_member.member.all())
 
-        # Serialize the member data
+ 
         serializer = MemeberSerializer(members, many=True)
         return Response(serializer.data)
 
 class CommitteeMembersView(APIView):
     def get(self, request):
-        # Filter to find the specific board, e.g., "Committees"
+     
         board = Board.objects.filter(title="Committees").first()
 
         if not board:
             return Response({'detail': 'Committees board not found'}, status=404)
 
-        # Retrieve BoardMember objects related to the found board
+        
         board_members = BoardMember.objects.filter(board=board).prefetch_related('member')
 
-        # Collect all unique members related to the board
+   
         members = []
         for board_member in board_members:
             members.extend(board_member.member.all())
-
-        # Remove duplicates if there are any
+ 
         unique_members = list({member.id: member for member in members}.values())
 
-        # Serialize the member data
+      
         serializer = MemeberSerializer(unique_members, many=True)
         return Response(serializer.data)
 
