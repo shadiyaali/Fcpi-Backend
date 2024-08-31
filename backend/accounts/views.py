@@ -22,8 +22,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
-from admins.models import Certificates,Event,SingleEvent
-from admins.serializers import EventListSerializer,SingleEventsSerializer 
+from admins.models import Certificates,Event,SingleEvent,GeneralEvent,GeneralCertificates
+from admins.serializers import EventListSerializer,SingleEventsSerializer ,GeneralEventListSerializer, GeneralSingleEventsSerializer
  
  
  
@@ -459,7 +459,10 @@ class AuthenticatedUserView(APIView):
         
         return Response(serializer.data)
     
-    
+
+ 
+        
+        return Response(serializer.data)   
     
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -615,6 +618,9 @@ class UserEnrolledEventListView(APIView):
             events_data.append(event_data)
 
         return Response({'events': events_data})
+    
+    
+    
 from django.contrib.auth.hashers import make_password
 
 class ChangePasswordAPIView(APIView):
@@ -959,3 +965,305 @@ class UserCountView(APIView):
             'last_7_days': users_last_7_days,
             'this_month': users_this_month
         })
+        
+        
+class ValidateEmailView(APIView):
+    def get(self, request):
+        email = request.GET.get('email', '')
+        
+        if not email:
+            return Response({'status': 400, 'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.filter(email=email).exists():
+            return Response({'status': 200, 'exists': True}, status=status.HTTP_200_OK)
+        else:
+            return Response({'status': 200, 'exists': False}, status=status.HTTP_200_OK)
+        
+        
+        
+class GeneralCheckEnrollmentView(APIView):
+    def get(self, request, slug):
+        if not request.user.is_authenticated:
+            return Response({"enrolled": False}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        event = get_object_or_404(GeneralEvent, slug=slug)
+        user = request.user
+        is_enrolled = GeneralEnrolled.objects.filter(user=user, event=event).exists()
+        
+        return Response({"enrolled": is_enrolled})
+    
+ 
+
+
+
+class GeneralEnrollEvent(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, slug):
+        event = get_object_or_404(GeneralEvent, slug=slug)
+        user = request.user
+        
+        if GeneralEnrolled.objects.filter(user=user, event=event).exists():
+            return Response({"detail": "You are already enrolled in this event."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        enrollment_data = {'user': user.id, 'event': event.id}
+        serializer = GeneralEnrolledSerializer(data=enrollment_data)
+        if serializer.is_valid():
+            serializer.save()
+            
+            event.is_enrolled = True
+            event.save()
+            
+            subject = 'Enrollment Confirmation'
+            message = f'Hello {user.first_name} {user.last_name}\n\nYou have successfully enrolled in the event: {event.event_name}.\n\nThank you!'
+            from_email = settings.EMAIL_HOST_USER   
+            to_email = [user.email]
+            send_mail(subject, message, from_email, to_email)
+            
+            return Response({"detail": "Successfully enrolled in the event."}, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GeneralEnrolledUserCountView(APIView):
+    def get(self, request, slug):
+        try:
+            event = GeneralEvent.objects.get(slug=slug)
+            user_count = GeneralEnrolled.objects.filter(event=event).count()
+            return Response({'user_count': user_count}, status=status.HTTP_200_OK)
+        except GeneralEvent.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+        
+class GeneralFeedbackCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        print("Received data:", request.data)
+
+        single_event_day = request.data.get('singleEvent_day')
+        event_id = request.data.get('event_id')
+
+        if not single_event_day:
+            return Response({'error': 'singleEvent_day is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not event_id:
+            return Response({'error': 'event_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        single_event_queryset = GeneralSingleEvent.objects.filter(day=single_event_day, event_id=event_id)
+        if single_event_queryset.count() == 0:
+            return Response({'error': 'SingleEvent does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+        elif single_event_queryset.count() > 1:
+            return Response({'error': 'Multiple SingleEvent instances found. Please provide more details to uniquely identify the event.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        single_event_instance = single_event_queryset.first()
+        print("SingleEvent ID:", single_event_instance.id)
+
+        request.data['single_event'] = single_event_instance.id
+
+        # Check if the user has already submitted feedback for this single event
+        existing_feedback = GeneralFeedback.objects.filter(user=request.user, single_event=single_event_instance).first()
+        if existing_feedback:
+            return Response({'error': 'You have already submitted feedback for this event.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = GeneralFeedbackSerializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            serializer.save(user=request.user, single_event=single_event_instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print("Error:", e)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+class GeneralUserEnrolledEventListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def calculate_event_dates(self, event):
+        # Use the correct related_name 'general_single_events'
+        single_events = event.general_single_events.all()
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
+
+    def calculate_event_times(self, event):
+        # Use the correct related_name 'general_single_events'
+        single_events = event.general_single_events.filter(day=1)
+        if single_events.exists():
+            multi_events = single_events.first().general_multi_events.all()  # Use the correct related_name
+            if multi_events.exists():
+                start_time = multi_events.first().starting_time
+                end_time = multi_events.last().ending_time
+                return start_time, end_time
+        return None, None
+
+    def get_event_status(self, event):
+        current_date = datetime.now().date()
+        start_date, end_date = self.calculate_event_dates(event)
+        if start_date and end_date:
+            if current_date <= end_date:
+                return "Live" if current_date >= start_date else "Upcoming"
+            else:
+                return "Completed"
+        return "Upcoming"
+
+    def get(self, request):
+        user = request.user
+        enrolled_events = GeneralEnrolled.objects.filter(user=user).select_related('event')
+
+        events_data = []
+        for enrollment in enrolled_events:
+            event = enrollment.event
+            event_status = self.get_event_status(event)
+            event_data = GeneralEventListSerializer(event).data
+            event_data['status'] = event_status
+
+            start_date, end_date = self.calculate_event_dates(event)
+            if start_date and end_date:
+                event_data['start_date'] = start_date.strftime('%Y-%m-%d')
+                event_data['end_date'] = end_date.strftime('%Y-%m-%d')
+            else:
+                event_data['start_date'] = "Invalid date"
+                event_data['end_date'] = "Invalid date"
+
+            if event.days == 1:
+                start_time, end_time = self.calculate_event_times(event)
+                if start_time and end_time:
+                    event_data['start_time'] = start_time.strftime('%H:%M:%S')
+                    event_data['end_time'] = end_time.strftime('%H:%M:%S')
+                else:
+                    event_data['start_time'] = "Invalid time"
+                    event_data['end_time'] = "Invalid time"
+                event_data['end_date'] = None
+            else:
+                event_data['start_time'] = None
+                event_data['end_time'] = None
+
+            events_data.append(event_data)
+
+        return Response({'events': events_data})
+    
+    
+    
+class GeneralCertificateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        user = request.user
+        feedbacks = GeneralFeedback.objects.filter(user=user)
+
+        if not feedbacks.exists():
+            return Response({"message": "No feedback found for the user"}, status=status.HTTP_404_NOT_FOUND)
+
+        serialized_certificates = []
+
+        for feedback in feedbacks:
+            single_event = feedback.single_event
+            event = single_event.event
+            certificates = GeneralCertificates.objects.filter(event=event)
+
+            if certificates.exists():
+                certificate = certificates.first()
+                event_name = event.event_name
+                if event.days > 1:
+                    event_name += f" (Day {single_event.day})"
+
+           
+
+                serialized_certificates.append({
+                    "event_name": event_name,
+             
+                    "days": event.days,
+                    "event_date": single_event.date,
+                    "single_event": {
+                        "points": single_event.points,
+                        "day": single_event.day
+                    },
+                    "certificate_image": certificate.image.url
+                })
+
+        return Response(serialized_certificates, status=status.HTTP_200_OK)
+    
+    
+class GeneralEventPointsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user_feedback = GeneralFeedback.objects.filter(user=request.user)
+            single_events = [feedback.single_event for feedback in user_feedback]
+            serializer =  GeneralSingleEventsSerializer(single_events, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GeneralUserEnrolledEventListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def calculate_event_dates(self, event):
+        single_events = event.general_single_events.all()  # Corrected related name
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
+
+    def calculate_event_times(self, event):
+        single_events = event.general_single_events.filter(day=1)  # Corrected related name
+        if single_events.exists():
+            multi_events = single_events.first().general_multi_events.all()  # Corrected related name
+            if multi_events.exists():
+                start_time = multi_events.first().starting_time
+                end_time = multi_events.last().ending_time
+                return start_time, end_time
+        return None, None
+
+    def get_event_status(self, event):
+        current_date = datetime.now().date()
+        start_date, end_date = self.calculate_event_dates(event)
+        if start_date and end_date:
+            if current_date <= end_date:
+                return "Live" if current_date >= start_date else "Upcoming"
+            else:
+                return "Completed"
+        return "Upcoming"
+
+    def get(self, request):
+        user = request.user
+        enrolled_events = GeneralEnrolled.objects.filter(user=user).select_related('event')
+
+        events_data = []
+        for enrollment in enrolled_events:
+            event = enrollment.event
+            event_status = self.get_event_status(event)
+            event_data = GeneralEventListSerializer(event).data
+            event_data['status'] = event_status
+
+            start_date, end_date = self.calculate_event_dates(event)
+            if start_date and end_date:
+                event_data['start_date'] = start_date.strftime('%Y-%m-%d')
+                event_data['end_date'] = end_date.strftime('%Y-%m-%d')
+            else:
+                event_data['start_date'] = "Invalid date"
+                event_data['end_date'] = "Invalid date"
+
+            if event.days == 1:
+                start_time, end_time = self.calculate_event_times(event)
+                if start_time and end_time:
+                    event_data['start_time'] = start_time.strftime('%H:%M:%S')
+                    event_data['end_time'] = end_time.strftime('%H:%M:%S')
+                else:
+                    event_data['start_time'] = "Invalid time"
+                    event_data['end_time'] = "Invalid time"
+                event_data['end_date'] = None
+            else:
+                event_data['start_time'] = None
+                event_data['end_time'] = None
+
+            events_data.append(event_data)
+
+        return Response({'events': events_data})

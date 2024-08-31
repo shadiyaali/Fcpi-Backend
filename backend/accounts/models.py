@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .manager import UserManager
 from django.utils import timezone
-from admins.models import Event ,SingleEvent,Certificates
+from admins.models import Event ,SingleEvent,Certificates,GeneralEvent,GeneralSingleEvent
 
 class UserRole(models.Model):
     name = models.CharField(max_length=200)
@@ -103,6 +103,9 @@ class Enrolled(models.Model):
     user = models.ForeignKey(User, related_name='userevent', on_delete=models.CASCADE, null=True, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='event_enrollments')
 
+class GeneralEnrolled(models.Model):    
+    user = models.ForeignKey(User, related_name='general_userevent', on_delete=models.CASCADE, null=True, blank=True)
+    event = models.ForeignKey(GeneralEvent, on_delete=models.CASCADE, related_name='general_event_enrollments')
     
     
 
@@ -116,3 +119,42 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"Message from {self.name} at {self.created_at}"
+    
+    
+    
+class GeneralFeedback(models.Model):
+    user = models.ForeignKey(User, related_name='general_feedback', on_delete=models.CASCADE,blank=True)
+    single_event = models.ForeignKey(GeneralSingleEvent, related_name='general_feedbacks', on_delete=models.CASCADE,null=True)
+     
+   
+    SATISFACTION_CHOICES = [
+        ('VS', 'Very Satisfied'),
+        ('SS', 'Somewhat Satisfied'),
+        ('N', 'Neutral'),
+        ('US', 'Unsatisfied'),
+        ('VU', 'Very Unsatisfied'),
+    ]
+    
+    HEAR_CHOICES = [
+       ('E', 'Email'),
+       ('S', 'Social Media Post'),
+       ('W', 'WhatsApp'),
+       ('F', 'FCPI Website'),
+       ('R', 'Referral'),
+       ('I', 'IDCongress2023'),
+       ('O', 'Other'),
+    ]
+
+    presentation_content = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    speaker_delivery = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    presentation_duration = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    audio_video_quality = models.CharField(max_length=2, choices=SATISFACTION_CHOICES, null=True)
+    how_did_you_hear = models.CharField(max_length=1, choices=HEAR_CHOICES, null=True)
+    suggestion = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now, null=True)
+ 
+
+    def __str__(self):
+        return f"Feedback - {self.created_at}"
+    class Meta:
+        unique_together = ('single_event', 'created_at')

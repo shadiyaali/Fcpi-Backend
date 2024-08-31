@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,GeneralCertificatesSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralEvent,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralEvent,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -219,10 +219,15 @@ class EventListAllView(APIView):
        
         events = Event.objects.all()
         serializer = EventListSerializer(events, many=True)
- 
+        print("serializer.data forum",serializer.data)
         return Response(serializer.data)
     
-    
+class GeneralSingleEventListAllView(APIView):
+    def get(self, request):
+        single_events = GeneralSingleEvent.objects.all()
+        serializer = GeneralSingleAllEventSerializer(single_events, many=True)
+        print("serializer.data",serializer.data)
+        return Response(serializer.data)   
  
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -846,7 +851,9 @@ class BlogListView(APIView):
         serializer = BlogSerializer(blogs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+ 
+    
+    
 class GeneralBlogListblog(APIView):
     def get(self, request):
         blogs = GeneralBlogs.objects.all()
@@ -889,7 +896,8 @@ class GeneralBlogListViewall(generics.ListAPIView):
  
 class GeneralBlogListView(APIView):
     def get(self, request):
-        blogs = GeneralBlogs.objects.prefetch_related('general_blog_contents').all()
+        # Use the correct related name here
+        blogs = GeneralBlogs.objects.prefetch_related('blog_contents').all()
         serializer = GeneralBlogsSerializer(blogs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -1132,7 +1140,9 @@ class CertificatesList(generics.ListAPIView):
     queryset = Certificates.objects.all()
     serializer_class = CertificatesSerializer        
         
-        
+class GeneralCertificatesList(generics.ListAPIView):
+    queryset = GeneralCertificates.objects.all()
+    serializer_class = CertificatesSerializer       
         
 class CertificatesDeleteView(generics.DestroyAPIView):
     queryset = Certificates.objects.all()
@@ -1392,20 +1402,20 @@ from django.db.models.functions import Lower
 
 class AllBoardMembersView(APIView):
     def get(self, request):
+     
         board = Board.objects.filter(title="Board of Directors").first()
-        logger.debug("Board: %s", board)  # Log board details
 
         if not board:
             return Response({'detail': 'Board of Directors not found'}, status=404)
 
         board_members = BoardMember.objects.filter(board=board).prefetch_related('member')
 
+        # Collect all members for the board
         members = []
         for board_member in board_members:
             members.extend(board_member.member.all())
 
-        logger.debug("Members: %s", members)  # Log members details
-
+        # Serialize the member data
         serializer = MemeberSerializer(members, many=True)
         return Response(serializer.data)
 
@@ -2265,7 +2275,7 @@ class GeneralEventListView(APIView):
         """
         Calculates the start and end dates of the event based on its single events.
         """
-        single_events = event.single_events.all()
+        single_events = event.general_single_events.all()  # Use the correct related name here
         if single_events.exists():
             start_date = single_events.first().date
             end_date = single_events.last().date
@@ -2277,9 +2287,9 @@ class GeneralEventListView(APIView):
         Calculates the starting time of the first MultiEvent and ending time of the last MultiEvent
         when days = 1 for the given event.
         """
-        single_event = event.single_events.filter(day=1).first()
+        single_event = event.general_single_events.filter(day=1).first()
         if single_event:
-            multi_events = single_event.multi_events.all()
+            multi_events = single_event.general_multi_events.all()
             if multi_events.exists():
                 start_time = multi_events.first().starting_time
                 end_time = multi_events.last().ending_time
@@ -2309,16 +2319,16 @@ class GeneralEventListView(APIView):
         completed_events_data = []
 
         for event in events:
-            # Determine event status
+         
             status = self.get_event_status(event)
 
-            # Calculate start and end dates
+         
             start_date, end_date = self.calculate_end_date(event)
 
-            # Calculate start and end times of MultiEvent for days = 1
+       
             start_time, end_time = self.calculate_multi_event_times(event)
 
-            # Serialize event data
+       
             event_data = GeneralEventListSerializer(event).data
             event_data['start_date'] = start_date
             event_data['end_date'] = end_date
@@ -2327,7 +2337,7 @@ class GeneralEventListView(APIView):
                 'end_time': end_time
             }
 
-            # Append to appropriate list based on status
+             
             if status == "Live":
                 live_events_data.append(event_data)
             elif status == "Upcoming":
@@ -2341,9 +2351,353 @@ class GeneralEventListView(APIView):
             'completed_events': completed_events_data,
         })
 
+class GeneralSingleEventDetailView(APIView):
+    def get(self, request, slug):
+        try:
+            event = get_object_or_404(
+                GeneralEvent.objects.prefetch_related('speakers', 'general_single_events__general_multi_events'),
+                slug=slug
+            )
+            serialized_data = GeneralEventListSerializer(event, context={'request': request}).data
+            serialized_single_events = []
+            single_events = event.general_single_events.all().order_by('day')
 
-class GeneralSingleEventListAllView(APIView):
+            for single_event in single_events:
+                single_event_dict = GeneralRetrieveSingleEventSerializer(single_event).data
+                single_event_dict['day'] = single_event.day
+
+                multi_events = single_event.general_multi_events.all().order_by('starting_time')
+
+                if multi_events.exists():
+                    first_multi_event = multi_events.first()
+                    last_multi_event = multi_events.last()
+
+                    
+                    if first_multi_event.starting_time:
+                        single_event_dict['first_multi_event_start'] = str(first_multi_event.starting_time)
+                    if last_multi_event.ending_time:
+                        single_event_dict['last_multi_event_end'] = str(last_multi_event.ending_time)
+
+                serialized_single_events.append(single_event_dict)
+
+            if single_events.exists():
+                serialized_data['start_date'] = single_events.first().date.strftime('%Y-%m-%d')
+                serialized_data['end_date'] = single_events.last().date.strftime('%Y-%m-%d')
+            else:
+                serialized_data['start_date'] = None
+                serialized_data['end_date'] = None
+
+            serialized_data['single_events'] = serialized_single_events
+
+            return Response(serialized_data)
+
+        except GeneralEvent.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class GeneralEventSpeakersView(APIView):
+    def get(self, request, slug):
+        event = get_object_or_404(GeneralEvent, slug=slug)
+        serializer = GeneralEventSpeakerSerializer(event)
+       
+        return Response(serializer.data) 
+    
+    
+class GeneralSingleEventDetailView(APIView):
+    def get(self, request, slug):
+        try:
+            # Use the correct related names
+            event = get_object_or_404(
+                GeneralEvent.objects.prefetch_related('speakers', 'general_single_events__general_multi_events'),
+                slug=slug
+            )
+            
+            serialized_data = GeneralEventListSerializer(event, context={'request': request}).data
+            
+            serialized_single_events = []
+            single_events = event.general_single_events.all().order_by('day')  # Use correct related_name
+
+            for single_event in single_events:
+                single_event_dict = GeneralRetrieveSingleEventSerializer(single_event).data
+                single_event_dict['day'] = single_event.day
+
+                multi_events = single_event.general_multi_events.all().order_by('starting_time')  # Use correct related_name
+
+                if multi_events.exists():
+                    first_multi_event = multi_events.first()
+                    last_multi_event = multi_events.last()
+
+                    if first_multi_event.starting_time:
+                        single_event_dict['first_multi_event_start'] = str(first_multi_event.starting_time)
+                    if last_multi_event.ending_time:
+                        single_event_dict['last_multi_event_end'] = str(last_multi_event.ending_time)
+
+                serialized_single_events.append(single_event_dict)
+
+            if single_events.exists():
+                serialized_data['start_date'] = single_events.first().date.strftime('%Y-%m-%d')
+                serialized_data['end_date'] = single_events.last().date.strftime('%Y-%m-%d')
+            else:
+                serialized_data['start_date'] = None
+                serialized_data['end_date'] = None
+
+            serialized_data['single_events'] = serialized_single_events
+
+            return Response(serialized_data)
+
+        except GeneralEvent.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+class GeneralSingleDetailView(APIView):
+    def get(self, request, slug):
+        try:
+            event = get_object_or_404(
+                GeneralEvent.objects.prefetch_related(
+                    'general_single_events__general_multi_events'  # Ensure related data is fetched
+                ),
+                slug=slug
+            )
+            serialized_data = GeneralEventListSerializer(event, context={'request': request}).data
+
+            serialized_single_events = []
+            current_date = timezone.now().date()  # Get the current date
+
+            # Sort single_events by date
+            sorted_single_events = sorted(event.general_single_events.all(), key=lambda se: se.date)
+
+            # Initialize start_date and end_date
+            start_date = None
+            end_date = None
+
+            for index, single_event in enumerate(sorted_single_events, start=1):
+                # Serialize single event
+                serialized_single_event = {
+                    'id': single_event.id,
+                    'highlights': single_event.highlights.split(', '),  # Convert back to list if needed
+                    'youtube_link': single_event.youtube_link,
+                    'points': str(single_event.points) if single_event.points else None,
+                    'date': single_event.date.strftime('%Y-%m-%d'),
+                    'day': index,
+                    'is_live_or_completed': single_event.date <= current_date,
+                }
+
+                # Handle multi-events within the single event
+                multi_events = single_event.general_multi_events.all().order_by('starting_time')
+                if multi_events.exists():
+                    first_multi_event = multi_events.first()
+                    last_multi_event = multi_events.last()
+
+                    # Assign start and end times directly from MultiEvent
+                    serialized_single_event['first_multi_event_start'] = str(first_multi_event.starting_time) if first_multi_event.starting_time else None
+                    serialized_single_event['last_multi_event_end'] = str(last_multi_event.ending_time) if last_multi_event.ending_time else None
+                
+                serialized_single_events.append(serialized_single_event)
+
+            # Set start_date and end_date based on the earliest and latest single events
+            if sorted_single_events:
+                start_date = sorted_single_events[0].date.strftime('%Y-%m-%d')
+                end_date = sorted_single_events[-1].date.strftime('%Y-%m-%d')
+
+            serialized_data['start_date'] = start_date
+            serialized_data['end_date'] = end_date
+            serialized_data['single_events'] = serialized_single_events
+
+            return Response(serialized_data)
+               
+        except GeneralEvent.DoesNotExist:
+            return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+        
+class GeneralCertificatesCreate(generics.ListCreateAPIView):
+    queryset = GeneralCertificates.objects.all()
+    serializer_class = GeneralCertificatesSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    def post(self, request, *args, **kwargs):
+        print("Request Data:", request.data)
+        
+        # Extract relevant fields for duplicate check
+        event_id = request.data.get('event')
+        # Add more fields if needed to uniquely identify a certificate
+
+        # Check for existing certificates
+        if GeneralCertificates.objects.filter(event_id=event_id).exists():
+            return Response(
+                {'error': 'A certificate for this event already exists.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Use the super().post() to handle the normal create operation
+            response = super().post(request, *args, **kwargs)
+        except Exception as e:
+            print("Error:", e)
+            response = Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return response
+    
+    
+class GeneralCertificatesDetail(generics.RetrieveUpdateAPIView):
+    queryset = GeneralCertificates.objects.all()
+    serializer_class = GeneralCertificatesSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_update(serializer)
+            print("Request:", request.data)
+            print("Updated instance:", serializer.data)
+            return Response(serializer.data)
+        except Exception as e:
+            print("Error:", e)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+class GeneralCertificatesDeleteView(generics.DestroyAPIView):
+    queryset = GeneralCertificates.objects.all()
+    serializer_class = GeneralCertificatesSerializer
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)   
+    
+    
+class GeneralEventUserToday(APIView):
     def get(self, request):
-        single_events = GeneralSingleEvent.objects.all()
-        serializer = GeneralSingleAllEventSerializer(single_events, many=True)
-        return Response(serializer.data)
+        current_date = timezone.now().date()
+
+        # Correct field name for related model
+        events = GeneralEvent.objects.filter(general_single_events__date=current_date).distinct()
+
+        events_data = GeneralEventListSerializer(events, many=True).data
+
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+class GeneralEventUserThisWeek(APIView):
+    def get(self, request):
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        # Use the correct related name for filtering
+        events = GeneralEvent.objects.filter(general_single_events__date__range=[start_of_week, end_of_week]).distinct()
+        events_data = GeneralEventListSerializer(events, many=True).data
+        
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+        
+class GeneralEventThisMonthUser(APIView):
+    def get(self, request):
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        
+        # Calculate the end of the month
+        end_of_month = start_of_month.replace(day=calendar.monthrange(start_of_month.year, start_of_month.month)[1])
+        
+        # Filter events for the current month
+        events = GeneralEvent.objects.filter(
+            general_single_events__date__gte=start_of_month,
+            general_single_events__date__lt=end_of_month + timedelta(days=1)
+        ).distinct()
+        
+        events_data = GeneralEventListSerializer(events, many=True).data
+        
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+        
+class GeneralEventThisYearUser(APIView):
+    def get(self, request):
+        today = timezone.now().date()
+        start_of_year = today.replace(month=1, day=1)
+        end_of_year = today.replace(month=12, day=31)
+        
+        # Filter events for the current year only
+        events = GeneralEvent.objects.filter(
+            general_single_events__date__gte=start_of_year, 
+            general_single_events__date__lte=end_of_year
+        ).distinct()
+        
+        events_data = GeneralEventListSerializer(events, many=True).data
+        
+        return Response({
+            'events': events_data,
+        }, status=status.HTTP_200_OK)
+        
+class GeneralEventListbannerView(APIView):
+    def calculate_end_date(self, event):
+        single_events = event.general_single_events.all()
+        if single_events.exists():
+            start_date = single_events.first().date
+            end_date = single_events.last().date
+            return start_date, end_date
+        return None, None
+
+    def get_event_status(self, event):
+        current_date = datetime.now().date()
+        start_date, end_date = self.calculate_end_date(event)
+        if start_date and end_date:
+            if start_date <= current_date <= end_date:
+                return "Live"
+            elif current_date > end_date:
+                return "Past"
+        return "Upcoming"
+
+    def get(self, request):
+        events = GeneralEvent.objects.all()
+        live_events = []
+        upcoming_events = []
+        completed_events = []
+
+        for event in events:
+            status = self.get_event_status(event)
+            if status == "Live":
+                live_events.append(event)
+            elif status == "Upcoming":
+                upcoming_events.append(event)
+            else:
+                completed_events.append(event)
+
+        live_events_data = []
+        upcoming_events_data = []
+        completed_events_data = []
+
+        for event in live_events:
+            start_date, end_date = self.calculate_end_date(event)
+            live_event_data = GeneralEventBannerSerializer(event).data
+            live_event_data['start_date'] = start_date
+            live_event_data['end_date'] = end_date
+            live_events_data.append(live_event_data)
+
+        for event in upcoming_events:
+            start_date, end_date = self.calculate_end_date(event)
+            upcoming_event_data = GeneralEventBannerSerializer(event).data
+            upcoming_event_data['start_date'] = start_date
+            upcoming_event_data['end_date'] = end_date
+            upcoming_events_data.append(upcoming_event_data)
+
+        for event in completed_events:
+            start_date, end_date = self.calculate_end_date(event)
+            completed_event_data = GeneralEventBannerSerializer(event).data
+            completed_event_data['start_date'] = start_date
+            completed_event_data['end_date'] = end_date
+            completed_events_data.append(completed_event_data)
+
+        return Response({
+            'live_events': live_events_data,
+            'upcoming_events': upcoming_events_data,
+            'completed_events': completed_events_data,
+        })      

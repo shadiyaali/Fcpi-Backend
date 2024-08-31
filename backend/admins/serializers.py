@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
+from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,7 +34,7 @@ class EventSpeakerSerializer(serializers.ModelSerializer):
         model = Event
         fields = ['id', 'slug','speakers']
   
-
+ 
  
 
 class MultiEventSerializer(serializers.ModelSerializer):
@@ -287,6 +287,9 @@ class EventListSerializer(serializers.ModelSerializer):
 
     def get_forum_name(self, obj):
         return obj.forum.title if obj.forum else None
+
+
+
 
     
     
@@ -570,7 +573,18 @@ class CertificatesListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certificates
         fields = ['id', 'event','image'] 
-        
+     
+class GeneralEventSerializer(serializers.ModelSerializer):
+     
+    speakers = serializers.PrimaryKeyRelatedField(many=True, queryset=Speaker.objects.all(), required=False)
+    class Meta:
+        model = GeneralEvent
+        fields = ('id', 'event_name', 'slug', 'speakers', 'date', 'days', 'banner' ) 
+class GeneralCertificatesListSerializer(serializers.ModelSerializer):
+    event = GeneralEventSerializer()   
+    class Meta:
+        model = GeneralCertificates
+        fields = ['id', 'event','image']    
     
 class BannerSerializer(serializers.ModelSerializer):
     banner = serializers.ImageField(required=False)  
@@ -852,13 +866,9 @@ class GeneralMultiEventSerializer(serializers.ModelSerializer):
         model = GeneralMultiEvent
         fields = ['id', 'starting_time', 'ending_time', 'topics', 'single_speaker', 'speaker_name']
 
-    def create(self, validated_data):
-        single_event = self.context['single_event']
-        multi_event = GeneralMultiEvent.objects.create(single_event=single_event, **validated_data)
-        return multi_event
-
     def get_speaker_name(self, obj):
         return obj.single_speaker.name if obj.single_speaker else None
+
 
        
 class GeneralSingleEventSerializer(serializers.ModelSerializer):
@@ -889,43 +899,29 @@ class GeneralSingleEventSerializer(serializers.ModelSerializer):
         return single_event
     
 class GeneralSingleEventGEtSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-    highlights = serializers.CharField()  # Changed from ListField to CharField
-    youtube_link = serializers.URLField()
-    points = serializers.DecimalField(max_digits=5, decimal_places=2)
-    multi_events = GeneralMultiEventSerializer(many=True)
+    multi_events = GeneralMultiEventSerializer(many=True, read_only=True ,source='general_multi_events')
 
     class Meta:
         model = GeneralSingleEvent
         fields = ['id', 'highlights', 'youtube_link', 'points', 'multi_events']
 
-    def create(self, validated_data):
-        multi_events_data = validated_data.pop('multi_events', [])
-        highlights = validated_data.pop('highlights', '')
-
-        # If highlights is a list, concatenate it into a single string
-        if isinstance(highlights, list):
-            highlights = ''.join(highlights)
-
-        # Create the SingleEvent instance with the concatenated highlights
-        single_event = GeneralSingleEvent.objects.create(highlights=highlights, **validated_data)
-
-        # Create related MultiEvent instances
-        for multi_event_data in multi_events_data:
-            multi_event_data['single_event'] = single_event
-            GeneralMultiEvent.objects.create(**multi_event_data)
-
-        return single_event
-
 
 
 class GeneralEventListSerializer(serializers.ModelSerializer):
-    single_events = GeneralSingleEventGEtSerializer(many=True, read_only=True)
-    speakers = SpeakerSerializer(many=True, read_only=True)
+    single_events = GeneralSingleEventGEtSerializer(many=True, read_only=True, source='general_single_events')
+    speakers = serializers.SerializerMethodField()
 
     class Meta:
         model = GeneralEvent
         fields = ['id', 'slug', 'event_name', 'date', 'days', 'banner', 'single_events', 'speakers']
+
+    def get_speakers(self, obj):
+        speakers_queryset = obj.speakers.all()
+        return SpeakerSerializer(speakers_queryset, many=True).data
+
+
+ 
+
 
 
 
@@ -936,3 +932,61 @@ class GeneralSingleAllEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneralSingleEvent
         fields = ['id', 'youtube_link', 'points', 'highlights', 'date', 'day', 'event_name']
+        
+class GeneralRetrieveSingleEventSerializer(serializers.ModelSerializer):
+    highlights = serializers.CharField()
+    youtube_link = serializers.URLField()
+    points = serializers.DecimalField(max_digits=5, decimal_places=2)
+    multi_events = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GeneralSingleEvent
+        fields = ['highlights', 'youtube_link', 'points', 'multi_events']
+
+    def get_multi_events(self, instance):
+    
+        multi_events = instance.general_multi_events.all()
+        return GeneralMultiEventSerializer(multi_events, many=True).data
+
+class GeneralEventSpeakerSerializer(serializers.ModelSerializer):
+    speakers = SpeakerSerializer(many=True)  
+    class Meta:
+        model = GeneralEvent
+        fields = ['id', 'slug','speakers']
+        
+        
+class GeneralCertificatesSerializer(serializers.ModelSerializer):
+        event_name = serializers.CharField(source='event.event_name', read_only=True)
+
+        class Meta:
+                model = GeneralCertificates
+                fields = ['id', 'event', 'event_name', 'image']
+                
+                
+                
+class GeneralSingleEventsSerializer(serializers.ModelSerializer):
+   
+    highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+   
+    event = GeneralEventSerializer()
+
+    def create(self, validated_data):
+        
+        pass
+
+    class Meta:
+        model = GeneralSingleEvent
+        fields = ('id', 'highlights', 'youtube_link', 'points','date', 'event', 'day')
+        
+        
+class GeneralEventBannerSerializer(serializers.ModelSerializer):
+    banner_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GeneralEvent
+        fields = ['id', 'event_name', 'date', 'slug','days', 'banner_image',  'speakers']   
+
+    def get_banner_image(self, obj):
+        if obj.banner:
+            return obj.banner.url
+        return None 

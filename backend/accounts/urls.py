@@ -19,10 +19,12 @@ urlpatterns = [
     path('user/<int:pk>/delete/', DeleteUser.as_view(), name='user-delete'),
     path('singleuser/', UserProfileView.as_view(), name='user-profile'),
     path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'), 
+    path('general_feedback/', GeneralFeedbackCreateView.as_view(), name='feedback-create'),
     path('ecertificate/', CertificateView.as_view(), name='certificate-view'),
     path('usercertificate/', AuthenticatedUserView.as_view(), name='authenticated-user'),
     path('user/<int:user_id>/', UserProfileAPIView.as_view(), name='user_profile_api'),
     path('enroll/<slug:slug>/', EnrollEvent.as_view(), name='enroll_event'),
+    path('general_enroll/<slug:slug>/', GeneralEnrollEvent.as_view(), name='enroll_event'),
     path('check-enrollment/<slug:slug>/', CheckEnrollmentView.as_view(), name='check_enrollment'),
     path('users/enrolled-events/', UserEnrolledEventListView.as_view(), name='user_enrolled_events'),
     path('change-password/', ChangePasswordAPIView.as_view(), name='change_password'),
@@ -39,6 +41,11 @@ urlpatterns = [
     path('events/<slug:slug>/enrollment-count/', EnrolledUserCountView.as_view(), name='event-enrollment-count'),
     path('usersall/', UserALLListView.as_view(), name='user-list'),
     path('user-countweek/', UserCountView.as_view(), name='user-count'),
-   
-
+    path('validate-email/', ValidateEmailView.as_view(), name='validate_email'),
+    path('general_check-enrollment/<slug:slug>/', GeneralCheckEnrollmentView.as_view(), name='check_enrollment'),
+    path('general_events/<slug:slug>/enrollment-count/', GeneralEnrolledUserCountView.as_view(), name='event-enrollment-count'),
+    path('general_users/enrolled-events/', GeneralUserEnrolledEventListView.as_view(), name='user_enrolled_events'),
+    path('general_ecertificate/', GeneralCertificateView.as_view(), name='certificate-view'),
+    path('general_event-points/', GeneralEventPointsAPIView.as_view(), name='event_points'),
+    path('users/general_enrolled-events/', GeneralUserEnrolledEventListView.as_view(), name='user_enrolled_events'),
 ]

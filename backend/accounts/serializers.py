@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import User,UserRole,UserProfile,Feedback,Enrolled,ContactMessage
-from admins.models import Event,Certificates,SingleEvent
+from .models import User,UserRole,UserProfile,Feedback,Enrolled,ContactMessage,GeneralEnrolled,GeneralFeedback
+from admins.models import Event,Certificates,SingleEvent,GeneralSingleEvent
 from admins.serializers import EventSerializer,SingleEventlistSerializer
     
 class UserRoleSerializer(serializers.ModelSerializer):
@@ -92,6 +92,23 @@ class FeedbackSerializer(serializers.ModelSerializer):
         ]
 
 
+class GeneralFeedbackSerializer(serializers.ModelSerializer):
+    single_event = serializers.PrimaryKeyRelatedField(queryset=GeneralSingleEvent.objects.all())
+
+    class Meta:
+        model = GeneralFeedback
+        fields = [
+            'id',
+            'single_event',                                               
+            'presentation_content',
+            'speaker_delivery',
+            'presentation_duration',
+            'audio_video_quality',
+            'how_did_you_hear',
+            'suggestion',
+        ]
+
+
 from admins.models import Certificates
 
 from rest_framework.serializers import SerializerMethodField
@@ -158,7 +175,12 @@ class EnrolledSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enrolled
         fields = ['user', 'event']
-        
+
+class GeneralEnrolledSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralEnrolled
+        fields = ['user', 'event']
+     
 class EventEnrollmentCountSerializer(serializers.ModelSerializer):
     enrollment_count = serializers.SerializerMethodField()
 

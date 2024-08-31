@@ -225,7 +225,9 @@ class News(models.Model):
    date = models.DateField(null=True) 
    text = models.TextField(null=True, blank=True)
    
-     
+
+
+
  
 
 class Board(models.Model):
@@ -378,3 +380,9 @@ class GeneralMultiEvent(models.Model):
    
     def __str__(self):
         return f"{self.single_event.event.event_name} - {self.starting_time} to {self.ending_time}"
+    
+    
+    
+class GeneralCertificates(models.Model):    
+    event = models.ForeignKey(GeneralEvent, related_name='general_certificates', on_delete=models.CASCADE,null=True, blank=True)     
+    image = models.ImageField(upload_to='blogs/', null=True, blank=True)   
