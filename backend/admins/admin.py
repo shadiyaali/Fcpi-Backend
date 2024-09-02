@@ -26,6 +26,7 @@ admin.site.register(UserFileAssociation)
 admin.site.register(GeneralEvent)
 admin.site.register(GeneralSingleEvent)
 admin.site.register(GeneralMultiEvent)
+admin.site.register(GeneralAttachment)
 
  
  

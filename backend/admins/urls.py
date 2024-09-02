@@ -113,5 +113,9 @@ urlpatterns = [
     path('general_eventsmonth/', GeneralEventThisMonthUser.as_view(), name='event-month-list'),
     path('general_eventsyear/', GeneralEventThisYearUser.as_view(), name='event-year-list'),
     path('general_eventslistb/', GeneralEventListbannerView.as_view(), name='event-list'),
+    path('general_upload/', GeneralUploadAttachmentView.as_view(), name='upload_attachment'),
+    path('general_attachments-all/', GeneralListAttachmentsView.as_view(), name='list-attachments'),
+    path('general_attachments/<int:pk>/delete/', GeneralAttachmentDeleteAPIView.as_view(), name='attachment-delete'),
+    path('general_attachments/<int:pk>/update/', GeneralAttachmentUpdateAPIView.as_view(), name='attachment-update'),
 ]     
  

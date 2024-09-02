@@ -386,3 +386,11 @@ class GeneralMultiEvent(models.Model):
 class GeneralCertificates(models.Model):    
     event = models.ForeignKey(GeneralEvent, related_name='general_certificates', on_delete=models.CASCADE,null=True, blank=True)     
     image = models.ImageField(upload_to='blogs/', null=True, blank=True)   
+    
+    
+class GeneralAttachment(models.Model):
+    single_event = models.ForeignKey(GeneralSingleEvent, on_delete=models.CASCADE, related_name='general_attachments')
+    file = models.FileField(upload_to='attachments/')
+
+    def __str__(self):
+        return f"Attachment for Event {self.single_event.id}"

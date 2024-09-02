@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
+from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralAttachment,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -990,3 +990,23 @@ class GeneralEventBannerSerializer(serializers.ModelSerializer):
         if obj.banner:
             return obj.banner.url
         return None 
+    
+    
+class GeneralAttachmentSerializer(serializers.ModelSerializer):
+    event_name = serializers.SerializerMethodField()
+    event_day = serializers.SerializerMethodField()   
+
+    class Meta:
+        model = GeneralAttachment
+        fields = ['id', 'single_event', 'file', 'event_name', 'event_day']
+
+    def get_event_name(self, obj):
+        if obj.single_event and obj.single_event.event:
+            return obj.single_event.event.event_name
+        return 'No event'
+
+    def get_event_day(self, obj):
+        if obj.single_event:
+            return obj.single_event.day
+        return 'No day'
+        
