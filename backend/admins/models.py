@@ -387,10 +387,20 @@ class GeneralCertificates(models.Model):
     event = models.ForeignKey(GeneralEvent, related_name='general_certificates', on_delete=models.CASCADE,null=True, blank=True)     
     image = models.ImageField(upload_to='blogs/', null=True, blank=True)   
     
-    
+from django.core.exceptions import ValidationError  
 class GeneralAttachment(models.Model):
     single_event = models.ForeignKey(GeneralSingleEvent, on_delete=models.CASCADE, related_name='general_attachments')
     file = models.FileField(upload_to='attachments/')
 
     def __str__(self):
         return f"Attachment for Event {self.single_event.id}"
+
+    def clean(self):
+        super().clean()
+        if self.file:
+            # Example: 10 MB limit
+            max_size_mb = 10
+            max_size_bytes = max_size_mb * 1024 * 1024
+
+            if self.file.size > max_size_bytes:
+                raise ValidationError(f"The file size should not exceed {max_size_mb} MB.")
