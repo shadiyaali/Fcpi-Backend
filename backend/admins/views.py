@@ -2329,9 +2329,8 @@ class GeneralEventListView(APIView):
 
         if start_date and end_date and start_time and end_time:
             # Create timezone-aware datetime objects
-            # Assuming your times are in UTC
-            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time), timezone.utc)
-            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time), timezone.utc)
+            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
 
             # Check if the current time is past fifteen minutes after the event end time
