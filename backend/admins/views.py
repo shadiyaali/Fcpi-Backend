@@ -389,15 +389,13 @@ class EventListView(APIView):
         """
         Determines the status of the event based on current date and event times.
         """
-        current_date = datetime.now().date()
-        current_time = datetime.now().time()
+        current_datetime = timezone.now()
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
 
         if start_date and end_date and start_time and end_time:
-            event_end_datetime = datetime.combine(end_date, end_time)
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
-            current_datetime = datetime.combine(current_date, current_time)
 
             # Log the calculated datetimes
             logger.debug(f"Event End Datetime: {event_end_datetime}")
@@ -406,8 +404,8 @@ class EventListView(APIView):
 
             if current_datetime >= fifteen_minutes_after_end:
                 return "Completed"
-            if start_date <= current_date <= end_date:
-                return "Live" if current_date >= end_date else "Upcoming"
+            if start_date <= current_datetime.date() <= end_date:
+                return "Live" if current_datetime.date() >= end_date else "Upcoming"
         return "Upcoming"
 
     def get(self, request):
