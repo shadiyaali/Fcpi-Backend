@@ -399,6 +399,11 @@ class EventListView(APIView):
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
             current_datetime = datetime.combine(current_date, current_time)
 
+            # Log the calculated datetimes
+            logger.debug(f"Event End Datetime: {event_end_datetime}")
+            logger.debug(f"Fifteen Minutes After End: {fifteen_minutes_after_end}")
+            logger.debug(f"Current Datetime: {current_datetime}")
+
             if current_datetime >= fifteen_minutes_after_end:
                 return "Completed"
             if start_date <= current_date <= end_date:
