@@ -2329,9 +2329,27 @@ class GeneralEventListView(APIView):
         start_time, end_time = self.calculate_multi_event_times(event)
 
         if start_date and end_date and start_time and end_time:
-            # Create naive datetime objects
-            event_start_datetime = datetime.combine(start_date, start_time)
-            event_end_datetime = datetime.combine(end_date, end_time)
+            # Extract date and time components
+            event_start_date = start_date
+            event_start_time = start_time
+            event_end_date = end_date
+            event_end_time = end_time
+
+            # Convert date and time to datetime objects for comparison
+            event_start_datetime = datetime(
+                event_start_date.year,
+                event_start_date.month,
+                event_start_date.day,
+                event_start_time.hour,
+                event_start_time.minute
+            )
+            event_end_datetime = datetime(
+                event_end_date.year,
+                event_end_date.month,
+                event_end_date.day,
+                event_end_time.hour,
+                event_end_time.minute
+            )
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
 
             # Check if the current time is past fifteen minutes after the event end time
@@ -2343,7 +2361,7 @@ class GeneralEventListView(APIView):
                 return "Live"
             
             # Check if the event date is in the future
-            if current_date < start_date:
+            if current_date < event_start_date:
                 return "Upcoming"
 
         return "Upcoming"
