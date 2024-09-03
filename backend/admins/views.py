@@ -349,20 +349,9 @@ from datetime import datetime, timedelta
 
 from datetime import datetime
 
-from datetime import datetime
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Event
-from .serializers import EventListSerializer
+ 
 
-from datetime import datetime, timedelta
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from datetime import datetime, timedelta
-from django.utils import timezone
-from rest_framework.response import Response
-from rest_framework.views import APIView
+logger = logging.getLogger(__name__)
 
 class EventListView(APIView):
     def calculate_end_date(self, event):
@@ -392,17 +381,16 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current date and event times.
+        Determines the status of the event based on the current date and event times.
         """
         current_datetime = timezone.now()
         current_date = current_datetime.date()
-        current_time = current_datetime.time()
         
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
-
+        
         if start_date and end_date and start_time and end_time:
-            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time), timezone.get_current_timezone())
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
             
             logger.debug(f"Current Datetime: {current_datetime}")
