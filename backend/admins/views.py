@@ -359,6 +359,11 @@ from datetime import datetime, timedelta
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from datetime import datetime, timedelta
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 class EventListView(APIView):
     def calculate_end_date(self, event):
         """
@@ -390,22 +395,24 @@ class EventListView(APIView):
         Determines the status of the event based on current date and event times.
         """
         current_datetime = timezone.now()
+        current_date = current_datetime.date()
+        current_time = current_datetime.time()
+        
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
 
         if start_date and end_date and start_time and end_time:
             event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
-
-            # Log the calculated datetimes
+            
+            logger.debug(f"Current Datetime: {current_datetime}")
             logger.debug(f"Event End Datetime: {event_end_datetime}")
             logger.debug(f"Fifteen Minutes After End: {fifteen_minutes_after_end}")
-            logger.debug(f"Current Datetime: {current_datetime}")
 
             if current_datetime >= fifteen_minutes_after_end:
                 return "Completed"
-            if start_date <= current_datetime.date() <= end_date:
-                return "Live" if current_datetime.date() >= end_date else "Upcoming"
+            if start_date <= current_date <= end_date:
+                return "Live" if current_datetime >= event_end_datetime else "Upcoming"
         return "Upcoming"
 
     def get(self, request):
@@ -449,6 +456,7 @@ class EventListView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
+
 
  
 
