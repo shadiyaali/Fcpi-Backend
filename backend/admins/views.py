@@ -2320,45 +2320,33 @@ class GeneralEventListView(APIView):
         """
         Determines the status of the event based on current date and event times.
         """
-        # Get the current datetime without timezone info
+        # Get the current date and time
         current_datetime = datetime.now()
         current_date = current_datetime.date()
         current_time = current_datetime.time()
 
+        # Retrieve start and end dates and times
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
 
         if start_date and end_date and start_time and end_time:
-            # Extract date and time components
+            # Create datetime objects from date and time components for comparison
             event_start_date = start_date
             event_start_time = start_time
             event_end_date = end_date
             event_end_time = end_time
 
-            # Convert date and time to datetime objects for comparison
-            event_start_datetime = datetime(
-                event_start_date.year,
-                event_start_date.month,
-                event_start_date.day,
-                event_start_time.hour,
-                event_start_time.minute
-            )
-            event_end_datetime = datetime(
-                event_end_date.year,
-                event_end_date.month,
-                event_end_date.day,
-                event_end_time.hour,
-                event_end_time.minute
-            )
-            fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
+            # Check if the current date and time are within the event's start and end times
+            if (event_start_date < current_date < event_end_date) or \
+            (event_start_date == current_date and event_start_time <= current_time) or \
+            (event_end_date == current_date and event_end_time >= current_time):
+                event_end_datetime = datetime.combine(event_end_date, event_end_time)
+                fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
 
-            # Check if the current time is past fifteen minutes after the event end time
-            if current_datetime >= fifteen_minutes_after_end:
-                return "Completed"
-            
-            # Check if the current time is between the event start and fifteen minutes after the end
-            if event_start_datetime <= current_datetime <= fifteen_minutes_after_end:
-                return "Live"
+                if current_datetime > fifteen_minutes_after_end:
+                    return "Completed"
+                elif current_datetime >= event_start_datetime and current_datetime <= fifteen_minutes_after_end:
+                    return "Live"
             
             # Check if the event date is in the future
             if current_date < event_start_date:
