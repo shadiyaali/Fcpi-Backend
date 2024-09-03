@@ -2320,7 +2320,8 @@ class GeneralEventListView(APIView):
         """
         Determines the status of the event based on current date and event times.
         """
-        current_datetime = timezone.now()  # Get the current datetime with timezone info
+        # Get the current datetime without timezone info
+        current_datetime = datetime.now()
         current_date = current_datetime.date()
         current_time = current_datetime.time()
 
@@ -2328,9 +2329,9 @@ class GeneralEventListView(APIView):
         start_time, end_time = self.calculate_multi_event_times(event)
 
         if start_date and end_date and start_time and end_time:
-            # Create timezone-aware datetime objects
-            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
-            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
+            # Create naive datetime objects
+            event_start_datetime = datetime.combine(start_date, start_time)
+            event_end_datetime = datetime.combine(end_date, end_time)
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
 
             # Check if the current time is past fifteen minutes after the event end time
