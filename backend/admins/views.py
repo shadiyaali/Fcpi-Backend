@@ -2320,43 +2320,29 @@ class GeneralEventListView(APIView):
         """
         Determines the status of the event based on current date and event times.
         """
-        # Get the current date and time (naive datetime)
-        current_datetime = datetime.now()
+        # Get the current datetime in UTC
+        current_datetime = datetime.utcnow()
         current_date = current_datetime.date()
         current_time = current_datetime.time()
 
-        # Retrieve start and end dates and times
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
 
         if start_date and end_date and start_time and end_time:
-            # Create naive datetime objects from date and time components
-            event_start_datetime = datetime(
-                start_date.year,
-                start_date.month,
-                start_date.day,
-                start_time.hour,
-                start_time.minute
-            )
-            event_end_datetime = datetime(
-                end_date.year,
-                end_date.month,
-                end_date.day,
-                end_time.hour,
-                end_time.minute
-            )
+            event_start_datetime = datetime.combine(start_date, start_time)
+            event_end_datetime = datetime.combine(end_date, end_time)
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
 
-            # Determine event status
-            if current_datetime > fifteen_minutes_after_end:
+            if current_datetime >= fifteen_minutes_after_end:
                 return "Completed"
+
             if event_start_datetime <= current_datetime <= fifteen_minutes_after_end:
                 return "Live"
+
             if current_date < start_date:
                 return "Upcoming"
-        
-        return "Upcoming"
 
+        return "Upcoming"
     def get(self, request):
         """
         Retrieves all events, categorizes them based on status, and returns serialized data.
