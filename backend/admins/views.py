@@ -354,7 +354,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Event
 from .serializers import EventListSerializer
-from datetime import datetime, time
+
 class EventListView(APIView):
     def calculate_end_date(self, event):
         """
@@ -383,40 +383,31 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on the current date and event dates.
+        Determines the status of the event based on the current date and event dates/times.
         """
-        # Use timezone-aware datetime
-        now = timezone.now()
-        current_date = now.date()
-        current_time = now.time()
+        current_datetime = datetime.now()
         start_date, end_date = self.calculate_end_date(event)
-
-        # Calculate end time with a 15-minute buffer
         start_time, end_time = self.calculate_multi_event_times(event)
-        if end_time:
-            # Calculate buffer end time as end_time + 15 minutes
-            end_time_hour = end_time.hour
-            end_time_minute = end_time.minute + 15
-            if end_time_minute >= 60:
-                end_time_minute -= 60
-                end_time_hour += 1
-            if end_time_hour >= 24:
-                end_time_hour = 23  # Handle cases where hour exceeds 23
 
-            end_time_with_buffer = time(end_time_hour, end_time_minute)
-        else:
-            end_time_with_buffer = None
-
-        if start_date and end_date:
-            if current_date < start_date:
-                return "Upcoming"
-            elif start_date <= current_date <= end_date:
-                if current_date == end_date and (end_time_with_buffer and current_time > end_time_with_buffer):
-                    return "Completed"
-                else:
-                    return "Live"
-            else:
+        # If end_time is available, combine it with end_date for a full datetime
+        if end_time and end_date:
+            end_datetime = datetime.combine(end_date, end_time)
+            if current_datetime > end_datetime:
                 return "Completed"
+            elif current_datetime >= datetime.combine(start_date, datetime.min.time()):
+                return "Live"
+            else:
+                return "Upcoming"
+        else:
+            # Fallback to date-only logic if no multi-events are available
+            if start_date and end_date:
+                if current_datetime.date() > end_date:
+                    return "Completed"
+                elif current_datetime.date() >= start_date:
+                    return "Live"
+                else:
+                    return "Upcoming"
+        
         return "Upcoming"
 
     def get(self, request):

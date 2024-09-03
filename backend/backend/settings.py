@@ -187,8 +187,7 @@ DATABASES = {
 }
 
 
-TIME_ZONE = 'Asia/Kolkata'  # IST
-USE_TZ = True
+ 
  
 
 # Password validation
