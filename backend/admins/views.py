@@ -385,8 +385,10 @@ class EventListView(APIView):
         """
         Determines the status of the event based on the current date and event dates.
         """
-        current_date = datetime.now().date()
-        current_time = datetime.now().time()
+        # Use timezone-aware datetime
+        now = timezone.now()
+        current_date = now.date()
+        current_time = now.time()
         start_date, end_date = self.calculate_end_date(event)
 
         # Calculate end time with a 15-minute buffer
