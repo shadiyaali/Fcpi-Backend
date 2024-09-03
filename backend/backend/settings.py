@@ -187,8 +187,7 @@ DATABASES = {
 }
 
 
-USE_TZ = True
-TIME_ZONE = 'UTC' 
+ 
  
 
 # Password validation
