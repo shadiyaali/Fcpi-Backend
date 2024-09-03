@@ -349,9 +349,15 @@ from datetime import datetime, timedelta
 
 from datetime import datetime
 
- 
+from datetime import datetime
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Event
+from .serializers import EventListSerializer
 
-logger = logging.getLogger(__name__)
+from datetime import datetime, timedelta
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 class EventListView(APIView):
     def calculate_end_date(self, event):
@@ -381,26 +387,22 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on the current date and event times.
+        Determines the status of the event based on current date and event times.
         """
-        current_datetime = timezone.now()
-        current_date = current_datetime.date()
-        
+        current_date = datetime.now().date()
+        current_time = datetime.now().time()
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
-        
+
         if start_date and end_date and start_time and end_time:
-            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time), timezone.get_current_timezone())
+            event_end_datetime = datetime.combine(end_date, end_time)
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
-            
-            logger.debug(f"Current Datetime: {current_datetime}")
-            logger.debug(f"Event End Datetime: {event_end_datetime}")
-            logger.debug(f"Fifteen Minutes After End: {fifteen_minutes_after_end}")
+            current_datetime = datetime.combine(current_date, current_time)
 
             if current_datetime >= fifteen_minutes_after_end:
                 return "Completed"
             if start_date <= current_date <= end_date:
-                return "Live" if current_datetime >= event_end_datetime else "Upcoming"
+                return "Live" if current_date >= end_date else "Upcoming"
         return "Upcoming"
 
     def get(self, request):
@@ -444,7 +446,6 @@ class EventListView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
-
 
  
 
@@ -2279,6 +2280,16 @@ class GeneralEventUpdateAPIView(APIView):
         return Response({'message': 'Event updated successfully'}, status=status.HTTP_200_OK)
 
 
+from datetime import datetime, timedelta
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import GeneralEvent
+from .serializers import GeneralEventListSerializer
+import logging
+
+logger = logging.getLogger(__name__)
+
 class GeneralEventListView(APIView):
     def calculate_end_date(self, event):
         """
@@ -2305,27 +2316,31 @@ class GeneralEventListView(APIView):
                 return start_time, end_time
         return None, None
 
-    
-
     def get_event_status(self, event):
-            """
-            Determines the status of the event based on current date and event times.
-            """
-            current_date = datetime.now().date()
-            current_time = datetime.now().time()
-            start_date, end_date = self.calculate_end_date(event)
-            start_time, end_time = self.calculate_multi_event_times(event)
+        """
+        Determines the status of the event based on current date and event times.
+        """
+        current_datetime = timezone.now()
+        current_date = current_datetime.date()
+        current_time = current_datetime.time()
 
-            if start_date and end_date and start_time and end_time:
-                event_end_datetime = datetime.combine(end_date, end_time)
-                fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
-                current_datetime = datetime.combine(current_date, current_time)
+        start_date, end_date = self.calculate_end_date(event)
+        start_time, end_time = self.calculate_multi_event_times(event)
 
-                if current_datetime >= fifteen_minutes_after_end:
-                    return "Completed"
-                if start_date <= current_date <= end_date:
-                    return "Live" if current_date >= end_date else "Upcoming"
-            return "Upcoming"
+        if start_date and end_date and start_time and end_time:
+            # Create timezone-aware datetime objects
+            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
+            fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
+
+            if current_datetime >= fifteen_minutes_after_end:
+                return "Completed"
+            if event_start_datetime <= current_datetime <= fifteen_minutes_after_end:
+                return "Live"
+            if current_date < start_date:
+                return "Upcoming"
+        
+        return "Upcoming"
 
     def get(self, request):
         """
@@ -2337,16 +2352,10 @@ class GeneralEventListView(APIView):
         completed_events_data = []
 
         for event in events:
-         
             status = self.get_event_status(event)
-
-         
             start_date, end_date = self.calculate_end_date(event)
-
-       
             start_time, end_time = self.calculate_multi_event_times(event)
 
-       
             event_data = GeneralEventListSerializer(event).data
             event_data['start_date'] = start_date
             event_data['end_date'] = end_date
@@ -2355,7 +2364,6 @@ class GeneralEventListView(APIView):
                 'end_time': end_time
             }
 
-             
             if status == "Live":
                 live_events_data.append(event_data)
             elif status == "Upcoming":
@@ -2368,6 +2376,7 @@ class GeneralEventListView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
+
 
 class GeneralSingleEventDetailView(APIView):
     def get(self, request, slug):
