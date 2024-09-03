@@ -354,7 +354,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Event
 from .serializers import EventListSerializer
-
+from datetime import datetime, time
 class EventListView(APIView):
     def calculate_end_date(self, event):
         """
@@ -383,29 +383,33 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current date and event dates.
+        Determines the status of the event based on the current date and event dates.
         """
         current_date = datetime.now().date()
         current_time = datetime.now().time()
         start_date, end_date = self.calculate_end_date(event)
 
-        # Add 15-minute buffer to the end time of the last multi-event
+        # Calculate end time with a 15-minute buffer
         start_time, end_time = self.calculate_multi_event_times(event)
         if end_time:
-            end_time_with_buffer = (datetime.combine(datetime.today(), end_time) + timedelta(minutes=15)).time()
+            # Calculate buffer end time as end_time + 15 minutes
+            end_time_hour = end_time.hour
+            end_time_minute = end_time.minute + 15
+            if end_time_minute >= 60:
+                end_time_minute -= 60
+                end_time_hour += 1
+            if end_time_hour >= 24:
+                end_time_hour = 23  # Handle cases where hour exceeds 23
+
+            end_time_with_buffer = time(end_time_hour, end_time_minute)
         else:
             end_time_with_buffer = None
-
-        logger.info(f"Current Date: {current_date}, Current Time: {current_time}")
-        logger.info(f"Event Start Date: {start_date}, End Date: {end_date}")
-        logger.info(f"Event Start Time: {start_time}, End Time: {end_time}")
-        logger.info(f"End Time with Buffer: {end_time_with_buffer}")
 
         if start_date and end_date:
             if current_date < start_date:
                 return "Upcoming"
             elif start_date <= current_date <= end_date:
-                if current_date == end_date and current_time > end_time_with_buffer:
+                if current_date == end_date and (end_time_with_buffer and current_time > end_time_with_buffer):
                     return "Completed"
                 else:
                     return "Live"
