@@ -396,6 +396,11 @@ class EventListView(APIView):
         else:
             end_time_with_buffer = None
 
+        logger.info(f"Current Date: {current_date}, Current Time: {current_time}")
+        logger.info(f"Event Start Date: {start_date}, End Date: {end_date}")
+        logger.info(f"Event Start Time: {start_time}, End Time: {end_time}")
+        logger.info(f"End Time with Buffer: {end_time_with_buffer}")
+
         if start_date and end_date:
             if current_date < start_date:
                 return "Upcoming"
