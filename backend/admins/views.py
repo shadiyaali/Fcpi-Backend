@@ -2279,7 +2279,7 @@ class GeneralEventUpdateAPIView(APIView):
 
         return Response({'message': 'Event updated successfully'}, status=status.HTTP_200_OK)
 
-
+import pytz
 from datetime import datetime, timedelta
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -2320,18 +2320,32 @@ class GeneralEventListView(APIView):
         """
         Determines the status of the event based on current date and event times.
         """
+        # Set up UTC timezone
+        utc = pytz.utc
+        
         # Get the current datetime in UTC
-        current_datetime = datetime.utcnow()
+        current_datetime = datetime.now(utc)
         current_date = current_datetime.date()
-        current_time = current_datetime.time()
 
+        # Assuming these methods return datetime.date and datetime.time
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
 
+        # Debug output
+        print(f"Current datetime (UTC): {current_datetime}")
+        print(f"Event start date: {start_date}, start time: {start_time}")
+        print(f"Event end date: {end_date}, end time: {end_time}")
+
         if start_date and end_date and start_time and end_time:
-            event_start_datetime = datetime.combine(start_date, start_time)
-            event_end_datetime = datetime.combine(end_date, end_time)
+            # Combine date and time into datetime objects in UTC
+            event_start_datetime = datetime.combine(start_date, start_time).replace(tzinfo=utc)
+            event_end_datetime = datetime.combine(end_date, end_time).replace(tzinfo=utc)
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
+
+            # Debug output
+            print(f"Event start datetime (UTC): {event_start_datetime}")
+            print(f"Event end datetime (UTC): {event_end_datetime}")
+            print(f"Fifteen minutes after end (UTC): {fifteen_minutes_after_end}")
 
             if current_datetime >= fifteen_minutes_after_end:
                 return "Completed"
