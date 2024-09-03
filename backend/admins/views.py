@@ -345,19 +345,15 @@ class EventDetailView(APIView):
  
 
 
+import logging
 from datetime import datetime, timedelta
-
-from datetime import datetime
-
-from datetime import datetime
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Event
 from .serializers import EventListSerializer
 
-from datetime import datetime, timedelta
-from rest_framework.response import Response
-from rest_framework.views import APIView
+logger = logging.getLogger(__name__)
 
 class EventListView(APIView):
     def calculate_end_date(self, event):
@@ -391,32 +387,45 @@ class EventListView(APIView):
         """
         # Get the current datetime without timezone info
         current_datetime = datetime.now()
-        current_date = current_datetime.date()
-        current_time = current_datetime.time()
 
+        # Calculate start and end dates
         start_date, end_date = self.calculate_end_date(event)
+        # Calculate start and end times of MultiEvent for days = 1
         start_time, end_time = self.calculate_multi_event_times(event)
 
+        # Print statements for debugging
+        print(f"Start Date: {start_date}")
+        print(f"End Date: {end_date}")
+        print(f"Start Time: {start_time}")
+        print(f"End Time: {end_time}")
+
         if start_date and end_date and start_time and end_time:
-       
+            # Combine date and time to create naive datetimes
             event_start_datetime = datetime.combine(start_date, start_time)
             event_end_datetime = datetime.combine(end_date, end_time)
             fifteen_minutes_after_end = event_end_datetime + timedelta(minutes=15)
 
-          
+            # Print statements for debugging
+            print(f"Event Start Datetime: {event_start_datetime}")
+            print(f"Event End Datetime: {event_end_datetime}")
+            print(f"Fifteen Minutes After End: {fifteen_minutes_after_end}")
+
+            # Determine event status
             if current_datetime >= fifteen_minutes_after_end:
+                print("Event is Completed")
                 return "Completed"
             
-        
             if event_start_datetime <= current_datetime <= fifteen_minutes_after_end:
+                print("Event is Live")
                 return "Live"
             
-           
-            if current_date < start_date:
+            if current_datetime < event_start_datetime:
+                print("Event is Upcoming")
                 return "Upcoming"
 
+        # Default to Upcoming if no other condition is met
+        print("Event is Upcoming")
         return "Upcoming"
-
 
     def get(self, request):
         """
