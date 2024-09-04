@@ -2802,34 +2802,25 @@ class GeneralAssociateFileWithUserView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        print("Received request data:", request.data)
-        
+        print("Received request data:", request.data)   
         attachment_id = request.data.get('attachmentId')
-        single_event_id = request.data.get('singleEventId')
+        single_event_id = request.data.get('singleEventId')   
 
         if not attachment_id or not single_event_id:
-            print("Missing attachmentId or singleEventId")
+            print("Missing attachmentId or singleEventId")   
             return Response({'error': 'attachmentId and singleEventId are required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            attachment = GeneralAttachment.objects.get(id=attachment_id)
+            attachment =GeneralAttachment.objects.get(id=attachment_id)
             single_event = GeneralSingleEvent.objects.get(id=single_event_id)
         except GeneralAttachment.DoesNotExist:
-            print(f"Attachment with id {attachment_id} not found")
             return Response({'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
         except GeneralSingleEvent.DoesNotExist:
-            print(f"SingleEvent with id {single_event_id} not found")
             return Response({'error': 'SingleEvent not found'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            print("Unexpected error:", str(e))
-            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        association, created = GeneralUserFileAssociation.objects.get_or_create(
+            user=request.user,
+            attachment=attachment
+        )
         
-        try:
-            association, created = GeneralUserFileAssociation.objects.get_or_create(
-                user=request.user,
-                attachment=attachment
-            )
-            return Response({'message': 'File associated with user successfully'}, status=status.HTTP_200_OK)
-        except Exception as e:
-            print("Error creating association:", str(e))
-            return Response({'error': 'Error creating file association'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'message': 'File associated with user successfully'}, status=status.HTTP_200_OK)
