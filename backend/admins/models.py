@@ -394,3 +394,28 @@ class GeneralAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment for Event {self.single_event.id}"
+    
+    
+class Newsletter(models.Model):
+    title = models.TextField(null=True, blank=True)
+    edition = models.CharField(max_length=255, null=True, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    thumbnail = models.ImageField(upload_to='newsletters/thumbnails/', null=True, blank=True)
+    pdf = models.FileField(upload_to='newsletters/pdfs/', null=True, blank=True)
+
+    def __str__(self):
+        return self.title or "Untitled Newsletter"
+
+class GeneralUserFileAssociation(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    attachment = models.ForeignKey(GeneralAttachment, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"User {self.user.id} - Attachment {self.attachment.id}"
+
+    @property
+    def file_url(self):
+        return self.attachment.file.url if self.attachment and self.attachment.file else None
+    

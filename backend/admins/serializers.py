@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralAttachment,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
+from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralAttachment,Newsletter,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1010,3 +1010,8 @@ class GeneralAttachmentSerializer(serializers.ModelSerializer):
             return obj.single_event.day
         return 'No day'
         
+        
+class NewsletterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Newsletter
+        fields = ['id', 'title', 'edition', 'start_date', 'end_date', 'thumbnail', 'pdf']

@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,GeneralEvent,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -383,31 +383,15 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on the current date and event dates/times.
+        Determines the status of the event based on current date and event dates.
         """
-        current_datetime = datetime.now()
+        current_date = datetime.now().date()
         start_date, end_date = self.calculate_end_date(event)
-        start_time, end_time = self.calculate_multi_event_times(event)
-
-        # If end_time is available, combine it with end_date for a full datetime
-        if end_time and end_date:
-            end_datetime = datetime.combine(end_date, end_time)
-            if current_datetime > end_datetime:
-                return "Completed"
-            elif current_datetime >= datetime.combine(start_date, datetime.min.time()):
-                return "Live"
+        if start_date and end_date:
+            if current_date <= end_date:
+                return "Live" if current_date >= start_date else "Upcoming"
             else:
-                return "Upcoming"
-        else:
-            # Fallback to date-only logic if no multi-events are available
-            if start_date and end_date:
-                if current_datetime.date() > end_date:
-                    return "Completed"
-                elif current_datetime.date() >= start_date:
-                    return "Live"
-                else:
-                    return "Upcoming"
-        
+                return "Completed"
         return "Upcoming"
 
     def get(self, request):
@@ -2764,3 +2748,79 @@ class GeneralAttachmentUpdateAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class NewsletterListCreateView(generics.ListCreateAPIView):
+    queryset = Newsletter.objects.all()
+    serializer_class = NewsletterSerializer
+    
+class NewsletterListView(generics.ListAPIView):
+    queryset = Newsletter.objects.all()
+    serializer_class = NewsletterSerializer
+    
+class NewsletterDeleteView(APIView):
+    def delete(self, request, pk, format=None):
+        try:
+            newsletter = Newsletter.objects.get(pk=pk)
+            newsletter.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Newsletter.DoesNotExist:
+            return Response(
+                {"detail": "Not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+class NewsletterUpdateView(generics.UpdateAPIView):
+    queryset = Newsletter.objects.all()
+    serializer_class = NewsletterSerializer
+    lookup_field = 'pk'
+
+    def put(self, request, *args, **kwargs):
+        print("Request data:", request.data)
+        print("URL kwargs:", self.kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        else:
+            print("Validation errors:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GeneralAttachmentsBySingleEventView(generics.ListAPIView):
+    serializer_class = GeneralAttachmentSerializer
+
+    def get_queryset(self):
+        single_event_id = self.request.query_params.get('single_event')
+        if single_event_id:
+            return GeneralAttachment.objects.filter(single_event=single_event_id)
+        return GeneralAttachment.objects.none()
+    
+    
+class GeneralAssociateFileWithUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        print("Received request data:", request.data)   
+        attachment_id = request.data.get('attachmentId')
+        single_event_id = request.data.get('singleEventId')   
+
+        if not attachment_id or not single_event_id:
+            print("Missing attachmentId or singleEventId")   
+            return Response({'error': 'attachmentId and singleEventId are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            attachment =GeneralAttachment.objects.get(id=attachment_id)
+            single_event = GeneralSingleEvent.objects.get(id=single_event_id)
+        except GeneralAttachment.DoesNotExist:
+            return Response({'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
+        except GeneralSingleEvent.DoesNotExist:
+            return Response({'error': 'SingleEvent not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        association, created = GeneralUserFileAssociation.objects.get_or_create(
+            user=request.user,
+            attachment=attachment
+        )
+        
+        return Response({'message': 'File associated with user successfully'}, status=status.HTTP_200_OK)

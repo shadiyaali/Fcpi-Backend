@@ -117,5 +117,11 @@ urlpatterns = [
     path('general_attachments-all/', GeneralListAttachmentsView.as_view(), name='list-attachments'),
     path('general_attachments/<int:pk>/delete/', GeneralAttachmentDeleteAPIView.as_view(), name='attachment-delete'),
     path('general_attachments/<int:pk>/update/', GeneralAttachmentUpdateAPIView.as_view(), name='attachment-update'),
+    path('newsletters/', NewsletterListCreateView.as_view(), name='newsletter-list-create'),
+    path('newsletterslist/', NewsletterListView.as_view(), name='newsletter-list'),
+    path('newsletters/<int:pk>/delete/', NewsletterDeleteView.as_view(), name='newsletter-delete'),
+    path('newsletters/<int:pk>/update/', NewsletterUpdateView.as_view(), name='update_newsletter'),
+    path('general_attachments/', GeneralAttachmentsBySingleEventView.as_view(), name='retrieve-attachment'),
+    path('general_user-file-interaction/', GeneralAssociateFileWithUserView.as_view(), name='user-file-interaction'),
 ]     
  
