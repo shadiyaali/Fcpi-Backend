@@ -419,3 +419,34 @@ class GeneralUserFileAssociation(models.Model):
     def file_url(self):
         return self.attachment.file.url if self.attachment and self.attachment.file else None
     
+    
+class Podcast(models.Model):
+    name = models.CharField(max_length=255)      
+    date = models.DateField()
+    starting_time = models.TimeField()
+    ending_time = models.TimeField()
+    youtube_url = models.URLField(max_length=200, blank=True, null=True)
+    # slug = models.SlugField(unique=True, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+    
+    # def save(self, *args, **kwargs):
+    #     if not self.slug:
+    #         self.slug = slugify(self.name)
+    #     super().save(*args, **kwargs)
+    
+class HostContents(models.Model): 
+    podcast =  models.ForeignKey(Podcast, related_name='host_contents', on_delete=models.CASCADE, null=True, blank=True) 
+    host_name = models.CharField(max_length=255)
+    host_image = models.ImageField(upload_to='host_images/')
+       
+    def __str__(self):
+        return f"{self.podcast.name if self.podcast else 'No Podcast'} - {self.host_name}"   
+class GuestContents(models.Model): 
+    podcast =  models.ForeignKey(Podcast, related_name='guest_contents', on_delete=models.CASCADE, null=True, blank=True) 
+    guest_name = models.CharField(max_length=255, blank=True, null=True)
+    guest_image = models.ImageField(upload_to='guest_images/', blank=True, null=True)
+       
+    def __str__(self):
+        return f"{self.podcast.name if self.podcast else 'No Podcast'} - {self.guest_name}"
