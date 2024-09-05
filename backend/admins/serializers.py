@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralAttachment,HostContents,Podcast,GuestContents,Newsletter,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
+from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralAttachment,Newsletter,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1019,125 +1019,125 @@ class NewsletterSerializer(serializers.ModelSerializer):
 
 
 
-class HostContentsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = HostContents
-        fields = ['id', 'host_name' , 'host_image']
+# class HostContentsSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = HostContents
+#         fields = ['id', 'host_name' , 'host_image']
 
 
-class GuestContentsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = GuestContents
-        fields = ['id', 'guest_name' , 'guest_image']
+# class GuestContentsSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = GuestContents
+#         fields = ['id', 'guest_name' , 'guest_image']
         
              
-class  PodcastSerializer(serializers.ModelSerializer):
-    host_contents = HostContentsSerializer(many=True, required=False)
-    guest_contents = GuestContentsSerializer(many=True, required=False)
+# class  PodcastSerializer(serializers.ModelSerializer):
+#     host_contents = HostContentsSerializer(many=True, required=False)
+#     guest_contents = GuestContentsSerializer(many=True, required=False)
     
-    class Meta:
-        model = Podcast
-        fields = ['id', 'name','date', 'starting_time', 'ending_time', 'youtube_url', 'host_contents'  ,'guest_contents']
+#     class Meta:
+#         model = Podcast
+#         fields = ['id', 'name','date', 'starting_time', 'ending_time', 'youtube_url', 'host_contents'  ,'guest_contents']
 
-    def create(self, validated_data):
-        host_contents_data = validated_data.pop('host_contents', [])
-        podcast = Podcast.objects.create(**validated_data)
+#     def create(self, validated_data):
+#         host_contents_data = validated_data.pop('host_contents', [])
+#         podcast = Podcast.objects.create(**validated_data)
 
-        for content_data in host_contents_data:
-            host_image_data = content_data.pop('host_image', None)
-            host_content = HostContents.objects.create(podcast=podcast, **content_data)
-            if host_image_data:
-                host_content.host_image = host_image_data
-                host_content.save()
+#         for content_data in host_contents_data:
+#             host_image_data = content_data.pop('host_image', None)
+#             host_content = HostContents.objects.create(podcast=podcast, **content_data)
+#             if host_image_data:
+#                 host_content.host_image = host_image_data
+#                 host_content.save()
 
-        return podcast
-    def create(self, validated_data):
-        guest_contents_data = validated_data.pop('guest_contents', [])
-        podcast = Podcast.objects.create(**validated_data)
+#         return podcast
+#     def create(self, validated_data):
+#         guest_contents_data = validated_data.pop('guest_contents', [])
+#         podcast = Podcast.objects.create(**validated_data)
 
-        for content_data in guest_contents_data:
-            guest_image_data = content_data.pop('guest_image', None)
-            guest_content = GuestContents.objects.create(podcast=podcast, **content_data)
-            if guest_image_data:
-                guest_content.guest_image = guest_image_data
-                guest_content.save()
+#         for content_data in guest_contents_data:
+#             guest_image_data = content_data.pop('guest_image', None)
+#             guest_content = GuestContents.objects.create(podcast=podcast, **content_data)
+#             if guest_image_data:
+#                 guest_content.guest_image = guest_image_data
+#                 guest_content.save()
 
-        return podcast
+#         return podcast
     
     
 
 
-class HostssContentsSerializer(serializers.ModelSerializer):
-    host_image = serializers.ImageField(required=False, allow_null=True)
+# class HostssContentsSerializer(serializers.ModelSerializer):
+#     host_image = serializers.ImageField(required=False, allow_null=True)
 
-    class Meta:
-        model = HostContents
-        fields = ['id', 'host_name' , 'host_image']
+#     class Meta:
+#         model = HostContents
+#         fields = ['id', 'host_name' , 'host_image']
 
-class  GuestssContentsSerializer(serializers.ModelSerializer):
-    guest_image = serializers.ImageField(required=False, allow_null=True)
+# class  GuestssContentsSerializer(serializers.ModelSerializer):
+#     guest_image = serializers.ImageField(required=False, allow_null=True)
 
-    class Meta:
-        model = GuestContents
-        fields = ['id', 'guest_name' , 'guest_image']
+#     class Meta:
+#         model = GuestContents
+#         fields = ['id', 'guest_name' , 'guest_image']
         
         
  
 
-class PodcastFormSerializer(serializers.ModelSerializer):
-    host_contents = HostssContentsSerializer(many=True)
-    guest_contents = GuestssContentsSerializer(many=True)
+# class PodcastFormSerializer(serializers.ModelSerializer):
+#     host_contents = HostssContentsSerializer(many=True)
+#     guest_contents = GuestssContentsSerializer(many=True)
 
-    class Meta:
-        model = Podcast
-        fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'host_contents', 'guest_contents']
+#     class Meta:
+#         model = Podcast
+#         fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'host_contents', 'guest_contents']
 
-    def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.date = validated_data.get('date', instance.date)
-        instance.starting_time = validated_data.get('starting_time', instance.starting_time)
-        instance.ending_time = validated_data.get('ending_time', instance.ending_time)
-        instance.youtube_url = validated_data.get('youtube_url', instance.youtube_url)
+#     def update(self, instance, validated_data):
+#         instance.name = validated_data.get('name', instance.name)
+#         instance.date = validated_data.get('date', instance.date)
+#         instance.starting_time = validated_data.get('starting_time', instance.starting_time)
+#         instance.ending_time = validated_data.get('ending_time', instance.ending_time)
+#         instance.youtube_url = validated_data.get('youtube_url', instance.youtube_url)
 
-        # Handle host_contents
-        host_contents_data = validated_data.pop('host_contents', [])
-        existing_host_content_ids = [content.id for content in instance.host_contents.all()]
+#         # Handle host_contents
+#         host_contents_data = validated_data.pop('host_contents', [])
+#         existing_host_content_ids = [content.id for content in instance.host_contents.all()]
 
-        for content_data in host_contents_data:
-            content_id = content_data.get('id', None)
-            if content_id and content_id in existing_host_content_ids:
-                content_instance = HostContents.objects.get(id=content_id, podcast=instance)
-                content_instance.host_name = content_data.get('host_name', content_instance.host_name)
-                new_image = content_data.get('host_image')
-                if new_image is not None:
-                    content_instance.host_image = new_image
-                content_instance.save()
-                existing_host_content_ids.remove(content_id)
-            else:
-                HostContents.objects.create(podcast=instance, **content_data)
+#         for content_data in host_contents_data:
+#             content_id = content_data.get('id', None)
+#             if content_id and content_id in existing_host_content_ids:
+#                 content_instance = HostContents.objects.get(id=content_id, podcast=instance)
+#                 content_instance.host_name = content_data.get('host_name', content_instance.host_name)
+#                 new_image = content_data.get('host_image')
+#                 if new_image is not None:
+#                     content_instance.host_image = new_image
+#                 content_instance.save()
+#                 existing_host_content_ids.remove(content_id)
+#             else:
+#                 HostContents.objects.create(podcast=instance, **content_data)
 
-        for old_id in existing_host_content_ids:
-            HostContents.objects.get(id=old_id, podcast=instance).delete()
+#         for old_id in existing_host_content_ids:
+#             HostContents.objects.get(id=old_id, podcast=instance).delete()
 
        
-        guest_contents_data = validated_data.pop('guest_contents', [])
-        existing_guest_content_ids = [content.id for content in instance.guest_contents.all()]
+#         guest_contents_data = validated_data.pop('guest_contents', [])
+#         existing_guest_content_ids = [content.id for content in instance.guest_contents.all()]
 
-        for content_data in guest_contents_data:
-            content_id = content_data.get('id', None)
-            if content_id and content_id in existing_guest_content_ids:
-                content_instance = GuestContents.objects.get(id=content_id, podcast=instance)
-                content_instance.guest_name = content_data.get('guest_name', content_instance.guest_name)
-                new_image = content_data.get('guest_image')
-                if new_image is not None:
-                    content_instance.guest_image = new_image
-                content_instance.save()
-                existing_guest_content_ids.remove(content_id)
-            else:
-                GuestContents.objects.create(podcast=instance, **content_data)
+#         for content_data in guest_contents_data:
+#             content_id = content_data.get('id', None)
+#             if content_id and content_id in existing_guest_content_ids:
+#                 content_instance = GuestContents.objects.get(id=content_id, podcast=instance)
+#                 content_instance.guest_name = content_data.get('guest_name', content_instance.guest_name)
+#                 new_image = content_data.get('guest_image')
+#                 if new_image is not None:
+#                     content_instance.guest_image = new_image
+#                 content_instance.save()
+#                 existing_guest_content_ids.remove(content_id)
+#             else:
+#                 GuestContents.objects.create(podcast=instance, **content_data)
 
-        for old_id in existing_guest_content_ids:
-            GuestContents.objects.get(id=old_id, podcast=instance).delete()
+#         for old_id in existing_guest_content_ids:
+#             GuestContents.objects.get(id=old_id, podcast=instance).delete()
 
-        instance.save()
-        return instance
+#         instance.save()
+#         return instance

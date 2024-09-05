@@ -123,11 +123,11 @@ urlpatterns = [
     path('newsletters/<int:pk>/update/', NewsletterUpdateView.as_view(), name='update_newsletter'),
     path('general_attachments/', GeneralAttachmentsBySingleEventView.as_view(), name='retrieve-attachment'),
     path('general_user-file-interaction/', GeneralAssociateFileWithUserView.as_view(), name='user-file-interaction'),
-    path('podcast/', CreatePodcast.as_view(), name='blog_admin'),
-    path('podcast_listall/', PodcastListViewall.as_view(), name='blog-list'),
-    path('podcast/<int:pk>/delete/', PodcastDeleteView.as_view(), name='podcast-delete'),
-    path('podcast/<int:pk>/update/', PodcastUpdateView.as_view(), name='podcast-update'),
-    path('podcasts_list/', PodcastListView.as_view(), name='podcast-list'),
-    path('podcast/<str:name>/', PodcastDetailView.as_view(), name='podcast-detail'),
+    # path('podcast/', CreatePodcast.as_view(), name='blog_admin'),
+    # path('podcast_listall/', PodcastListViewall.as_view(), name='blog-list'),
+    # path('podcast/<int:pk>/delete/', PodcastDeleteView.as_view(), name='podcast-delete'),
+    # path('podcast/<int:pk>/update/', PodcastUpdateView.as_view(), name='podcast-update'),
+    # path('podcasts_list/', PodcastListView.as_view(), name='podcast-list'),
+    # path('podcast/<str:name>/', PodcastDetailView.as_view(), name='podcast-detail'),
 ]     
  
