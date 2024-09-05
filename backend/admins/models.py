@@ -426,15 +426,12 @@ class Podcast(models.Model):
     starting_time = models.TimeField()
     ending_time = models.TimeField()
     youtube_url = models.URLField(max_length=200, blank=True, null=True)
-    # slug = models.SlugField(unique=True, blank=True, null=True)
+  
 
     def __str__(self):
         return self.name
     
-    # def save(self, *args, **kwargs):
-    #     if not self.slug:
-    #         self.slug = slugify(self.name)
-    #     super().save(*args, **kwargs)
+  
     
 class HostContents(models.Model): 
     podcast =  models.ForeignKey(Podcast, related_name='host_contents', on_delete=models.CASCADE, null=True, blank=True) 
