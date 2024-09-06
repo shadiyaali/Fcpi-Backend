@@ -1,6 +1,6 @@
 from django.db import models
 from accounts.models import User
-from admins.models import Forum,Event
+from admins.models import Forum,Event,GeneralEvent
 from django.contrib.auth import get_user_model
  
 
@@ -29,10 +29,19 @@ class Message(models.Model):
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    answered = models.BooleanField(default=False)  # New field to track message status
+    answered = models.BooleanField(default=False)  
 
     def __str__(self):
         return self.content
 
+class GeneralMessage(models.Model):
+   
+    event = models.ForeignKey(GeneralEvent, on_delete=models.CASCADE, null=True, blank=True, related_name='speaker_general_messages')
+    content = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    answered = models.BooleanField(default=False)  
 
+    def __str__(self):
+        return self.content
 

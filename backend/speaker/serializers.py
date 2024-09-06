@@ -1,6 +1,6 @@
 # users/serializers.py
 
-from .models import Message 
+from .models import Message ,GeneralMessage
 from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from .models import SecondUser
@@ -96,3 +96,28 @@ class MessageSerializersChat(serializers.ModelSerializer):
             last_name = obj.author.last_name
             return f"{first_name} {last_name}".strip()   
         return 'Unknown'
+
+
+class GeneralMessageSerializersChat(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    event_name = serializers.CharField(source='event.event_name', read_only=True)
+  
+    author_profile = UserProfileSerializer(source='author.userprofile', read_only=True)
+
+    class Meta:
+        model = GeneralMessage
+        fields = ['id', 'event_name',  'content', 'timestamp', 'author_name', 'author_profile']
+
+    def get_author_name(self, obj):
+        # Combine first name and last name
+        if obj.author:
+            first_name = obj.author.first_name
+            last_name = obj.author.last_name
+            return f"{first_name} {last_name}".strip()   
+        return 'Unknown'
+
+
+class GeneralMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralMessage
+        fields = ['id', 'event', 'content', 'author', 'timestamp', 'answered']

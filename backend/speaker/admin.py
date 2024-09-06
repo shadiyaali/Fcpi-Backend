@@ -5,3 +5,4 @@ from .models import *
  
 admin.site.register(SecondUser)
 admin.site.register(Message)
+admin.site.register(GeneralMessage)

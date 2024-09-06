@@ -16,8 +16,8 @@ from admins.models import Forum,Event
 from .serializers import MessageSerializer
 from .models import SecondUser 
 from django.contrib.auth import get_user_model
-from .models import Message
-from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer ,MessageSerializersChat
+from .models import Message,GeneralMessage,GeneralEvent
+from .serializers import MessageSerializer,MessageSerializerChat,SecondUserSerializer,GeneralMessageSerializer ,MessageSerializersChat,GeneralMessageSerializersChat
 from django.shortcuts import get_object_or_404
 User = get_user_model()
 
@@ -96,6 +96,7 @@ from django.http import JsonResponse
 from .models import Message
 from .serializers import MessageSerializersChat
 
+# In MessageListView
 class MessageListView(APIView):
     def get(self, request, event_name=None, forum_name=None, format=None):
         current_date = date.today()
@@ -111,6 +112,7 @@ class MessageListView(APIView):
                 timestamp__date=current_date
             )
         elif forum_name:
+            print("Fetching messages with forum")
             messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(
                 forum__title=forum_name,
                 timestamp__date=current_date
@@ -120,12 +122,16 @@ class MessageListView(APIView):
                 timestamp__date=current_date
             )
 
-        # Log the serialized data
+        # Log the queryset data
+        for message in messages:
+            print(f"Message ID: {message.id}, Event Name: {message.event.event_name if message.event else 'None'}, Forum Name: {message.forum.title if message.forum else 'None'}")
+            
         serializer = MessageSerializersChat(messages, many=True)
         data = serializer.data
-        print('Serialized Messages Data:', data)
-
+        print("Serialized Data:", data)
+        
         return JsonResponse(data, safe=False)
+
 
 
         
@@ -162,7 +168,7 @@ class SendMessageAPIView(APIView):
                 )
 
                 serializer = MessageSerializer(message)
-                print("Serialized message data:", serializer.data)
+               
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
             except Event.DoesNotExist:
@@ -206,11 +212,7 @@ class ToggleUserStatus(APIView):
             user.status = 'Active' if user.status == 'Inactive' else 'Inactive'
             user.save()
 
-            # Print all details after status change
-            print("User ID:", user.id)
-            print("Username:", user.username)
-            print("Old Status:", old_status)
-            print("New Status:", user.status)
+            
 
             serializer = SecondUserSerializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -269,3 +271,116 @@ class UserMessageListView(APIView):
         data = serializer.data
 
         return JsonResponse(data, safe=False)
+
+
+class GeneralUserMessageListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, event_name=None, format=None):
+        user = request.user  # Ensure user is authenticated
+
+        # Check if the user is authenticated
+        if not user.is_authenticated:
+            return JsonResponse({'error': 'User not authenticated'}, status=403)
+
+        # Filter messages based on event_name and user
+        filters = {'author': user}
+        if event_name:
+            filters['general_event__event_name'] = event_name
+
+        messages = GeneralMessage.objects.select_related('general_event', 'author__userprofile').filter(**filters)
+
+        # Serialize the data
+        serializer = GeneralMessageSerializersChat(messages, many=True)
+        data = serializer.data
+
+        return JsonResponse(data, safe=False)
+    
+    
+class GeneralSendMessageAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+      
+        content = request.data.get('content')
+        event_name = request.data.get('event_name')
+      
+
+        if content:
+            try:
+                author = request.user  # Fetch the author from the authenticated user
+            
+
+                event = None
+                if event_name:
+                    event = GeneralEvent.objects.get(event_name=event_name)
+
+            
+
+                message = GeneralMessage.objects.create(
+                    content=content,
+                    author=author,
+                    event=event,
+                  
+                )
+
+                serializer = GeneralMessageSerializer(message)
+              
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            except Event.DoesNotExist:
+               
+                return Response({'error': 'Invalid event name'}, status=status.HTTP_400_BAD_REQUEST)
+             
+            except Exception as e:
+             
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+        
+            return Response({'error': 'Content is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class GeneralMessageListView(APIView):
+    def get(self, request, event_name=None, format=None):
+        current_date = date.today()
+
+        # Debugging print statement to check the event_name value
+        print(f"Received event_name: {event_name}")
+
+        if event_name:
+            print(f"Fetching messages for event_name: {event_name}")
+            messages = GeneralMessage.objects.select_related('event', 'author__userprofile').filter(
+                event__event_name=event_name,
+                timestamp__date=current_date
+            )
+        else:
+            print("Fetching messages without event_name")
+            messages = GeneralMessage.objects.select_related('event', 'author__userprofile').filter(
+                timestamp__date=current_date
+            )
+
+        # Serialize the messages
+        serializer = GeneralMessageSerializersChat(messages, many=True)
+        data = serializer.data
+
+        # Debugging print statement to check the serialized data
+ 
+
+        return JsonResponse(data, safe=False)
+
+
+class GeneralMessageUpdateView(APIView):
+    def put(self, request, pk):
+        try:
+            message = GeneralMessage.objects.get(pk=pk)
+        except GeneralMessage.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Toggle the 'answered' field
+        message.answered = not message.answered
+        message.save()
+
+        serializer = GeneralMessageSerializer(message)
+        return Response(serializer.data)
