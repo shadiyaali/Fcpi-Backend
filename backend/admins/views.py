@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer ,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,PodcastFormSerializer,PodcastSerializer,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,Podcasts,HostContentss,GuestContentss,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -2826,280 +2826,310 @@ class GeneralAssociateFileWithUserView(APIView):
         return Response({'message': 'File associated with user successfully'}, status=status.HTTP_200_OK)
 
 
-# from django.http import HttpResponse
-# from rest_framework.response import Response
-# from rest_framework import status
-# from rest_framework.views import APIView
-# from django.db import transaction
-# from .models import Podcast, HostContents, GuestContents
+from django.http import HttpResponse
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
+from django.db import transaction
+from .models import Podcasts, HostContentss, GuestContentss
 
-# class CreatePodcast(APIView):
-#     def post(self, request):
-#         try:
-#             print("Request data:", request.data)
-#             with transaction.atomic():
-#                 name = request.data.get('name')
-#                 date = request.data.get('date')
-#                 starting_time = request.data.get('starting_time')
-#                 ending_time = request.data.get('ending_time')
-#                 youtube_url = request.data.get('youtube_url')
+class CreatePodcast(APIView):
+    def post(self, request):
+        try:
+            print("Request data:", request.data)
+            with transaction.atomic():
+                name = request.data.get('name')
+                date = request.data.get('date')
+                starting_time = request.data.get('starting_time')
+                ending_time = request.data.get('ending_time')
+                youtube_url = request.data.get('youtube_url')
                 
-#                 podcast = Podcast.objects.create(
-#                     name=name,
-#                     date=date,
-#                     starting_time=starting_time,
-#                     ending_time=ending_time,
-#                     youtube_url=youtube_url,
-#                 )
+                podcast = Podcasts.objects.create(
+                    name=name,
+                    date=date,
+                    starting_time=starting_time,
+                    ending_time=ending_time,
+                    youtube_url=youtube_url,
+                )
                 
-#                 # Process host contents
-#                 host_contents = []
-#                 for key in request.data.keys():
-#                     if key.startswith('host_contents'):
-#                         index = key.split('[')[1].split(']')[0]
-#                         if len(host_contents) <= int(index):
-#                             host_contents.append({})
-#                         field = key.split('[')[2].split(']')[0]
-#                         host_contents[int(index)][field] = request.data.get(key)
+                # Process host contents
+                host_contents = []
+                for key in request.data.keys():
+                    if key.startswith('host_contents'):
+                        index = key.split('[')[1].split(']')[0]
+                        if len(host_contents) <= int(index):
+                            host_contents.append({})
+                        field = key.split('[')[2].split(']')[0]
+                        host_contents[int(index)][field] = request.data.get(key)
                 
-#                 print("Extracted host contents:", host_contents)
+                print("Extracted host contents:", host_contents)
 
-#                 for content_data in host_contents:
-#                     host_name = content_data.get('host_name')
-#                     host_image = request.FILES.get(f'host_contents[{host_contents.index(content_data)}][host_image]')
+                for content_data in host_contents:
+                    host_name = content_data.get('host_name')
+                    host_image = request.FILES.get(f'host_contents[{host_contents.index(content_data)}][host_image]')
                     
-#                     content = HostContents.objects.create(
-#                         podcast=podcast,
-#                         host_name=host_name,
-#                         host_image=host_image
-#                     )
+                    content = HostContentss.objects.create(
+                        podcast=podcast,
+                        host_name=host_name,
+                        host_image=host_image
+                    )
                     
-#                 # Process guest contents
-#                 guest_contents = []
-#                 for key in request.data.keys():
-#                     if key.startswith('guest_contents'):
-#                         index = key.split('[')[1].split(']')[0]
-#                         if len(guest_contents) <= int(index):
-#                             guest_contents.append({})
-#                         field = key.split('[')[2].split(']')[0]
-#                         guest_contents[int(index)][field] = request.data.get(key)
+                # Process guest contents
+                guest_contents = []
+                for key in request.data.keys():
+                    if key.startswith('guest_contents'):
+                        index = key.split('[')[1].split(']')[0]
+                        if len(guest_contents) <= int(index):
+                            guest_contents.append({})
+                        field = key.split('[')[2].split(']')[0]
+                        guest_contents[int(index)][field] = request.data.get(key)
                 
-#                 print("Extracted guest contents:", guest_contents)
+                print("Extracted guest contents:", guest_contents)
 
-#                 for content_data in guest_contents:
-#                     guest_name = content_data.get('guest_name')
-#                     guest_image = request.FILES.get(f'guest_contents[{guest_contents.index(content_data)}][guest_image]')
+                for content_data in guest_contents:
+                    guest_name = content_data.get('guest_name')
+                    guest_image = request.FILES.get(f'guest_contents[{guest_contents.index(content_data)}][guest_image]')
                     
-#                     content = GuestContents.objects.create(
-#                         podcast=podcast,
-#                         guest_name=guest_name,
-#                         guest_image=guest_image
-#                     )
+                    content = GuestContentss.objects.create(
+                        podcast=podcast,
+                        guest_name=guest_name,
+                        guest_image=guest_image
+                    )
                     
-#         except Exception as e:
-#             print("Error:", e)
-#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            print("Error:", e)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-#         return Response(status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_201_CREATED)
 
 
-# class  PodcastListViewall(generics.ListAPIView):
-#     queryset =  Podcast.objects.prefetch_related('host_contents').all()
-#     queryset =  Podcast.objects.prefetch_related('guest_contents').all()
-#     serializer_class =  PodcastSerializer
+class  PodcastListViewall(generics.ListAPIView):
+    queryset =  Podcasts.objects.prefetch_related('host_contents').all()
+    queryset =  Podcasts.objects.prefetch_related('guest_contents').all()
+    serializer_class =  PodcastSerializer
     
     
     
-# class PodcastDeleteView(generics.DestroyAPIView):
-#     queryset = Podcast.objects.all()
-#     serializer_class = PodcastSerializer
+class PodcastDeleteView(generics.DestroyAPIView):
+    queryset = Podcasts.objects.all()
+    serializer_class = PodcastSerializer
 
-#     def delete(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         self.perform_destroy(instance)
-#         return Response(status=status.HTTP_204_NO_CONTENT)
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
     
     
-# class PodcastUpdateView(UpdateAPIView):
-#     queryset = Podcast.objects.all()
-#     serializer_class = PodcastFormSerializer
-#     parser_classes = (MultiPartParser, FormParser)
+class PodcastUpdateView(UpdateAPIView):
+    queryset = Podcasts.objects.all()
+    serializer_class = PodcastFormSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
-#     def put(self, request, *args, **kwargs):
-#         podcast = self.get_object()
+    def put(self, request, *args, **kwargs):
+        podcast = self.get_object()
 
-#         # Print statements for debugging
-#         print("Initial podcast object:", podcast)
-#         print("Request Data:", request.data)
-#         print("Request Files:", request.FILES)
+        # Print statements for debugging
+        print("Initial podcast object:", podcast)
+        print("Request Data:", request.data)
+        print("Request Files:", request.FILES)
 
-#         host_contents_data = []
-#         for key, value in request.data.items():
-#             if key.startswith('host_contents'):
-#                 parts = key.split('[')
-#                 index = int(parts[1][:-1])
-#                 field = parts[2][:-1]
+        host_contents_data = []
+        for key, value in request.data.items():
+            if key.startswith('host_contents'):
+                parts = key.split('[')
+                index = int(parts[1][:-1])
+                field = parts[2][:-1]
 
-#                 while len(host_contents_data) <= index:
-#                     host_contents_data.append({})
+                while len(host_contents_data) <= index:
+                    host_contents_data.append({})
 
-#                 host_contents_data[index][field] = value[0] if isinstance(value, list) else value
+                host_contents_data[index][field] = value[0] if isinstance(value, list) else value
 
-#         print("Parsed host_contents data:", host_contents_data)
+        print("Parsed host_contents data:", host_contents_data)
 
-#         guest_contents_data = []
-#         for key, value in request.data.items():
-#             if key.startswith('guest_contents'):
-#                 parts = key.split('[')
-#                 index = int(parts[1][:-1])
-#                 field = parts[2][:-1]
+        guest_contents_data = []
+        for key, value in request.data.items():
+            if key.startswith('guest_contents'):
+                parts = key.split('[')
+                index = int(parts[1][:-1])
+                field = parts[2][:-1]
 
-#                 while len(guest_contents_data) <= index:
-#                     guest_contents_data.append({})
+                while len(guest_contents_data) <= index:
+                    guest_contents_data.append({})
 
-#                 guest_contents_data[index][field] = value[0] if isinstance(value, list) else value
+                guest_contents_data[index][field] = value[0] if isinstance(value, list) else value
 
-#         print("Parsed guest_contents data:", guest_contents_data)
+        print("Parsed guest_contents data:", guest_contents_data)
 
-#         data = {
-#             'name': request.data.get('name'),
-#             'date': request.data.get('date'),
-#             'starting_time': request.data.get('starting_time'),
-#             'ending_time': request.data.get('ending_time'),
-#             'youtube_url': request.data.get('youtube_url'),  # Correctly handle youtube_url
-#             'host_contents': host_contents_data,
-#             'guest_contents': guest_contents_data,
-#         }
+        data = {
+            'name': request.data.get('name'),
+            'date': request.data.get('date'),
+            'starting_time': request.data.get('starting_time'),
+            'ending_time': request.data.get('ending_time'),
+            'youtube_url': request.data.get('youtube_url'),  # Correctly handle youtube_url
+            'host_contents': host_contents_data,
+            'guest_contents': guest_contents_data,
+        }
 
-#         print("Constructed data payload:", data)
+        print("Constructed data payload:", data)
 
-#         # Process host contents
-#         existing_host_contents = podcast.host_contents.all()
-#         existing_content_map = {content.host_name: content for content in existing_host_contents}
+        # Process host contents
+        existing_host_contents = podcast.host_contents.all()
+        existing_content_map = {content.host_name: content for content in existing_host_contents}
 
-#         updated_host_contents = []
-#         for content in data['host_contents']:
-#             print("Processing content:", content)
-#             host_name = content.get('host_name')
-#             existing_content = existing_content_map.get(host_name)
+        updated_host_contents = []
+        for content in data['host_contents']:
+            print("Processing content:", content)
+            host_name = content.get('host_name')
+            existing_content = existing_content_map.get(host_name)
 
-#             if 'host_image' in content:
-#                 image_url = content['host_image']
-#                 if isinstance(image_url, str) and image_url.startswith('http'):
-#                     try:
-#                         response = requests.get(image_url)
-#                         response.raise_for_status()
-#                         content['host_image'] = ContentFile(response.content, name=image_url.split('/')[-1])
-#                     except requests.HTTPError:
-#                         content['host_image'] = None
-#                 elif not isinstance(content['host_image'], UploadedFile):
-#                     if existing_content and existing_content.host_image:
-#                         content['host_image'] = existing_content.host_image
-#                     else:
-#                         content['host_image'] = None
+            if 'host_image' in content:
+                image_url = content['host_image']
+                if isinstance(image_url, str) and image_url.startswith('http'):
+                    try:
+                        response = requests.get(image_url)
+                        response.raise_for_status()
+                        content['host_image'] = ContentFile(response.content, name=image_url.split('/')[-1])
+                    except requests.HTTPError:
+                        content['host_image'] = None
+                elif not isinstance(content['host_image'], UploadedFile):
+                    if existing_content and existing_content.host_image:
+                        content['host_image'] = existing_content.host_image
+                    else:
+                        content['host_image'] = None
 
-#             updated_host_contents.append(content)
+            updated_host_contents.append(content)
 
-#         print("Updated host contents:", updated_host_contents)
-#         data['host_contents'] = updated_host_contents
+        print("Updated host contents:", updated_host_contents)
+        data['host_contents'] = updated_host_contents
 
-#         # Process guest contents
-#         existing_guest_contents = podcast.guest_contents.all()
-#         existing_content_map = {content.guest_name: content for content in existing_guest_contents}
+        # Process guest contents
+        existing_guest_contents = podcast.guest_contents.all()
+        existing_content_map = {content.guest_name: content for content in existing_guest_contents}
 
-#         updated_guest_contents = []
-#         for content in data['guest_contents']:
-#             print("Processing content:", content)
-#             guest_name = content.get('guest_name')
-#             existing_content = existing_content_map.get(guest_name)
+        updated_guest_contents = []
+        for content in data['guest_contents']:
+            print("Processing content:", content)
+            guest_name = content.get('guest_name')
+            existing_content = existing_content_map.get(guest_name)
 
-#             if 'guest_image' in content:
-#                 image_url = content['guest_image']
-#                 if isinstance(image_url, str) and image_url.startswith('http'):
-#                     try:
-#                         response = requests.get(image_url)
-#                         response.raise_for_status()
-#                         content['guest_image'] = ContentFile(response.content, name=image_url.split('/')[-1])
-#                     except requests.HTTPError:
-#                         content['guest_image'] = None
-#                 elif not isinstance(content['guest_image'], UploadedFile):
-#                     if existing_content and existing_content.guest_image:
-#                         content['guest_image'] = existing_content.guest_image
-#                     else:
-#                         content['guest_image'] = None
+            if 'guest_image' in content:
+                image_url = content['guest_image']
+                if isinstance(image_url, str) and image_url.startswith('http'):
+                    try:
+                        response = requests.get(image_url)
+                        response.raise_for_status()
+                        content['guest_image'] = ContentFile(response.content, name=image_url.split('/')[-1])
+                    except requests.HTTPError:
+                        content['guest_image'] = None
+                elif not isinstance(content['guest_image'], UploadedFile):
+                    if existing_content and existing_content.guest_image:
+                        content['guest_image'] = existing_content.guest_image
+                    else:
+                        content['guest_image'] = None
 
-#             updated_guest_contents.append(content)
+            updated_guest_contents.append(content)
 
-#         print("Updated guest contents:", updated_guest_contents)
-#         data['guest_contents'] = updated_guest_contents
+        print("Updated guest contents:", updated_guest_contents)
+        data['guest_contents'] = updated_guest_contents
 
-#         # Serialize and save the updated podcast data
-#         serializer = self.get_serializer(podcast, data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-#         else:
-#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Serialize and save the updated podcast data
+        serializer = self.get_serializer(podcast, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
-# class PodcastListView(APIView):
-#     def get_podcast_status(self, podcast):
-#         """
-#         Determines the status of the podcast based on the current date and podcast date.
-#         """
-#         current_date = datetime.now().date()
-#         podcast_date = podcast.date
+from datetime import datetime, timedelta
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from datetime import datetime, timedelta
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from datetime import datetime, timedelta, date
+
+from datetime import datetime, timedelta, date
+
+class PodcastListView(APIView):
+    def get_podcast_status(self, podcast):
+        """
+        Determines the status of the podcast based on the current time and podcast timings.
+        """
+        current_time = datetime.now()
+        podcast_date = podcast.date
+        podcast_start_time = datetime.combine(podcast_date, podcast.starting_time)
+        podcast_end_time = datetime.combine(podcast_date, podcast.ending_time)
         
-#         if podcast_date == current_date:
-#             return "Live"
-#         elif podcast_date > current_date:
-#             return "Upcoming"
-#         else:
-#             return "Completed"
+        # 15 minutes before the podcast start time
+        upcoming_threshold = podcast_start_time - timedelta(minutes=15)
 
-#     def get(self, request):
-#         """
-#         Retrieves all podcasts, categorizes them based on status, and returns serialized data.
-#         """
-#         podcasts = Podcast.objects.all()
-#         live_podcasts_data = []
-#         upcoming_podcasts_data = []
-#         completed_podcasts_data = []
-
-#         for podcast in podcasts:
-#             # Determine podcast status
-#             status = self.get_podcast_status(podcast)
-
-#             # Serialize podcast data
-#             podcast_data = PodcastSerializer(podcast).data
-
-#             # Append to appropriate list based on status
-#             if status == "Live":
-#                 live_podcasts_data.append(podcast_data)
-#             elif status == "Upcoming":
-#                 upcoming_podcasts_data.append(podcast_data)
-#             else:
-#                 completed_podcasts_data.append(podcast_data)
-
-#         return Response({
-#             'live_podcasts': live_podcasts_data,
-#             'upcoming_podcasts': upcoming_podcasts_data,
-#             'completed_podcasts': completed_podcasts_data,
-#         })
+        if podcast_date < current_time.date():
+            # Podcast is in the past
+            if current_time > podcast_end_time:
+                return "Completed"
         
-# import urllib.parse       
-# class PodcastDetailView(APIView):
-#     def get(self, request, name, *args, **kwargs):
-#         # Decode the URL-encoded name
-#         decoded_name = urllib.parse.unquote(name)
+        elif podcast_date == current_time.date():
+            if current_time < upcoming_threshold:
+                return "Upcoming"
+            elif upcoming_threshold <= current_time <= podcast_end_time:
+                return "Live"
+            elif current_time > podcast_end_time:
+                return "Completed"
         
-#         try:
-#             # Fetch the podcast using the name
-#             podcast = Podcast.objects.get(name=decoded_name)
-#         except Podcast.DoesNotExist:
-#             return Response({'error': 'Podcast not found'}, status=404)
+        elif podcast_date > current_time.date():
+            return "Upcoming"
         
-#         serializer = PodcastSerializer(podcast)
-#         return Response(serializer.data)
+        return "Unknown"  # Fallback in case no conditions match
+
+    def get(self, request):
+        """
+        Retrieves all podcasts, categorizes them based on status, and returns serialized data.
+        """
+        podcasts = Podcasts.objects.all()
+        live_podcasts_data = []
+        upcoming_podcasts_data = []
+        completed_podcasts_data = []
+
+        for podcast in podcasts:
+            # Determine podcast status
+            status = self.get_podcast_status(podcast)
+
+            # Serialize podcast data
+            podcast_data = PodcastSerializer(podcast).data
+
+            # Append to appropriate list based on status
+            if status == "Live":
+                live_podcasts_data.append(podcast_data)
+            elif status == "Upcoming":
+                upcoming_podcasts_data.append(podcast_data)
+            elif status == "Completed":
+                completed_podcasts_data.append(podcast_data)
+
+        return Response({
+            'live_podcasts': live_podcasts_data,
+            'upcoming_podcasts': upcoming_podcasts_data,
+            'completed_podcasts': completed_podcasts_data,
+        })
+
+
+        
+import urllib.parse       
+class PodcastDetailView(APIView):
+    def get(self, request, name, *args, **kwargs):
+        # Decode the URL-encoded name
+        decoded_name = urllib.parse.unquote(name)
+        
+        try:
+            # Fetch the podcast using the name
+            podcast = Podcasts.objects.get(name=decoded_name)
+        except Podcasts.DoesNotExist:
+            return Response({'error': 'Podcast not found'}, status=404)
+        
+        serializer = PodcastSerializer(podcast)
+        return Response(serializer.data)
