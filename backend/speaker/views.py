@@ -252,23 +252,18 @@ class DeactivateUserView(APIView):
 class UserMessageListView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, event_name=None, format=None):
+    def get(self, request, event_id=None, format=None):
         user = request.user  # Ensure user is authenticated
 
-        # Check if the user is authenticated
-        if not user.is_authenticated:
-            return JsonResponse({'error': 'User not authenticated'}, status=403)
-
-        # Filter messages based on event_name and user
         filters = {'author': user}
-        if event_name:
-            filters['event__event_name'] = event_name
+        if event_id:
+            filters['event_id'] = event_id  # Filter by event_id
 
         messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(**filters)
 
-        # Serialize the data
         serializer = MessageSerializersChat(messages, many=True)
         data = serializer.data
+        print("messages", serializer.data)
 
         return JsonResponse(data, safe=False)
 
@@ -276,25 +271,21 @@ class UserMessageListView(APIView):
 class GeneralUserMessageListView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, event_name=None, format=None):
-        user = request.user  # Ensure user is authenticated
+    def get(self, request, event_id=None, format=None):
+        user = request.user   
 
-        # Check if the user is authenticated
-        if not user.is_authenticated:
-            return JsonResponse({'error': 'User not authenticated'}, status=403)
-
-        # Filter messages based on event_name and user
         filters = {'author': user}
-        if event_name:
-            filters['general_event__event_name'] = event_name
+        if event_id:
+            filters['event_id'] = event_id  # Filter by event_id
 
-        messages = GeneralMessage.objects.select_related('general_event', 'author__userprofile').filter(**filters)
+        messages = GeneralMessage.objects.select_related('event',  'author__userprofile').filter(**filters)
 
-        # Serialize the data
         serializer = GeneralMessageSerializersChat(messages, many=True)
         data = serializer.data
+        print("messages", serializer.data)
 
         return JsonResponse(data, safe=False)
+
     
     
 class GeneralSendMessageAPIView(APIView):
@@ -365,10 +356,8 @@ class GeneralMessageListView(APIView):
         serializer = GeneralMessageSerializersChat(messages, many=True)
         data = serializer.data
 
-        # Debugging print statement to check the serialized data
- 
-
         return JsonResponse(data, safe=False)
+
 
 
 class GeneralMessageUpdateView(APIView):
