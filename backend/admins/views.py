@@ -2957,20 +2957,26 @@ class PodcastUpdateView(APIView):
 
 
 
+from django.utils import timezone
+from datetime import datetime
+
 class PodcastListView(APIView):
     def get_podcast_status(self, podcast):
         """
-        Determines the status of the podcast based on the current date and podcast date.
+        Determines the status of the podcast based on the current datetime and podcast start/end times.
         """
-        current_date = datetime.now().date()
-        podcast_date = podcast.date
-        
-        if podcast_date == current_date :
+        current_datetime = timezone.now()  # Get current time in the timezone specified in Django settings
+        podcast_start_datetime = timezone.make_aware(datetime.combine(podcast.date, podcast.starting_time))
+        podcast_end_datetime = timezone.make_aware(datetime.combine(podcast.date, podcast.ending_time))
+
+        if podcast_start_datetime <= current_datetime <= podcast_end_datetime:
             return "Live"
-        elif podcast_date > current_date:
+        elif current_datetime < podcast_start_datetime:
             return "Upcoming"
-        else:
+        elif current_datetime > podcast_end_datetime:
             return "Completed"
+        else:
+            return "Unknown"  # Fallback status if none of the conditions match
 
     def get(self, request):
         """
@@ -2993,7 +2999,7 @@ class PodcastListView(APIView):
                 live_podcasts_data.append(podcast_data)
             elif status == "Upcoming":
                 upcoming_podcasts_data.append(podcast_data)
-            else:
+            elif status == "Completed":
                 completed_podcasts_data.append(podcast_data)
 
         return Response({
@@ -3001,6 +3007,7 @@ class PodcastListView(APIView):
             'upcoming_podcasts': upcoming_podcasts_data,
             'completed_podcasts': completed_podcasts_data,
         })
+
         
 import urllib.parse       
 class PodcastDetailView(APIView):
