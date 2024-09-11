@@ -2969,7 +2969,7 @@ class PodcastListView(APIView):
         podcast_start_datetime = timezone.make_aware(datetime.combine(podcast.date, podcast.starting_time))
         podcast_end_datetime = timezone.make_aware(datetime.combine(podcast.date, podcast.ending_time))
 
-        if podcast_start_datetime <= current_datetime <= podcast_end_datetime:
+        if  current_datetime <= podcast_end_datetime:
             return "Live"
         elif current_datetime < podcast_start_datetime:
             return "Upcoming"
