@@ -54,16 +54,16 @@ class MessageSerializerChat(serializers.ModelSerializer):
         fields = ['id', 'content', 'forum_name', 'event_name', 'author_name', 'timestamp']
 
     def get_author_name(self, obj):
-        # Combine first name and last name
+        
         if obj.author:
             first_name = obj.author.first_name
             last_name = obj.author.last_name
-            return f"{first_name} {last_name}".strip()  # Return combined name or just first_name if last_name is missing
+            return f"{first_name} {last_name}".strip()  
         return 'Unknown'
 
 
     def get_timestamp(self, obj):
-        # Format the timestamp as needed, e.g., 'YYYY-MM-DD HH:MM:SS'
+   
         return obj.timestamp.strftime('%Y-%m-%d %H:%M:%S')
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -82,7 +82,7 @@ class SecondUserSerializer(serializers.ModelSerializer):
 class MessageSerializersChat(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
     event_name = serializers.CharField(source='event.event_name', read_only=True)
-    forum_name = serializers.CharField(source='forum.title', read_only=True)
+    forum_name = serializers.CharField(source='event.forum.title', read_only=True)
     author_profile = UserProfileSerializer(source='author.userprofile', read_only=True)
 
     class Meta:

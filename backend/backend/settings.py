@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'accounts',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
-    # 'rest_framework_simplejwt',
+ 
     'corsheaders',
     'admins',
     'speaker',
@@ -187,7 +187,17 @@ DATABASES = {
 }
 
 
- 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'fcpi',
+#         'USER': 'postgres',
+#         'PASSWORD': '12345678',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
+
  
 
 # Password validation

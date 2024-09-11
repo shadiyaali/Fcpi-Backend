@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,PodcastFormSerializer,PodcastSerializer,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,PodcastUpdateSerializer,PodcastSerializer ,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,Podcasts,HostContentss,GuestContentss,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,Podcastfcpi ,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -2831,87 +2831,64 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from django.db import transaction
-from .models import Podcasts, HostContentss, GuestContentss
+ 
 
 class CreatePodcast(APIView):
     def post(self, request):
         try:
             print("Request data:", request.data)
             with transaction.atomic():
+                # Extract data from the request
                 name = request.data.get('name')
                 date = request.data.get('date')
                 starting_time = request.data.get('starting_time')
                 ending_time = request.data.get('ending_time')
                 youtube_url = request.data.get('youtube_url')
-                
-                podcast = Podcasts.objects.create(
+                banner = request.FILES.get('banner')
+
+                # Extract host and guest IDs manually
+                host_ids = [value for key, value in request.data.items() if key.startswith('host')]
+                guest_ids = [value for key, value in request.data.items() if key.startswith('guest')]
+
+                # Create the podcast
+                podcast = Podcastfcpi.objects.create(
                     name=name,
                     date=date,
                     starting_time=starting_time,
                     ending_time=ending_time,
                     youtube_url=youtube_url,
+                    banner=banner
                 )
-                
-                # Process host contents
-                host_contents = []
-                for key in request.data.keys():
-                    if key.startswith('host_contents'):
-                        index = key.split('[')[1].split(']')[0]
-                        if len(host_contents) <= int(index):
-                            host_contents.append({})
-                        field = key.split('[')[2].split(']')[0]
-                        host_contents[int(index)][field] = request.data.get(key)
-                
-                print("Extracted host contents:", host_contents)
 
-                for content_data in host_contents:
-                    host_name = content_data.get('host_name')
-                    host_image = request.FILES.get(f'host_contents[{host_contents.index(content_data)}][host_image]')
-                    
-                    content = HostContentss.objects.create(
-                        podcast=podcast,
-                        host_name=host_name,
-                        host_image=host_image
-                    )
-                    
-                # Process guest contents
-                guest_contents = []
-                for key in request.data.keys():
-                    if key.startswith('guest_contents'):
-                        index = key.split('[')[1].split(']')[0]
-                        if len(guest_contents) <= int(index):
-                            guest_contents.append({})
-                        field = key.split('[')[2].split(']')[0]
-                        guest_contents[int(index)][field] = request.data.get(key)
-                
-                print("Extracted guest contents:", guest_contents)
+                # Fetch and set the ManyToMany relationships
+                if host_ids:
+                    hosts = Speaker.objects.filter(id__in=host_ids)
+                    podcast.hosts.set(hosts)
+                    print("Hosts set:", hosts)
 
-                for content_data in guest_contents:
-                    guest_name = content_data.get('guest_name')
-                    guest_image = request.FILES.get(f'guest_contents[{guest_contents.index(content_data)}][guest_image]')
-                    
-                    content = GuestContentss.objects.create(
-                        podcast=podcast,
-                        guest_name=guest_name,
-                        guest_image=guest_image
-                    )
-                    
+                if guest_ids:
+                    guests = Speaker.objects.filter(id__in=guest_ids)
+                    podcast.guests.set(guests)
+                    print("Guests set:", guests)
+                
+                print("Created podcast:", podcast)
+
+        except Speaker.DoesNotExist as e:
+            print("Speaker not found:", e)
+            return Response({"error": "Speaker not found"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             print("Error:", e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        return Response(status=status.HTTP_201_CREATED)
+        return Response({"message": "Podcast created successfully", "podcast_id": podcast.id}, status=status.HTTP_201_CREATED)
 
-
-class  PodcastListViewall(generics.ListAPIView):
-    queryset =  Podcasts.objects.prefetch_related('host_contents').all()
-    queryset =  Podcasts.objects.prefetch_related('guest_contents').all()
-    serializer_class =  PodcastSerializer
-    
+class PodcastListViewall(generics.ListAPIView):
+    queryset = Podcastfcpi.objects.all()  # Updated to get all podcasts
+    serializer_class = PodcastSerializer
     
     
 class PodcastDeleteView(generics.DestroyAPIView):
-    queryset = Podcasts.objects.all()
+    queryset = Podcastfcpi.objects.all()
     serializer_class = PodcastSerializer
 
     def delete(self, request, *args, **kwargs):
@@ -2921,126 +2898,62 @@ class PodcastDeleteView(generics.DestroyAPIView):
     
     
     
-class PodcastUpdateView(UpdateAPIView):
-    queryset = Podcasts.objects.all()
-    serializer_class = PodcastFormSerializer
-    parser_classes = (MultiPartParser, FormParser)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 
-    def put(self, request, *args, **kwargs):
-        podcast = self.get_object()
+class PodcastUpdateView(APIView):
+    def put(self, request, pk):
+        try:
+            podcast = Podcastfcpi.objects.get(pk=pk)
 
-        # Print statements for debugging
-        print("Initial podcast object:", podcast)
-        print("Request Data:", request.data)
-        print("Request Files:", request.FILES)
+            # Extract basic data
+            name = request.data.get('name')
+            date = request.data.get('date')
+            starting_time = request.data.get('starting_time')
+            ending_time = request.data.get('ending_time')
+            youtube_url = request.data.get('youtube_url')
+            banner = request.FILES.get('banner')  # Optional banner
 
-        host_contents_data = []
-        for key, value in request.data.items():
-            if key.startswith('host_contents'):
-                parts = key.split('[')
-                index = int(parts[1][:-1])
-                field = parts[2][:-1]
+            # Extract hosts and guests
+            host_ids = [value for key, value in request.data.items() if key.startswith('host')]
+            guest_ids = [value for key, value in request.data.items() if key.startswith('guest')]
 
-                while len(host_contents_data) <= index:
-                    host_contents_data.append({})
+            # Prepare data to update
+            data = {
+                'name': name,
+                'date': date,
+                'starting_time': starting_time,
+                'ending_time': ending_time,
+                'youtube_url': youtube_url,
+            }
+            if banner:
+                data['banner'] = banner
 
-                host_contents_data[index][field] = value[0] if isinstance(value, list) else value
+            # Serialize and update the podcast
+            serializer = PodcastUpdateSerializer(podcast, data=data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
 
-        print("Parsed host_contents data:", host_contents_data)
+                # Set hosts and guests
+                if host_ids:
+                    hosts = Speaker.objects.filter(id__in=host_ids)
+                    podcast.hosts.set(hosts)
+                if guest_ids:
+                    guests = Speaker.objects.filter(id__in=guest_ids)
+                    podcast.guests.set(guests)
 
-        guest_contents_data = []
-        for key, value in request.data.items():
-            if key.startswith('guest_contents'):
-                parts = key.split('[')
-                index = int(parts[1][:-1])
-                field = parts[2][:-1]
+                # Return the updated podcast
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                while len(guest_contents_data) <= index:
-                    guest_contents_data.append({})
+        except Podcastfcpi.DoesNotExist:
+            return Response({"error": "Podcast not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                guest_contents_data[index][field] = value[0] if isinstance(value, list) else value
 
-        print("Parsed guest_contents data:", guest_contents_data)
-
-        data = {
-            'name': request.data.get('name'),
-            'date': request.data.get('date'),
-            'starting_time': request.data.get('starting_time'),
-            'ending_time': request.data.get('ending_time'),
-            'youtube_url': request.data.get('youtube_url'),  # Correctly handle youtube_url
-            'host_contents': host_contents_data,
-            'guest_contents': guest_contents_data,
-        }
-
-        print("Constructed data payload:", data)
-
-        # Process host contents
-        existing_host_contents = podcast.host_contents.all()
-        existing_content_map = {content.host_name: content for content in existing_host_contents}
-
-        updated_host_contents = []
-        for content in data['host_contents']:
-            print("Processing content:", content)
-            host_name = content.get('host_name')
-            existing_content = existing_content_map.get(host_name)
-
-            if 'host_image' in content:
-                image_url = content['host_image']
-                if isinstance(image_url, str) and image_url.startswith('http'):
-                    try:
-                        response = requests.get(image_url)
-                        response.raise_for_status()
-                        content['host_image'] = ContentFile(response.content, name=image_url.split('/')[-1])
-                    except requests.HTTPError:
-                        content['host_image'] = None
-                elif not isinstance(content['host_image'], UploadedFile):
-                    if existing_content and existing_content.host_image:
-                        content['host_image'] = existing_content.host_image
-                    else:
-                        content['host_image'] = None
-
-            updated_host_contents.append(content)
-
-        print("Updated host contents:", updated_host_contents)
-        data['host_contents'] = updated_host_contents
-
-        # Process guest contents
-        existing_guest_contents = podcast.guest_contents.all()
-        existing_content_map = {content.guest_name: content for content in existing_guest_contents}
-
-        updated_guest_contents = []
-        for content in data['guest_contents']:
-            print("Processing content:", content)
-            guest_name = content.get('guest_name')
-            existing_content = existing_content_map.get(guest_name)
-
-            if 'guest_image' in content:
-                image_url = content['guest_image']
-                if isinstance(image_url, str) and image_url.startswith('http'):
-                    try:
-                        response = requests.get(image_url)
-                        response.raise_for_status()
-                        content['guest_image'] = ContentFile(response.content, name=image_url.split('/')[-1])
-                    except requests.HTTPError:
-                        content['guest_image'] = None
-                elif not isinstance(content['guest_image'], UploadedFile):
-                    if existing_content and existing_content.guest_image:
-                        content['guest_image'] = existing_content.guest_image
-                    else:
-                        content['guest_image'] = None
-
-            updated_guest_contents.append(content)
-
-        print("Updated guest contents:", updated_guest_contents)
-        data['guest_contents'] = updated_guest_contents
-
-        # Serialize and save the updated podcast data
-        serializer = self.get_serializer(podcast, data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -3063,7 +2976,7 @@ class PodcastListView(APIView):
         """
         Retrieves all podcasts, categorizes them based on status, and returns serialized data.
         """
-        podcasts = Podcasts.objects.all()
+        podcasts = Podcastfcpi.objects.all()
         live_podcasts_data = []
         upcoming_podcasts_data = []
         completed_podcasts_data = []
@@ -3096,10 +3009,12 @@ class PodcastDetailView(APIView):
         decoded_name = urllib.parse.unquote(name)
         
         try:
-            # Fetch the podcast using the name
-            podcast = Podcasts.objects.get(name=decoded_name)
-        except Podcasts.DoesNotExist:
+            # Fetch the podcast using the decoded name
+            podcast = Podcastfcpi.objects.get(name=decoded_name)
+        except Podcastfcpi.DoesNotExist:
             return Response({'error': 'Podcast not found'}, status=404)
         
+        # Serialize the podcast data
         serializer = PodcastSerializer(podcast)
+        
         return Response(serializer.data)

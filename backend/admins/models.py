@@ -420,8 +420,10 @@ class GeneralUserFileAssociation(models.Model):
         return self.attachment.file.url if self.attachment and self.attachment.file else None
     
     
-class Podcasts(models.Model):
-    name = models.CharField(max_length=255)      
+class Podcast(models.Model):
+    name = models.CharField(max_length=255)  
+    host = models.ForeignKey(Speaker, on_delete=models.CASCADE, related_name='podcasts_as_host',null = True )  
+    guest = models.ForeignKey(Speaker,on_delete=models.CASCADE, related_name='podcasts_as_guest' ,null=True)  
     date = models.DateField()
     starting_time = models.TimeField()
     ending_time = models.TimeField()
@@ -433,17 +435,16 @@ class Podcasts(models.Model):
     
   
     
-class HostContentss(models.Model): 
-    podcast =  models.ForeignKey(Podcasts, related_name='host_contents', on_delete=models.CASCADE, null=True, blank=True) 
-    host_name = models.CharField(max_length=255)
-    host_image = models.ImageField(upload_to='host_images/')
-       
+class Podcastfcpi(models.Model):
+    name = models.CharField(max_length=255)  
+    banner = models.ImageField(upload_to='podcastfcpi_banners/', null=True, blank=True)
+    hosts = models.ManyToManyField(Speaker, related_name='podcastfcpi_as_host')
+    guests = models.ManyToManyField(Speaker, related_name='podcastfcpi_as_guest') 
+    date = models.DateField()
+    starting_time = models.TimeField()
+    ending_time = models.TimeField()
+    youtube_url = models.URLField(max_length=200, blank=True, null=True)
+  
+
     def __str__(self):
-        return f"{self.podcast.name if self.podcast else 'No Podcast'} - {self.host_name}"   
-class GuestContentss(models.Model): 
-    podcast =  models.ForeignKey(Podcasts, related_name='guest_contents', on_delete=models.CASCADE, null=True, blank=True) 
-    guest_name = models.CharField(max_length=255, blank=True, null=True)
-    guest_image = models.ImageField(upload_to='guest_images/', blank=True, null=True)
-       
-    def __str__(self):
-        return f"{self.podcast.name if self.podcast else 'No Podcast'} - {self.guest_name}"
+        return self.name

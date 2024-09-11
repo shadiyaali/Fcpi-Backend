@@ -1,6 +1,6 @@
 from django.db import models
 from accounts.models import User
-from admins.models import Forum,Event,GeneralEvent
+from admins.models import Forum,Event,GeneralEvent,Speaker
 from django.contrib.auth import get_user_model
  
 
@@ -45,3 +45,5 @@ class GeneralMessage(models.Model):
     def __str__(self):
         return self.content
 
+
+ 

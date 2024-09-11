@@ -28,9 +28,7 @@ admin.site.register(GeneralSingleEvent)
 admin.site.register(GeneralMultiEvent)
 admin.site.register(GeneralAttachment)
 admin.site.register(Newsletter)
-admin.site.register(Podcasts)
-admin.site.register(HostContentss)
-admin.site.register(GuestContentss)
-
+admin.site.register(Podcastfcpi)
+ 
  
  

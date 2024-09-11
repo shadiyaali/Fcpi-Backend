@@ -92,14 +92,17 @@ class SecondUserStatusChangeView(APIView):
  
 from datetime import date
 
-from django.http import JsonResponse
-from .models import Message
-from .serializers import MessageSerializersChat
-
-# In MessageListView
+ 
+ 
 class MessageListView(APIView):
     def get(self, request, event_name=None, forum_name=None, format=None):
         current_date = date.today()
+
+        # Debug prints for event_name and forum_name
+        print(f"Event Name: {event_name}")
+        print(f"Forum Name: {forum_name}")
+
+        # Build the queryset based on the provided filters
         if event_name and forum_name:
             messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(
                 event__event_name=event_name,
@@ -125,13 +128,15 @@ class MessageListView(APIView):
         # Log the queryset data
         for message in messages:
             print(f"Message ID: {message.id}, Event Name: {message.event.event_name if message.event else 'None'}, Forum Name: {message.forum.title if message.forum else 'None'}")
-            
+
+        # Serialize the data
         serializer = MessageSerializersChat(messages, many=True)
         data = serializer.data
+        
+        # Debug print for serialized data
         print("Serialized Data:", data)
         
         return JsonResponse(data, safe=False)
-
 
 
         
@@ -246,24 +251,18 @@ class DeactivateUserView(APIView):
         
         
  
-
-
- 
+from django.utils import timezone
 class UserMessageListView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, event_id=None, format=None):
-        user = request.user  # Ensure user is authenticated
-
-        filters = {'author': user}
-        if event_id:
-            filters['event_id'] = event_id  # Filter by event_id
-
-        messages = Message.objects.select_related('event', 'forum', 'author__userprofile').filter(**filters)
-
+    def get(self, request, format=None):
+        user = request.user
+        # Get messages only from the current day using `timestamp`
+        today = timezone.now().date()
+        messages = Message.objects.filter(author=user, timestamp__date=today)
         serializer = MessageSerializersChat(messages, many=True)
         data = serializer.data
-        print("messages", serializer.data)
+        print("User messages", data)  # Debugging output
 
         return JsonResponse(data, safe=False)
 
@@ -271,20 +270,17 @@ class UserMessageListView(APIView):
 class GeneralUserMessageListView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, event_id=None, format=None):
-        user = request.user   
-
-        filters = {'author': user}
-        if event_id:
-            filters['event_id'] = event_id  # Filter by event_id
-
-        messages = GeneralMessage.objects.select_related('event',  'author__userprofile').filter(**filters)
-
+    def get(self, request, format=None):
+        user = request.user
+        # Get messages only from the current day using `timestamp`
+        today = timezone.now().date()
+        messages = GeneralMessage.objects.filter(author=user, timestamp__date=today)
         serializer = GeneralMessageSerializersChat(messages, many=True)
         data = serializer.data
-        print("messages", serializer.data)
+        print("General messages", data)  # Debugging output
 
         return JsonResponse(data, safe=False)
+
 
     
     
@@ -373,3 +369,6 @@ class GeneralMessageUpdateView(APIView):
 
         serializer = GeneralMessageSerializer(message)
         return Response(serializer.data)
+
+
+ 
