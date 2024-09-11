@@ -355,6 +355,9 @@ from rest_framework.response import Response
 from .models import Event
 from .serializers import EventListSerializer
 
+from django.utils import timezone
+from datetime import datetime
+
 class EventListView(APIView):
     def calculate_end_date(self, event):
         """
@@ -383,15 +386,22 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current date and event dates.
+        Determines the status of the event based on current datetime and multi-event times.
         """
-        current_date = datetime.now().date()
+        current_datetime = timezone.now()
         start_date, end_date = self.calculate_end_date(event)
-        if start_date and end_date:
-            if current_date <= end_date:
-                return "Live" if current_date >= start_date else "Upcoming"
+        start_time, end_time = self.calculate_multi_event_times(event)
+
+        if start_date and end_date and start_time and end_time:
+            # Combine date and time to get the full datetime for start and end
+            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
+
+            if current_datetime <= event_end_datetime:
+                return "Live" if current_datetime >= event_start_datetime else "Upcoming"
             else:
                 return "Completed"
+        
         return "Upcoming"
 
     def get(self, request):
@@ -435,6 +445,7 @@ class EventListView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
+
  
  
  
@@ -2270,12 +2281,18 @@ class GeneralEventUpdateAPIView(APIView):
         return Response({'message': 'Event updated successfully'}, status=status.HTTP_200_OK)
 
 
+from django.utils import timezone
+from datetime import datetime
+
+from django.utils import timezone
+from datetime import datetime
+
 class GeneralEventListView(APIView):
     def calculate_end_date(self, event):
         """
-        Calculates the start and end dates of the event based on its single events.
+        Calculates the start and end dates of the event based on its general single events.
         """
-        single_events = event.general_single_events.all()  # Use the correct related name here
+        single_events = event.general_single_events.all()
         if single_events.exists():
             start_date = single_events.first().date
             end_date = single_events.last().date
@@ -2298,15 +2315,25 @@ class GeneralEventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current date and event dates.
+        Determines the status of the event based on current datetime and event dates.
         """
-        current_date = datetime.now().date()
+        current_datetime = timezone.now()  # Use timezone-aware current datetime
         start_date, end_date = self.calculate_end_date(event)
-        if start_date and end_date:
-            if current_date <= end_date:
-                return "Live" if current_date >= start_date else "Upcoming"
+        start_time, end_time = self.calculate_multi_event_times(event)
+
+        if start_date and end_date and start_time and end_time:
+            # Combine date and time to get the full datetime for start and end
+            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
+
+            if current_datetime <= event_end_datetime:
+                if current_datetime >= event_start_datetime:
+                    return "Live"
+                else:
+                    return "Upcoming"
             else:
                 return "Completed"
+        
         return "Upcoming"
 
     def get(self, request):
@@ -2319,16 +2346,16 @@ class GeneralEventListView(APIView):
         completed_events_data = []
 
         for event in events:
-         
+            # Determine event status
             status = self.get_event_status(event)
 
-         
+            # Calculate start and end dates
             start_date, end_date = self.calculate_end_date(event)
 
-       
+            # Calculate start and end times of MultiEvent for days = 1
             start_time, end_time = self.calculate_multi_event_times(event)
 
-       
+            # Serialize event data
             event_data = GeneralEventListSerializer(event).data
             event_data['start_date'] = start_date
             event_data['end_date'] = end_date
@@ -2337,12 +2364,12 @@ class GeneralEventListView(APIView):
                 'end_time': end_time
             }
 
-             
+            # Append to appropriate list based on status
             if status == "Live":
                 live_events_data.append(event_data)
             elif status == "Upcoming":
                 upcoming_events_data.append(event_data)
-            else:
+            elif status == "Completed":
                 completed_events_data.append(event_data)
 
         return Response({
@@ -2350,6 +2377,7 @@ class GeneralEventListView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
+
 
 class GeneralSingleEventDetailView(APIView):
     def get(self, request, slug):
