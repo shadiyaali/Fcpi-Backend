@@ -448,3 +448,19 @@ class Podcastfcpi(models.Model):
 
     def __str__(self):
         return self.name
+    
+    
+    
+class Podcastfcpipodcast(models.Model):
+    name = models.CharField(max_length=255)  
+    banner = models.ImageField(upload_to='podcastfcpipodcast_banners/', null=True, blank=True)
+    hosts = models.ManyToManyField(Speaker, related_name='podcastfcpipodcast_as_host')
+    guests = models.ManyToManyField(Speaker, related_name='podcastfcpipodcast_as_guest') 
+    date = models.DateField()
+    starting_time = models.TimeField()
+    ending_time = models.TimeField()
+    youtube_url = models.URLField(max_length=200, blank=True, null=True)
+  
+
+    def __str__(self):
+        return self.name

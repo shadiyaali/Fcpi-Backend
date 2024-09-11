@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralAttachment,Podcastfcpi ,Newsletter,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
+from .models import Admin,Forum,Speaker,Gallery,Attachment,GeneralEvent,GeneralAttachment,Podcastfcpipodcast ,Newsletter,GeneralCertificates,UserFileAssociation,GeneralMultiEvent,Event,GalleryImage,GeneralSingleEvent,SingleEvent,MultiEvent,Member,ForumMember,Blogs,BlogsContents,Certificates,Banner,News,BoardMember,Board,GeneralBlogsContents,GeneralBlogs
 from datetime import datetime
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1025,13 +1025,13 @@ class PodcastSerializer(serializers.ModelSerializer):
     banner = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
-        model = Podcastfcpi
+        model = Podcastfcpipodcast
         fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'hosts', 'guests', 'banner']
     
     def create(self, validated_data):
         hosts_data = validated_data.pop('hosts', [])
         guests_data = validated_data.pop('guests', [])
-        podcast = Podcastfcpi.objects.create(**validated_data)
+        podcast = Podcastfcpipodcast.objects.create(**validated_data)
         
         # Handling ManyToMany relationships
         if hosts_data:
@@ -1091,7 +1091,7 @@ class PodcastUpdateSerializer(serializers.ModelSerializer):
     banner = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
-        model = Podcastfcpi
+        model = Podcastfcpipodcast 
         fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'hosts', 'guests', 'banner']
 
     def update(self, instance, validated_data):

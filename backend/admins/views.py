@@ -5,7 +5,7 @@ from rest_framework import status
 from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,PodcastUpdateSerializer,PodcastSerializer ,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,Podcastfcpi ,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,Podcastfcpipodcast ,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -2851,7 +2851,7 @@ class CreatePodcast(APIView):
                 guest_ids = [value for key, value in request.data.items() if key.startswith('guest')]
 
                 # Create the podcast
-                podcast = Podcastfcpi.objects.create(
+                podcast = Podcastfcpipodcast.objects.create(
                     name=name,
                     date=date,
                     starting_time=starting_time,
@@ -2883,12 +2883,12 @@ class CreatePodcast(APIView):
         return Response({"message": "Podcast created successfully", "podcast_id": podcast.id}, status=status.HTTP_201_CREATED)
 
 class PodcastListViewall(generics.ListAPIView):
-    queryset = Podcastfcpi.objects.all()  # Updated to get all podcasts
+    queryset = Podcastfcpipodcast.objects.all()  # Updated to get all podcasts
     serializer_class = PodcastSerializer
     
     
 class PodcastDeleteView(generics.DestroyAPIView):
-    queryset = Podcastfcpi.objects.all()
+    queryset = Podcastfcpipodcast.objects.all()
     serializer_class = PodcastSerializer
 
     def delete(self, request, *args, **kwargs):
@@ -2905,7 +2905,7 @@ from rest_framework import status
 class PodcastUpdateView(APIView):
     def put(self, request, pk):
         try:
-            podcast = Podcastfcpi.objects.get(pk=pk)
+            podcast = Podcastfcpipodcast.objects.get(pk=pk)
 
             # Extract basic data
             name = request.data.get('name')
@@ -2948,7 +2948,7 @@ class PodcastUpdateView(APIView):
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        except Podcastfcpi.DoesNotExist:
+        except Podcastfcpipodcast.DoesNotExist:
             return Response({"error": "Podcast not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2976,7 +2976,7 @@ class PodcastListView(APIView):
         """
         Retrieves all podcasts, categorizes them based on status, and returns serialized data.
         """
-        podcasts = Podcastfcpi.objects.all()
+        podcasts = Podcastfcpipodcast.objects.all()
         live_podcasts_data = []
         upcoming_podcasts_data = []
         completed_podcasts_data = []
@@ -3010,8 +3010,8 @@ class PodcastDetailView(APIView):
         
         try:
             # Fetch the podcast using the decoded name
-            podcast = Podcastfcpi.objects.get(name=decoded_name)
-        except Podcastfcpi.DoesNotExist:
+            podcast = Podcastfcpipodcast.objects.get(name=decoded_name)
+        except Podcastfcpipodcast.DoesNotExist:
             return Response({'error': 'Podcast not found'}, status=404)
         
         # Serialize the podcast data
