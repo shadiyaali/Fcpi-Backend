@@ -2962,23 +2962,16 @@ class PodcastListView(APIView):
         """
         Determines the status of the podcast based on the current date and podcast date.
         """
-        current_datetime = datetime.now()
-        current_date = current_datetime.date()
-        
-        # Assuming podcast.date is a date object and podcast.start_time and podcast.end_time are datetime objects
+        current_date = datetime.now().date()
         podcast_date = podcast.date
-        podcast_start_datetime = podcast.start_time  # should be a datetime object
-        podcast_end_datetime = podcast.end_time      # should be a datetime object
-
-        if podcast_date == current_date:
-            if podcast_start_datetime <= current_datetime <= podcast_end_datetime:
-                return "Live"
-            else:
-                return "Completed"
+        
+        if podcast_date == current_date :
+            return "Live"
         elif podcast_date > current_date:
             return "Upcoming"
         else:
             return "Completed"
+
     def get(self, request):
         """
         Retrieves all podcasts, categorizes them based on status, and returns serialized data.
