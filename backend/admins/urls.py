@@ -86,7 +86,10 @@ urlpatterns = [
     path('upload/', UploadAttachmentView.as_view(), name='upload_attachment'),
     path('single-events-all/', SingleEventListAllView.as_view(), name='single-event-list'),
     # path('attachments/<int:pk>/update/', UpdateAttachmentView.as_view(), name='update-attachment'),
-    path('attachments/', AttachmentsBySingleEventView.as_view(), name='retrieve-attachment'),
+    
+    path('general_attachments/<slug:slug>/', GeneralAttachmentsBySingleEventView.as_view(), name='general-attachments'),
+    path('attachments/<slug:slug>/', AttachmentsBySingleEventView.as_view(), name='event-attachments'),
+    
     path('attachments-all/', ListAttachmentsView.as_view(), name='list-attachments'),
     path('attachments/<int:pk>/delete/', AttachmentDeleteAPIView.as_view(), name='attachment-delete'),
     path('user-file-interaction/', AssociateFileWithUserView.as_view(), name='user-file-interaction'),
@@ -121,7 +124,7 @@ urlpatterns = [
     path('newsletterslist/', NewsletterListView.as_view(), name='newsletter-list'),
     path('newsletters/<int:pk>/delete/', NewsletterDeleteView.as_view(), name='newsletter-delete'),
     path('newsletters/<int:pk>/update/', NewsletterUpdateView.as_view(), name='update_newsletter'),
-    path('general_attachments/', GeneralAttachmentsBySingleEventView.as_view(), name='retrieve-attachment'),
+    # path('general_attachments/', GeneralAttachmentsBySingleEventView.as_view(), name='retrieve-attachment'),
     path('general_user-file-interaction/', GeneralAssociateFileWithUserView.as_view(), name='user-file-interaction'),
     path('podcast/', CreatePodcast.as_view(), name='blog_admin'),
     path('podcast_listall/', PodcastListViewall.as_view(), name='blog-list'),
@@ -129,5 +132,12 @@ urlpatterns = [
     path('podcast/<int:pk>/update/', PodcastUpdateView.as_view(), name='podcast-update'),
     path('podcasts_list/', PodcastListView.as_view(), name='podcast-list'),
     path('podcast/<str:name>/', PodcastDetailView.as_view(), name='podcast-detail'),
+    path('total-events/', TotalEventCountView.as_view(), name='total-events'),
+    path('member-count/', MemberCountAPIView.as_view(), name='member-count-api'),
+    path('speaker-count/', SpeakerCountAPIView.as_view(), name='speaker-count-api'),
+    path('newsletter-count/',  NewsletterCountAPIView.as_view(), name='speaker-count-api'),
+    path('podcast-count/',  PodcastCountAPIView.as_view(), name='speaker-count-api'),
+    path('events/<int:event_id>/attachments/', SingleEventAttachmentsView.as_view(), name='event-attachments'),
+    path('general-events/<int:event_id>/attachments/', GeneralSingleEventAttachmentsView.as_view(), name='general-event-attachments'),
 ]     
  

@@ -262,7 +262,7 @@ class UserMessageListView(APIView):
         messages = Message.objects.filter(author=user, timestamp__date=today)
         serializer = MessageSerializersChat(messages, many=True)
         data = serializer.data
-        print("User messages", data)  # Debugging output
+        # print("User messages", data)  # Debugging output
 
         return JsonResponse(data, safe=False)
 
@@ -277,7 +277,7 @@ class GeneralUserMessageListView(APIView):
         messages = GeneralMessage.objects.filter(author=user, timestamp__date=today)
         serializer = GeneralMessageSerializersChat(messages, many=True)
         data = serializer.data
-        print("General messages", data)  # Debugging output
+        # print("General messages", data)  # Debugging output
 
         return JsonResponse(data, safe=False)
 

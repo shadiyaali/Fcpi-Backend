@@ -2015,15 +2015,49 @@ class UpdateAttachmentView(APIView):
 
 
 
-from rest_framework.generics import RetrieveAPIView
+ 
+class GeneralAttachmentsBySingleEventView(generics.ListAPIView):
+    serializer_class = GeneralAttachmentSerializer
+
+    def get_queryset(self):
+        slug = self.kwargs.get('slug')
+        if slug:
+            try:
+                event = GeneralEvent.objects.get(slug=slug)
+                queryset = GeneralAttachment.objects.filter(single_event__event=event)  # Filter by event, not by ID
+                print(f'GeneralAttachmentsBySingleEventView: Fetched {queryset.count()} attachments for event_slug={slug}')
+                for attachment in queryset:
+                    print(f'Attachment ID: {attachment.id}, File: {attachment.file}')
+                return queryset
+            except GeneralEvent.DoesNotExist:
+                print(f'GeneralAttachmentsBySingleEventView: Event with slug {slug} does not exist')
+        else:
+            print('GeneralAttachmentsBySingleEventView: No event_slug provided')
+        return GeneralAttachment.objects.none()
+
+
 class AttachmentsBySingleEventView(generics.ListAPIView):
     serializer_class = AttachmentSerializer
 
     def get_queryset(self):
-        single_event_id = self.request.query_params.get('single_event')
-        if single_event_id:
-            return Attachment.objects.filter(single_event=single_event_id)
+        slug = self.kwargs.get('slug')
+        if slug:
+            try:
+                event = Event.objects.get(slug=slug)
+                queryset = Attachment.objects.filter(single_event__event=event)  # Filter by event, not by ID
+                print(f'AttachmentsBySingleEventView: Fetched {queryset.count()} attachments for event_slug={slug}')
+                for attachment in queryset:
+                    print(f'Attachment ID: {attachment.id}, File: {attachment.file}')
+                return queryset
+            except Event.DoesNotExist:
+                print(f'AttachmentsBySingleEventView: Event with slug {slug} does not exist')
+        else:
+            print('AttachmentsBySingleEventView: No event_slug provided')
         return Attachment.objects.none()
+
+
+ 
+    
     
 class ListAttachmentsView(generics.ListAPIView):
     queryset = Attachment.objects.all()
@@ -2816,14 +2850,20 @@ class NewsletterUpdateView(generics.UpdateAPIView):
             print("Validation errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class GeneralAttachmentsBySingleEventView(generics.ListAPIView):
-    serializer_class = GeneralAttachmentSerializer
+# class GeneralAttachmentsBySingleEventView(generics.ListAPIView):
+#     serializer_class = GeneralAttachmentSerializer
 
-    def get_queryset(self):
-        single_event_id = self.request.query_params.get('single_event')
-        if single_event_id:
-            return GeneralAttachment.objects.filter(single_event=single_event_id)
-        return GeneralAttachment.objects.none()
+#     def get_queryset(self):
+#         single_event_id = self.request.query_params.get('single_event')
+#         if single_event_id:
+#             queryset = GeneralAttachment.objects.filter(single_event=single_event_id)
+#             print(f'GeneralAttachmentsBySingleEventView: Fetched {queryset.count()} attachments for single_event_id={single_event_id}')
+#             for attachment in queryset:
+#                 print(f'Attachment ID: {attachment.id}, File: {attachment.file}')
+#             return queryset
+#         print('GeneralAttachmentsBySingleEventView: No single_event_id provided')
+#         return GeneralAttachment.objects.none()
+    
     
     
 class GeneralAssociateFileWithUserView(APIView):
@@ -3052,4 +3092,79 @@ class PodcastDetailView(APIView):
         # Serialize the podcast data
         serializer = PodcastSerializer(podcast)
         
+        return Response(serializer.data)
+    
+    
+    
+class TotalEventCountView(APIView):
+ 
+ 
+    def get(self, request):
+     
+        event_count = Event.objects.count()
+        general_event_count = GeneralEvent.objects.count()
+
+        # Calculate the total count
+        total_events = event_count + general_event_count
+
+        # Return the response with the total event count
+        return Response({
+            'total_events': total_events,
+            'event_count': event_count,
+            'general_event_count': general_event_count
+        })
+        
+        
+        
+class MemberCountAPIView(APIView):
+    def get(self, request):
+        member_count = Member.objects.count()
+        return Response({'member_count': member_count})
+    
+    
+    
+class SpeakerCountAPIView(APIView):
+    def get(self, request):
+        speaker_count = Speaker.objects.count()
+        return Response({'speaker_count': speaker_count})
+    
+class  NewsletterCountAPIView(APIView):
+    def get(self, request):
+        newsletter_count =  Newsletter.objects.count()
+        return Response({'newsletter_count': newsletter_count})
+    
+class PodcastCountAPIView(APIView):
+    def get(self, request):
+        podcast_count = Podcastfcpipodcast.objects.count()
+        return Response({'podcast_count': podcast_count})
+
+class SingleEventAttachmentsView(generics.GenericAPIView):
+    serializer_class = AttachmentSerializer
+
+    def get(self, request, *args, **kwargs):
+        event_id = self.kwargs.get('event_id')
+        try:
+            single_event = SingleEvent.objects.get(id=event_id)
+        except SingleEvent.DoesNotExist:
+            raise NotFound("SingleEvent not found")
+
+        attachments = single_event.attachments.all()
+        serializer = self.get_serializer(attachments, many=True)
+        print("serializer.data attachments", serializer.data)
+        return Response(serializer.data)
+
+    
+class GeneralSingleEventAttachmentsView(generics.GenericAPIView):
+    serializer_class = GeneralAttachmentSerializer
+
+    def get(self, request, *args, **kwargs):
+        event_id = self.kwargs.get('event_id')
+        try:
+            general_single_event = GeneralSingleEvent.objects.get(id=event_id)
+        except GeneralSingleEvent.DoesNotExist:
+            raise NotFound("GeneralSingleEvent not found")
+
+        attachments = general_single_event.general_attachments.all()
+        serializer = self.get_serializer(attachments, many=True)
+        print("serializer.data general_attachments", serializer.data)
         return Response(serializer.data)

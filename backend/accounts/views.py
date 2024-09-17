@@ -556,6 +556,9 @@ class UserEnrolledEventListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def calculate_event_dates(self, event):
+        """
+        Calculates the start and end dates of the event based on its single events.
+        """
         single_events = event.single_events.all()
         if single_events.exists():
             start_date = single_events.first().date
@@ -563,10 +566,14 @@ class UserEnrolledEventListView(APIView):
             return start_date, end_date
         return None, None
 
-    def calculate_event_times(self, event):
-        single_events = event.single_events.filter(day=1)
-        if single_events.exists():
-            multi_events = single_events.first().multi_events.all()
+    def calculate_multi_event_times(self, event):
+        """
+        Calculates the starting time of the first MultiEvent and ending time of the last MultiEvent
+        when days = 1 for the given event.
+        """
+        single_event = event.single_events.filter(day=1).first()
+        if single_event:
+            multi_events = single_event.multi_events.all()
             if multi_events.exists():
                 start_time = multi_events.first().starting_time
                 end_time = multi_events.last().ending_time
@@ -574,13 +581,23 @@ class UserEnrolledEventListView(APIView):
         return None, None
 
     def get_event_status(self, event):
-        current_date = datetime.now().date()
+        """
+        Determines the status of the event based on current datetime and multi-event times.
+        """
+        current_datetime = timezone.now()
         start_date, end_date = self.calculate_event_dates(event)
-        if start_date and end_date:
-            if current_date <= end_date:
-                return "Live" if current_date >= start_date else "Upcoming"
+        start_time, end_time = self.calculate_multi_event_times(event)
+
+        if start_date and end_date and start_time and end_time:
+            # Combine date and time to get the full datetime for start and end
+            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
+
+            if current_datetime <= event_end_datetime:
+                return "Live" if current_datetime >= event_start_datetime else "Upcoming"
             else:
                 return "Completed"
+        
         return "Upcoming"
 
     def get(self, request):
@@ -603,7 +620,7 @@ class UserEnrolledEventListView(APIView):
                 event_data['end_date'] = "Invalid date"
 
             if event.days == 1:
-                start_time, end_time = self.calculate_event_times(event)
+                start_time, end_time = self.calculate_multi_event_times(event)
                 if start_time and end_time:
                     event_data['start_time'] = start_time.strftime('%H:%M:%S')
                     event_data['end_time'] = end_time.strftime('%H:%M:%S')
@@ -618,6 +635,7 @@ class UserEnrolledEventListView(APIView):
             events_data.append(event_data)
 
         return Response({'events': events_data})
+
     
     
     
@@ -1205,6 +1223,9 @@ class GeneralUserEnrolledEventListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def calculate_event_dates(self, event):
+        """
+        Calculate the start and end dates for general single events.
+        """
         single_events = event.general_single_events.all()  # Corrected related name
         if single_events.exists():
             start_date = single_events.first().date
@@ -1213,6 +1234,9 @@ class GeneralUserEnrolledEventListView(APIView):
         return None, None
 
     def calculate_event_times(self, event):
+        """
+        Calculate the start and end times for general multi-events when event days = 1.
+        """
         single_events = event.general_single_events.filter(day=1)  # Corrected related name
         if single_events.exists():
             multi_events = single_events.first().general_multi_events.all()  # Corrected related name
@@ -1223,13 +1247,22 @@ class GeneralUserEnrolledEventListView(APIView):
         return None, None
 
     def get_event_status(self, event):
-        current_date = datetime.now().date()
+        """
+        Determine the event status (Live, Upcoming, Completed) based on current date and event times.
+        """
+        current_datetime = timezone.now()
         start_date, end_date = self.calculate_event_dates(event)
-        if start_date and end_date:
-            if current_date <= end_date:
-                return "Live" if current_date >= start_date else "Upcoming"
+        start_time, end_time = self.calculate_event_times(event)
+
+        if start_date and end_date and start_time and end_time:
+            event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
+
+            if current_datetime <= event_end_datetime:
+                return "Live" if current_datetime >= event_start_datetime else "Upcoming"
             else:
                 return "Completed"
+
         return "Upcoming"
 
     def get(self, request):
@@ -1267,3 +1300,55 @@ class GeneralUserEnrolledEventListView(APIView):
             events_data.append(event_data)
 
         return Response({'events': events_data})
+
+class UserCountAPIView(APIView):
+    def get(self, request):
+        # Adjust the query to exclude admin users
+        user_count = User.objects.filter(is_staff=False, is_superuser=False).count()
+        return Response({'user_count': user_count})
+    
+    
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
+from django.utils.timezone import make_aware
+from datetime import datetime
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class MonthlyUserCountAPIView(APIView):
+    def get(self, request):
+        # Get the current date and the start of the year
+        now = datetime.now()
+        start_of_year = now.replace(month=1, day=1)
+        start_of_year = make_aware(start_of_year)
+
+        # Query user counts per month, excluding superusers
+        user_counts = User.objects.filter(date_joined__gte=start_of_year, is_superuser=False) \
+            .annotate(month=TruncMonth('date_joined')) \
+            .values('month') \
+            .annotate(count=Count('id')) \
+            .order_by('month')
+
+        # Create a dictionary with all months from March to September initialized to 0
+        month_names = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
+        monthly_data = {month: 0 for month in month_names}
+
+        # Update the monthly_data with actual counts from the query result
+        for entry in user_counts:
+            # Convert datetime month to its abbreviated form (e.g., 'Sep')
+            month_name = entry['month'].strftime('%b')
+            if month_name in monthly_data:  # Only update if within March to September
+                monthly_data[month_name] = entry['count']
+
+        # Convert the dictionary to lists for the response
+        months = list(monthly_data.keys())
+        counts = list(monthly_data.values())
+
+        return Response({
+            'months': months,
+            'counts': counts
+        })
+

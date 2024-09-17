@@ -1010,7 +1010,6 @@ class GeneralAttachmentSerializer(serializers.ModelSerializer):
             return obj.single_event.day
         return 'No day'
         
-        
 class NewsletterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Newsletter
