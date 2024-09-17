@@ -2981,13 +2981,13 @@ class PodcastUpdateView(APIView):
             starting_time = request.data.get('starting_time')
             ending_time = request.data.get('ending_time')
             youtube_url = request.data.get('youtube_url')
-            banner = request.FILES.get('banner')  # Optional banner
+            banner = request.FILES.get('banner') 
 
-            # Extract hosts and guests
+       
             host_ids = [value for key, value in request.data.items() if key.startswith('host')]
             guest_ids = [value for key, value in request.data.items() if key.startswith('guest')]
 
-            # Prepare data to update
+           
             data = {
                 'name': name,
                 'date': date,
@@ -2998,12 +2998,12 @@ class PodcastUpdateView(APIView):
             if banner:
                 data['banner'] = banner
 
-            # Serialize and update the podcast
+          
             serializer = PodcastUpdateSerializer(podcast, data=data, partial=True)
             if serializer.is_valid():
                 serializer.save()
 
-                # Set hosts and guests
+          
                 if host_ids:
                     hosts = Speaker.objects.filter(id__in=host_ids)
                     podcast.hosts.set(hosts)
@@ -3011,7 +3011,7 @@ class PodcastUpdateView(APIView):
                     guests = Speaker.objects.filter(id__in=guest_ids)
                     podcast.guests.set(guests)
 
-                # Return the updated podcast
+          
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -3031,26 +3031,41 @@ from datetime import datetime
 from datetime import datetime
 from django.utils import timezone
 
+from datetime import timedelta
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 class PodcastListView(APIView):
     def get_podcast_status(self, podcast):
         """
-        Determines the status of the podcast based on the current datetime and podcast start/end times.
+        Determines the status of the podcast based on the current datetime and podcast start/end times,
+        considering a 15-minute buffer before the start time and after the end time.
         """
-        current_datetime = timezone.now()  # Get current time in the timezone specified in Django settings
-        
-        # Combine the date with start and end times, and make them timezone-aware
+        current_datetime = timezone.now()  # Get current time
         podcast_start_datetime = timezone.make_aware(datetime.combine(podcast.date, podcast.starting_time))
         podcast_end_datetime = timezone.make_aware(datetime.combine(podcast.date, podcast.ending_time))
-        
-        # Determine the podcast status based on the current time
-        if current_datetime < podcast_start_datetime:
+
+        # Calculate 15-minute buffer before the start time and after the end time
+        live_start_datetime = podcast_start_datetime - timedelta(minutes=15)
+        live_end_datetime = podcast_end_datetime + timedelta(minutes=15)
+
+        # Debugging: Print current time and buffer intervals
+        # print(f"Current Time: {current_datetime}")
+        # print(f"Event Start Time: {podcast_start_datetime}")
+        # print(f"Event End Time: {podcast_end_datetime}")
+        # print(f"Fifteen Minutes Before Start: {live_start_datetime}")
+        # print(f"Fifteen Minutes After End: {live_end_datetime}")
+
+        # Determine status based on current time in relation to buffer windows
+        if current_datetime < live_start_datetime:
             return "Upcoming"
-        elif podcast_start_datetime <= current_datetime <= podcast_end_datetime:
+        elif live_start_datetime <= current_datetime <= live_end_datetime:
             return "Live"
-        elif current_datetime > podcast_end_datetime:
+        elif current_datetime > live_end_datetime:
             return "Completed"
         else:
-            return "Unknown"  # Fallback status if none of the conditions match
+            return "Unknown"
 
     def get(self, request):
         """
@@ -3076,6 +3091,7 @@ class PodcastListView(APIView):
             elif status == "Completed":
                 completed_podcasts_data.append(podcast_data)
 
+        # Return response with categorized podcasts
         return Response({
             'live_podcasts': live_podcasts_data,
             'upcoming_podcasts': upcoming_podcasts_data,
