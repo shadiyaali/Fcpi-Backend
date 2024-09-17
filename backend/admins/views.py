@@ -358,6 +358,11 @@ from .serializers import EventListSerializer
 from django.utils import timezone
 from datetime import datetime
 
+from datetime import timedelta
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 class EventListView(APIView):
     def calculate_end_date(self, event):
         """
@@ -386,9 +391,10 @@ class EventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current datetime and multi-event times.
+        Determines the status of the event based on current datetime and multi-event times,
+        with a 15-minute buffer for live status.
         """
-        current_datetime = timezone.now()
+        current_datetime = timezone.now()  # Get the current time
         start_date, end_date = self.calculate_end_date(event)
         start_time, end_time = self.calculate_multi_event_times(event)
 
@@ -397,11 +403,24 @@ class EventListView(APIView):
             event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
             event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
 
-            if current_datetime <= event_end_datetime:
-                return "Live" if current_datetime >= event_start_datetime else "Upcoming"
-            else:
-                return "Completed"
-        
+            # Adding the 15-minute buffer before the start and after the end
+            live_start_datetime = event_start_datetime - timedelta(minutes=15)
+            live_end_datetime = event_end_datetime + timedelta(minutes=15)
+
+            # Debugging: Print relevant times to the console
+            print(f"Current Time: {current_datetime}")
+            print(f"Event Start Time: {event_start_datetime}")
+            print(f"Event End Time: {event_end_datetime}")
+            print(f"Fifteen Minutes Before Start: {live_start_datetime}")
+            print(f"Fifteen Minutes After End: {live_end_datetime}")
+
+            # Determine event status based on the current time and the time buffers
+            if current_datetime < live_start_datetime:
+                return "Upcoming"  # Before 15 minutes of the first multi-event's start time
+            elif live_start_datetime <= current_datetime <= live_end_datetime:
+                return "Live"  # Within the 15 minutes before start and 15 minutes after the last end time
+            elif current_datetime > live_end_datetime:
+                return "Completed"  # After 15 minutes of the last multi-event's end time
         return "Upcoming"
 
     def get(self, request):
@@ -2321,6 +2340,11 @@ from datetime import datetime
 from django.utils import timezone
 from datetime import datetime
 
+from datetime import timedelta, datetime
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 class GeneralEventListView(APIView):
     def calculate_end_date(self, event):
         """
@@ -2349,7 +2373,8 @@ class GeneralEventListView(APIView):
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current datetime and event dates.
+        Determines the status of the event based on current datetime and event dates,
+        with a 15-minute buffer for live status.
         """
         current_datetime = timezone.now()  # Use timezone-aware current datetime
         start_date, end_date = self.calculate_end_date(event)
@@ -2360,14 +2385,24 @@ class GeneralEventListView(APIView):
             event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
             event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
 
-            if current_datetime <= event_end_datetime:
-                if current_datetime >= event_start_datetime:
-                    return "Live"
-                else:
-                    return "Upcoming"
-            else:
-                return "Completed"
-        
+            # Adding the 15-minute buffer before the start and after the end
+            live_start_datetime = event_start_datetime - timedelta(minutes=15)
+            live_end_datetime = event_end_datetime + timedelta(minutes=15)
+
+            # Debugging: Print relevant times to the console
+            print(f"Current Time: {current_datetime}")
+            print(f"Event Start Time: {event_start_datetime}")
+            print(f"Event End Time: {event_end_datetime}")
+            print(f"Fifteen Minutes Before Start: {live_start_datetime}")
+            print(f"Fifteen Minutes After End: {live_end_datetime}")
+
+            # Determine event status based on the current time and the time buffers
+            if current_datetime < live_start_datetime:
+                return "Upcoming"  # Before 15 minutes of the first multi-event's start time
+            elif live_start_datetime <= current_datetime <= live_end_datetime:
+                return "Live"  # Within the 15 minutes before start and 15 minutes after the last end time
+            elif current_datetime > live_end_datetime:
+                return "Completed"  # After 15 minutes of the last multi-event's end time
         return "Upcoming"
 
     def get(self, request):
