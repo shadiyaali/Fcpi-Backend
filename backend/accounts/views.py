@@ -1318,6 +1318,9 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
+
+
 class MonthlyUserCountAPIView(APIView):
     def get(self, request):
         # Get the current date and the start of the year
@@ -1351,4 +1354,73 @@ class MonthlyUserCountAPIView(APIView):
             'months': months,
             'counts': counts
         })
+class Last10MonthsUserCountAPIView(APIView):
+    def get(self, request):
+        # Get the current date
+        now = datetime.now()
+        # Calculate the start of the period 10 months ago
+        start_of_period = now - timedelta(days=10*30)  # Approximate 10 months
+        start_of_period = make_aware(start_of_period)
 
+        # Query user counts per month for the last 10 months, excluding superusers
+        user_counts = User.objects.filter(date_joined__gte=start_of_period, is_superuser=False) \
+            .annotate(month=TruncMonth('date_joined')) \
+            .values('month') \
+            .annotate(count=Count('id')) \
+            .order_by('month')
+
+        # Create a list of months for the last 10 months including the current month
+        months = [(start_of_period + timedelta(days=i*30)).strftime('%b-%Y') for i in range(9)]  # 9 months before current month
+        months.append(now.strftime('%b-%Y'))  # Add current month
+        monthly_data = {month: 0 for month in months}
+
+        # Update the monthly_data with actual counts from the query result
+        for entry in user_counts:
+            month = entry['month'].strftime('%b-%Y')
+            if month in monthly_data:  # Only update if within the last 10 months
+                monthly_data[month] = entry['count']
+
+        # Convert the dictionary to lists for the response
+        months = list(monthly_data.keys())
+        counts = list(monthly_data.values())
+
+        return Response({
+            'months': months,
+            'counts': counts
+        })
+from datetime import datetime, timedelta
+from django.db.models.functions import TruncDate
+class Last10DaysUserCountAPIView(APIView):
+    def get(self, request):
+        # Get today's date and calculate the start and end of the last 10 days
+        today = datetime.now()
+        start_of_period = today - timedelta(days=10)
+        start_of_period = make_aware(start_of_period)
+
+        # Query user counts per day for the last 10 days, excluding superusers
+        user_counts = User.objects.filter(date_joined__gte=start_of_period, is_superuser=False) \
+            .annotate(day=TruncDate('date_joined')) \
+            .values('day') \
+            .annotate(count=Count('id')) \
+            .order_by('day')
+
+        # Create a list of dates for the last 10 days
+        days = [(start_of_period + timedelta(days=i)).strftime('%d-%b') for i in range(10)]
+        daily_data = {day: 0 for day in days}
+
+        # Update the daily_data with actual counts from the query result
+        for entry in user_counts:
+            day = entry['day'].strftime('%d-%b')
+            if day in daily_data:  # Only update if within the last 10 days
+                daily_data[day] = entry['count']
+
+        # Convert the dictionary to lists for the response
+        days = list(daily_data.keys())
+        counts = list(daily_data.values())
+
+        return Response({
+            'days': days,
+            'counts': counts
+        })
+        
+        

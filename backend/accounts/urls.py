@@ -49,5 +49,6 @@ urlpatterns = [
     path('general_event-points/', GeneralEventPointsAPIView.as_view(), name='event_points'),
     path('users/general_enrolled-events/', GeneralUserEnrolledEventListView.as_view(), name='user_enrolled_events'),
     path('user-count/',  UserCountAPIView.as_view(), name='speaker-count-api'),
-    path('monthly-user-count/', MonthlyUserCountAPIView.as_view(), name='monthly-user-count'),
+    path('monthly-user-count/', Last10MonthsUserCountAPIView.as_view(), name='monthly-user-count'),   
+    path('last-10-days-user-count/', Last10DaysUserCountAPIView.as_view(), name='last_10_days_user_count'),
 ]
