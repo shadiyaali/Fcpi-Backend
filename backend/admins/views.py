@@ -2207,6 +2207,22 @@ class UserAttachmentsView(generics.ListAPIView):
         return Response({'attachments': serializer.data}, status=status.HTTP_200_OK)
     
     
+class GeneralUserAttachmentsView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = GeneralAttachmentSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        # Get attachment IDs associated with the user
+        attachment_ids = GeneralUserFileAssociation.objects.filter(user=user).values_list('attachment_id', flat=True)
+        # Fetch the full Attachment instances
+        return GeneralAttachment.objects.filter(id__in=attachment_ids)
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({'attachments': serializer.data}, status=status.HTTP_200_OK)
+    
 class AttachmentUpdateAPIView(APIView):
     def put(self, request, *args, **kwargs):
         try:

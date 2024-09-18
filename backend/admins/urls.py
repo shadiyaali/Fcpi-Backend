@@ -85,15 +85,14 @@ urlpatterns = [
     path('events/<int:event_id>/delete/', EventDeleteAPIView.as_view(), name='event-delete'),
     path('upload/', UploadAttachmentView.as_view(), name='upload_attachment'),
     path('single-events-all/', SingleEventListAllView.as_view(), name='single-event-list'),
-    # path('attachments/<int:pk>/update/', UpdateAttachmentView.as_view(), name='update-attachment'),
-    
+    # path('attachments/<int:pk>/update/', UpdateAttachmentView.as_view(), name='update-attachment'),   
     path('general_attachments/<slug:slug>/', GeneralAttachmentsBySingleEventView.as_view(), name='general-attachments'),
-    path('attachments/<slug:slug>/', AttachmentsBySingleEventView.as_view(), name='event-attachments'),
-    
+    path('attachments/<slug:slug>/', AttachmentsBySingleEventView.as_view(), name='event-attachments'),    
     path('attachments-all/', ListAttachmentsView.as_view(), name='list-attachments'),
     path('attachments/<int:pk>/delete/', AttachmentDeleteAPIView.as_view(), name='attachment-delete'),
     path('user-file-interaction/', AssociateFileWithUserView.as_view(), name='user-file-interaction'),
     path('user-attachments/', UserAttachmentsView.as_view(), name='user-attachments'),
+    path('general-user-attachments/', GeneralUserAttachmentsView.as_view(), name='user-attachments'),
     path('attachments/<int:pk>/update/', AttachmentUpdateAPIView.as_view(), name='attachment-update'),
     path('check-auth/', CheckAuthView.as_view(), name='check_auth'),
     path('logout/', AdminLogout.as_view(), name='admin-logout'),
