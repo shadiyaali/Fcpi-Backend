@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,PodcastUpdateSerializer,PodcastSerializer ,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
+from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,PodcastUpdateSerializer,MultiEventupppSerializer,SingleEventupppSerializer, SingleEventuppSerializer, MultiEventuppSerializer,PodcastSerializer ,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,Podcastfcpipodcast ,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
@@ -229,135 +229,135 @@ class GeneralSingleEventListAllView(APIView):
         print("serializer.data",serializer.data)
         return Response(serializer.data)   
  
-from rest_framework.views import APIView
+ 
+ 
+
+
+ 
+
 from rest_framework.response import Response
 from rest_framework import status
-from django.shortcuts import get_object_or_404
-from .models import Event, SingleEvent, MultiEvent, Forum, Speaker
-import json
-
-import json
-from django.http import JsonResponse
-from rest_framework import status
-from rest_framework.views import APIView
-from .models import Event, SingleEvent, MultiEvent
-from .serializers import EventSerializer, SingleEventSerializer, MultiEventSerializer
-
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
 from django.db import transaction
 import json
-
-from .models import Event, SingleEvent, MultiEvent
+from datetime import datetime, timedelta
+from .models import Event, SingleEvent, MultiEvent, Forum
 from .serializers import EventSerializer, SingleEventSerializer, MultiEventSerializer
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+import json
+from datetime import datetime, timedelta
+from .models import Event, SingleEvent, MultiEvent, Forum
+from .serializers import EventSerializer, SingleEventSerializer, MultiEventSerializer
+from django.utils.dateparse import parse_date
+
+# views.py
+from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.views import APIView
+from django.utils.dateparse import parse_date
+from django.db import transaction
+import json
+from datetime import timedelta
+
+from .models import Event, SingleEvent, MultiEvent, Forum
+from .serializers import EventSerializer
+
 class EventUpdateAPIView(APIView):
+    parser_classes = (MultiPartParser, FormParser)  # Ensure to include parsers for handling file uploads
+
     @transaction.atomic
-    def put(self, request, *args, **kwargs):
-        event_id = kwargs.get('event_id')
-        event = get_object_or_404(Event, id=event_id)
-
-        # Extract data from request
-        event_name = request.data.get('event_name')
-        date = request.data.get('date')
-        days = request.data.get('days')
-        forum_id = request.data.get('forum')
-        speakers = request.data.getlist('speakers')
-        single_events = request.data.get('single_events', '[]')  # Default to empty list if not present
-        banner = request.FILES.get('banner')
-        youtube_link = request.data.get('youtube_link')
-        points = request.data.get('points')
-        highlights = request.data.get('highlights')
-
-        # Parse single_events from JSON string
+    def put(self, request, event_id):
         try:
-            single_events_data = json.loads(single_events)
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': 'Invalid JSON format for single_events'}, status=status.HTTP_400_BAD_REQUEST)
+            print("Request Data:", request.data)
+            print("Request Files:", request.FILES)  # Debug: Print files in request
 
-        # Prepare data for updating the event
-        event_data = {
-            'event_name': event_name,
-            'date': date,
-            'days': int(days) if days else event.days,
-            'forum': forum_id,
-            'speakers': speakers,
-            'banner': banner or event.banner,
-            'youtube_link': youtube_link,
-            'points': points,
-            'highlights': json.loads(highlights) if highlights else []
-        }
+            # Fetch the event to update
+            event = get_object_or_404(Event, id=event_id)
+            speakers_list = request.data.getlist('speakers')
+            print("Extracted Speakers List:", speakers_list)
 
-        # Validate and update Event
-        event_serializer = EventSerializer(event, data=event_data, partial=True)
-        if event_serializer.is_valid():
-            event = event_serializer.save()
+            speakers_list = [int(speaker_id) for speaker_id in speakers_list]
 
-            # Process single events
-            single_event_ids = []
-            for single_event_data in single_events_data:
-                single_event_id = single_event_data.get('id')
-                day = single_event_data.get('day')
-                
-                # Check if the SingleEvent already exists (by id or day)
-                single_event = None
-                if single_event_id:
-                    single_event = SingleEvent.objects.filter(id=single_event_id).first()
-                elif day:
-                    single_event = SingleEvent.objects.filter(event=event, day=day).first()
+            # Prepare data for updating the event
+            event_name = request.data.get('event_name')
+            date_str = request.data.get('date')
+            days = int(request.data.get('days', 1))
+            forum_id = request.data.get('forum')
+            
+            # Handle file upload for banner
+            if 'banner' in request.FILES:
+                event.banner = request.FILES['banner']  # Use request.FILES to get the uploaded file
 
-                if single_event:
-                    # Update existing single event
-                    single_serializer = SingleEventSerializer(single_event, data=single_event_data, partial=True)
-                else:
-                    # Create new single event
-                    single_serializer = SingleEventSerializer(data=single_event_data)
+            if date_str:
+                try:
+                    event_date = parse_date(date_str)
+                    if not event_date:
+                        raise ValueError("Invalid date format.")
+                except ValueError:
+                    return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                event_date = None
 
-                if single_serializer.is_valid():
-                    single_instance = single_serializer.save(event=event)
-                    single_event_ids.append(single_instance.id)
+            if not Forum.objects.filter(id=forum_id).exists():
+                return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
 
-                    # Process multi events within the single event
-                    multi_events_data = single_event_data.get('multi_events', [])
-                    multi_event_ids = []
-                    for multi_event_data in multi_events_data:
-                        multi_event_id = multi_event_data.get('id')
+            # Update event fields
+            event.event_name = event_name
+            event.date = event_date
+            event.days = days
+            event.forum_id = forum_id
+            event.save()  # Save the updated event before updating related data
+            
+            event.speakers.set(speakers_list)
 
-                        # Check if MultiEvent exists by id
-                        if multi_event_id:
-                            multi_event = MultiEvent.objects.filter(id=multi_event_id).first()
-                        else:
-                            # Check if MultiEvent exists by time and single event
-                            multi_event = MultiEvent.objects.filter(
-                                single_event=single_instance,
-                                starting_time=multi_event_data.get('starting_time'),
-                                ending_time=multi_event_data.get('ending_time')
-                            ).first()
+            SingleEvent.objects.filter(event=event).delete()
+            single_events_data = json.loads(request.data.get('single_events', '[]'))
+            print("Single Events Data:", single_events_data)
 
-                        if multi_event:
-                            # Update existing multi event
-                            multi_serializer = MultiEventSerializer(multi_event, data=multi_event_data, partial=True, context={'single_event': single_instance})
-                        else:
-                            # Create new multi event
-                            multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
+            dates = [event_date + timedelta(days=i) for i in range(days)] if event_date else []
+            if len(single_events_data) < len(dates):
+                return Response({'error': 'Insufficient single events data.'}, status=status.HTTP_400_BAD_REQUEST)
 
-                        if multi_serializer.is_valid():
-                            multi_instance = multi_serializer.save()
-                            multi_event_ids.append(multi_instance.id)
-                        else:
-                            return JsonResponse(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    return JsonResponse(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            for date_index, date in enumerate(dates):
+                single_event_data = single_events_data[date_index]
+                single_event = SingleEvent.objects.create(
+                    event=event,
+                    date=date.strftime('%Y-%m-%d'),
+                    day=date_index + 1,
+                    youtube_link=single_event_data.get('youtube_link'),
+                    points=single_event_data.get('points'),
+                    highlights=single_event_data.get('highlights', []),
+                )
 
-            # Delete single events that are not included in the update
-            SingleEvent.objects.filter(event=event).exclude(id__in=single_event_ids).delete()
+                MultiEvent.objects.filter(single_event=single_event).delete()
 
-            return JsonResponse({'message': 'Event and associated data updated successfully'}, status=status.HTTP_200_OK)
-        else:
-            return JsonResponse(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                for multi_event_data in single_event_data.get('multi_events', []):
+                    single_speaker_id = multi_event_data.get('single_speaker')
+                    if isinstance(single_speaker_id, dict):
+                        single_speaker_id = single_speaker_id.get('id')
+                    
+                    MultiEvent.objects.create(
+                        single_event=single_event,
+                        starting_time=multi_event_data.get('starting_time'),
+                        ending_time=multi_event_data.get('ending_time'),
+                        topics=multi_event_data.get('topics'),
+                        single_speaker_id=single_speaker_id,
+                    )
+
+            return Response({'message': 'Event and associated data updated successfully'}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("Error:", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
@@ -415,17 +415,25 @@ class EventListView(APIView):
 
     def calculate_multi_event_times(self, event):
         """
-        Calculates the starting time of the first MultiEvent and ending time of the last MultiEvent
-        when days = 1 for the given event.
+        Calculates the earliest starting time and latest ending time for all MultiEvents
+        across all SingleEvents in the event.
         """
-        single_event = event.single_events.filter(day=1).first()
-        if single_event:
+        earliest_start_time = None
+        latest_end_time = None
+
+        # Iterate over all single events
+        for single_event in event.single_events.all():
+            # Get all multi events for the current single event
             multi_events = single_event.multi_events.all()
-            if multi_events.exists():
-                start_time = multi_events.first().starting_time
-                end_time = multi_events.last().ending_time
-                return start_time, end_time
-        return None, None
+            for multi_event in multi_events:
+                # Compare and track the earliest start time
+                if earliest_start_time is None or multi_event.starting_time < earliest_start_time:
+                    earliest_start_time = multi_event.starting_time
+                # Compare and track the latest end time
+                if latest_end_time is None or multi_event.ending_time > latest_end_time:
+                    latest_end_time = multi_event.ending_time
+
+        return earliest_start_time, latest_end_time
 
     def get_event_status(self, event):
         """
@@ -477,7 +485,7 @@ class EventListView(APIView):
             # Calculate start and end dates
             start_date, end_date = self.calculate_end_date(event)
 
-            # Calculate start and end times of MultiEvent for days = 1
+            # Calculate start and end times of MultiEvent for all days
             start_time, end_time = self.calculate_multi_event_times(event)
 
             # Serialize event data
@@ -2373,111 +2381,107 @@ class GeneralEventDeleteAPIView(APIView):
         
         
 
+# views.py
+from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.views import APIView
+from django.utils.dateparse import parse_date
+from django.db import transaction
+import json
+from datetime import timedelta
+
+from .models import Event, SingleEvent, MultiEvent, Forum
+from .serializers import EventSerializer
+
 class GeneralEventUpdateAPIView(APIView):
+    parser_classes = (MultiPartParser, FormParser)  # Ensure to include parsers for handling file uploads
+
     @transaction.atomic
-    def put(self, request, *args, **kwargs):
-        event_id = kwargs.get('event_id')
-        event = get_object_or_404(GeneralEvent, id=event_id)
-
-        # Extract data from request
-        event_name = request.data.get('event_name')
-        date = request.data.get('date')
-        days = request.data.get('days')
-        forum_id = request.data.get('forum')
-        speakers = request.data.getlist('speakers')
-        single_events = request.data.get('single_events', '[]')  # Default to empty list if not present
-        banner = request.FILES.get('banner')
-        youtube_link = request.data.get('youtube_link')
-        points = request.data.get('points')
-        highlights = request.data.get('highlights')
-
-        # Parse single_events from JSON string
+    def put(self, request, event_id):
         try:
-            single_events_data = json.loads(single_events)
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': 'Invalid JSON format for single_events'}, status=status.HTTP_400_BAD_REQUEST)
+            print("Request Data:", request.data)
+            print("Request Files:", request.FILES)  # Debug: Print files in request
 
-        # Prepare data for updating the event
-        event_data = {
-            'event_name': event_name,
-            'date': date,
-            'days': int(days) if days else event.days,
-            'forum': forum_id,
-            'speakers': speakers,
-            'banner': banner or event.banner,
-            'youtube_link': youtube_link,
-            'points': points,
-            'highlights': json.loads(highlights) if highlights else []
-        }
+            # Fetch the event to update
+            event = get_object_or_404(GeneralEvent, id=event_id)
+            speakers_list = request.data.getlist('speakers')
+            print("Extracted Speakers List:", speakers_list)
 
-        # Validate and update Event
-        event_serializer = GeneralEventSerializer(event, data=event_data, partial=True)
-        if event_serializer.is_valid():
-            event = event_serializer.save()
+            speakers_list = [int(speaker_id) for speaker_id in speakers_list]
 
-            # Process single events
-            single_event_ids = []
-            for single_event_data in single_events_data:
-                single_event_id = single_event_data.get('id')
-                day = single_event_data.get('day')
-                
-                # Check if the SingleEvent already exists (by id or day)
-                single_event = None
-                if single_event_id:
-                    single_event = GeneralSingleEvent.objects.filter(id=single_event_id).first()
-                elif day:
-                    single_event = GeneralSingleEvent.objects.filter(event=event, day=day).first()
+            # Prepare data for updating the event
+            event_name = request.data.get('event_name')
+            date_str = request.data.get('date')
+            days = int(request.data.get('days', 1))
+            forum_id = request.data.get('forum')
+            
+            # Handle file upload for banner
+            if 'banner' in request.FILES:
+                event.banner = request.FILES['banner']  # Use request.FILES to get the uploaded file
 
-                if single_event:
-                    # Update existing single event
-                    single_serializer = GeneralSingleEventSerializer(single_event, data=single_event_data, partial=True)
-                else:
-                    # Create new single event
-                    single_serializer = GeneralSingleEventSerializer(data=single_event_data)
+            if date_str:
+                try:
+                    event_date = parse_date(date_str)
+                    if not event_date:
+                        raise ValueError("Invalid date format.")
+                except ValueError:
+                    return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                event_date = None
 
-                if single_serializer.is_valid():
-                    single_instance = single_serializer.save(event=event)
-                    single_event_ids.append(single_instance.id)
+            if forum_id and not Forum.objects.filter(id=forum_id).exists():
+                return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
 
-                    # Process multi events within the single event
-                    multi_events_data = single_event_data.get('multi_events', [])
-                    multi_event_ids = []
-                    for multi_event_data in multi_events_data:
-                        multi_event_id = multi_event_data.get('id')
+            # Update event fields
+            event.event_name = event_name
+            event.date = event_date
+            event.days = days
+            event.forum_id = forum_id
+            event.save()  # Save the updated event before updating related data
+            
+            event.speakers.set(speakers_list)
 
-                        # Check if MultiEvent exists by id
-                        if multi_event_id:
-                            multi_event = GeneralMultiEvent.objects.filter(id=multi_event_id).first()
-                        else:
-                            # Check if MultiEvent exists by time and single event
-                            multi_event = GeneralMultiEvent.objects.filter(
-                                single_event=single_instance,
-                                starting_time=multi_event_data.get('starting_time'),
-                                ending_time=multi_event_data.get('ending_time')
-                            ).first()
+            GeneralSingleEvent.objects.filter(event=event).delete()
+            single_events_data = json.loads(request.data.get('single_events', '[]'))
+            print("Single Events Data:", single_events_data)
 
-                        if multi_event:
-                            # Update existing multi event
-                            multi_serializer = GeneralMultiEventSerializer(multi_event, data=multi_event_data, partial=True, context={'single_event': single_instance})
-                        else:
-                            # Create new multi event
-                            multi_serializer = GeneralMultiEventSerializer(data=multi_event_data, context={'single_event': single_instance})
+            dates = [event_date + timedelta(days=i) for i in range(days)] if event_date else []
+            if len(single_events_data) < len(dates):
+                return Response({'error': 'Insufficient single events data.'}, status=status.HTTP_400_BAD_REQUEST)
 
-                        if multi_serializer.is_valid():
-                            multi_instance = multi_serializer.save()
-                            multi_event_ids.append(multi_instance.id)
-                        else:
-                            return JsonResponse(multi_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    return JsonResponse(single_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            for date_index, date in enumerate(dates):
+                single_event_data = single_events_data[date_index]
+                single_event = GeneralSingleEvent.objects.create(
+                    event=event,
+                    date=date.strftime('%Y-%m-%d'),
+                    day=date_index + 1,
+                    youtube_link=single_event_data.get('youtube_link'),
+                    points=single_event_data.get('points'),
+                    highlights=single_event_data.get('highlights', []),
+                )
 
-            # Delete single events that are not included in the update
-            GeneralSingleEvent.objects.filter(event=event).exclude(id__in=single_event_ids).delete()
+                GeneralMultiEvent.objects.filter(single_event=single_event).delete()
 
-            return JsonResponse({'message': 'Event and associated data updated successfully'}, status=status.HTTP_200_OK)
-        else:
-            return JsonResponse(event_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                for multi_event_data in single_event_data.get('multi_events', []):
+                    single_speaker_id = multi_event_data.get('single_speaker')
+                    if isinstance(single_speaker_id, dict):
+                        single_speaker_id = single_speaker_id.get('id')
+                    
+                    GeneralMultiEvent.objects.create(
+                        single_event=single_event,
+                        starting_time=multi_event_data.get('starting_time'),
+                        ending_time=multi_event_data.get('ending_time'),
+                        topics=multi_event_data.get('topics'),
+                        single_speaker_id=single_speaker_id,
+                    )
 
+            return Response({'message': 'Event and associated data updated successfully'}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("Error:", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

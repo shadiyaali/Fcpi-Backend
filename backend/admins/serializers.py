@@ -35,7 +35,21 @@ class EventSpeakerSerializer(serializers.ModelSerializer):
         fields = ['id', 'slug','speakers']
   
  
- 
+class MultiEventupppSerializer(serializers.ModelSerializer):
+    speaker_name = serializers.SerializerMethodField()
+    single_speaker = serializers.PrimaryKeyRelatedField(queryset=Speaker.objects.all())
+
+    class Meta:
+        model = MultiEvent
+        fields = ['id', 'starting_time', 'ending_time', 'topics', 'single_speaker', 'speaker_name']
+
+    def create(self, validated_data):
+        single_event = self.context['single_event']
+        multi_event = MultiEvent.objects.create(single_event=single_event, **validated_data)
+        return multi_event
+
+    def get_speaker_name(self, obj):
+        return obj.single_speaker.name if obj.single_speaker else None
 
 class MultiEventSerializer(serializers.ModelSerializer):
     speaker_name = serializers.SerializerMethodField()
@@ -114,10 +128,141 @@ class SingleEventSerializer(serializers.ModelSerializer):
             MultiEvent.objects.create(**multi_event_data)
 
         return single_event
+
+class SingleEventupppSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+    highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+    youtube_link = serializers.URLField()
+    points = serializers.DecimalField(max_digits=5, decimal_places=2)
+    multi_events = MultiEventSerializer(many=True)
+    single_event_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SingleEvent
+        fields = ['id', 'highlights', 'youtube_link', 'points', 'multi_events', 'single_event_name']
+
+    def get_single_event_name(self, obj):
+        return str(obj)
+
+    def create(self, validated_data):
+        multi_events_data = validated_data.pop('multi_events', [])
+        single_event = SingleEvent.objects.create(**validated_data)
+        
+        for multi_event_data in multi_events_data:
+            MultiEvent.objects.create(single_event=single_event, **multi_event_data)
+        
+        return single_event
+
+    def update(self, instance, validated_data):
+        multi_events_data = validated_data.pop('multi_events', [])
+        
+        # Update SingleEvent instance
+        instance.highlights = ', '.join(validated_data.get('highlights', []))
+        instance.youtube_link = validated_data.get('youtube_link', instance.youtube_link)
+        instance.points = validated_data.get('points', instance.points)
+        instance.save()
+        
+        # Update or create MultiEvent instances
+        existing_multi_events = set((e.starting_time, e.ending_time) for e in instance.multi_events.all())
+        new_multi_events = {(e['starting_time'], e['ending_time']) for e in multi_events_data}
+
+        # Delete old multi-events not in the new data
+        for starting_time, ending_time in existing_multi_events - new_multi_events:
+            instance.multi_events.filter(starting_time=starting_time, ending_time=ending_time).delete()
+
+        # Create or update multi-events
+        for multi_event_data in multi_events_data:
+            MultiEvent.objects.update_or_create(
+                single_event=instance,
+                starting_time=multi_event_data['starting_time'],
+                ending_time=multi_event_data['ending_time'],
+                defaults={**multi_event_data}
+            )
+        
+        return instance
+
+
+
+
     
+class MultiEventuppSerializer(serializers.ModelSerializer):
+    speaker_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MultiEvent
+        fields = ['id', 'starting_time', 'ending_time', 'topics', 'single_speaker', 'speaker_name']
+
+    def create(self, validated_data):
+        single_event = self.context['single_event']
+        multi_event = MultiEvent.objects.create(single_event=single_event, **validated_data)
+        return multi_event
+
+    def get_speaker_name(self, obj):
+        return obj.single_speaker.name if obj.single_speaker else None
+
+    def to_internal_value(self, data):
+        # Ensure single_speaker is handled as an integer PK
+        if 'single_speaker' in data and isinstance(data['single_speaker'], dict):
+            data['single_speaker'] = data['single_speaker'].get('id')
+        return super().to_internal_value(data)
+
+class SingleEventuppSerializer(serializers.ModelSerializer):
+    highlights = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+    youtube_link = serializers.URLField()
+    points = serializers.DecimalField(max_digits=5, decimal_places=2)
+    multi_events = MultiEventSerializer(many=True, required=False, allow_empty=True)
+
+    class Meta:
+        model = SingleEvent
+        fields = ['id', 'date', 'day', 'highlights', 'youtube_link', 'points', 'multi_events']
     
-    
-    
+    def validate(self, data):
+        """
+        Check that `date` and `day` are present in the request data.
+        """
+        if 'date' not in data:
+            raise serializers.ValidationError({"date": "This field is required."})
+        if 'day' not in data:
+            raise serializers.ValidationError({"day": "This field is required."})
+        return data
+
+    def update(self, instance, validated_data):
+        multi_events_data = validated_data.pop('multi_events', [])
+        highlights = validated_data.pop('highlights', [])
+
+        # Update fields in SingleEvent
+        instance.date = validated_data.get('date', instance.date)
+        instance.day = validated_data.get('day', instance.day)
+        instance.highlights = ', '.join(highlights)
+        instance.youtube_link = validated_data.get('youtube_link', instance.youtube_link)
+        instance.points = validated_data.get('points', instance.points)
+        instance.save()
+
+        # Handle MultiEvents
+        multi_event_ids = []
+        for multi_event_data in multi_events_data:
+            multi_event_id = multi_event_data.get('id')
+            if multi_event_id:
+                multi_event = MultiEvent.objects.filter(id=multi_event_id).first()
+                if multi_event:
+                    multi_serializer = MultiEventSerializer(multi_event, data=multi_event_data, partial=True)
+                else:
+                    multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': instance})
+            else:
+                multi_serializer = MultiEventSerializer(data=multi_event_data, context={'single_event': instance})
+
+            if multi_serializer.is_valid():
+                multi_instance = multi_serializer.save()
+                multi_event_ids.append(multi_instance.id)
+            else:
+                raise serializers.ValidationError(multi_serializer.errors)
+
+        # Delete multi events that are not included in the update
+        MultiEvent.objects.filter(single_event=instance).exclude(id__in=multi_event_ids).delete()
+
+        return instance
+
+
     
     
 class SingleEventGEtSerializer(serializers.ModelSerializer):
