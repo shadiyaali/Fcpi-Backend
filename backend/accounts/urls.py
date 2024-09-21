@@ -51,4 +51,6 @@ urlpatterns = [
     path('user-count/',  UserCountAPIView.as_view(), name='speaker-count-api'),
     path('monthly-user-count/', Last10MonthsUserCountAPIView.as_view(), name='monthly-user-count'),   
     path('last-10-days-user-count/', Last10DaysUserCountAPIView.as_view(), name='last_10_days_user_count'),
+    path('events/<slug:slug>/enrolled-users/', EnrolledUserView.as_view(), name='enrolled_user_list'),
+    path('general-events/<slug:slug>/enrolled-users/', GeneralEnrolledUserView.as_view(), name='general_enrolled_user_list'),
 ]
