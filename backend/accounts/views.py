@@ -1424,9 +1424,11 @@ class Last10DaysUserCountAPIView(APIView):
         })
         
 class EnrolledUserView(APIView):
-    def get(self, request, event_id):
+    def get(self, request, slug):
+        print(f"Slug received: {slug}")  # Log the received slug
         try:
-            event = Event.objects.get(id=event_id)
+            event = Event.objects.get(slug=slug)
+            print(f"Event found: {event.event_name}")  
             enrolled_users = Enrolled.objects.filter(event=event).select_related('user')
             user_data = [{
                 'id': user.user.id,
@@ -1437,6 +1439,7 @@ class EnrolledUserView(APIView):
             } for user in enrolled_users]
             return Response({'enrolled_users': user_data}, status=status.HTTP_200_OK)
         except Event.DoesNotExist:
+            print("Event not found")  
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
