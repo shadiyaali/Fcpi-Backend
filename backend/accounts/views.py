@@ -1424,10 +1424,9 @@ class Last10DaysUserCountAPIView(APIView):
         })
         
 class EnrolledUserView(APIView):
-    def get(self, request, slug):
+    def get(self, request, event_id):
         try:
-            event = Event.objects.get(slug=slug)
-            print(f"Event found: {event.event_name}")  # Debug line
+            event = Event.objects.get(id=event_id)
             enrolled_users = Enrolled.objects.filter(event=event).select_related('user')
             user_data = [{
                 'id': user.user.id,
@@ -1441,18 +1440,18 @@ class EnrolledUserView(APIView):
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-class GeneralEnrolledUserView(APIView):
-    def get(self, request, slug):
-        try:
-            event = GeneralEvent.objects.get(slug=slug)
-            enrolled_users = GeneralEnrolled.objects.filter(event=event).select_related('user')
-            user_data = [{
-                'id': user.user.id,
-                'name': f"{user.user.first_name} {user.user.last_name}",
-                'email': user.user.email,
-                'phone': user.user.phone,
-                'event_name': event.event_name  # Add event name here
-            } for user in enrolled_users]
-            return Response({'enrolled_users': user_data}, status=status.HTTP_200_OK)
-        except GeneralEvent.DoesNotExist:
-            return Response({'error': 'General event not found'}, status=status.HTTP_404_NOT_FOUND)
+# class GeneralEnrolledUserView(APIView):
+#     def get(self, request, slug):
+#         try:
+#             event = GeneralEvent.objects.get(slug=slug)
+#             enrolled_users = GeneralEnrolled.objects.filter(event=event).select_related('user')
+#             user_data = [{
+#                 'id': user.user.id,
+#                 'name': f"{user.user.first_name} {user.user.last_name}",
+#                 'email': user.user.email,
+#                 'phone': user.user.phone,
+#                 'event_name': event.event_name  # Add event name here
+#             } for user in enrolled_users]
+#             return Response({'enrolled_users': user_data}, status=status.HTTP_200_OK)
+#         except GeneralEvent.DoesNotExist:
+#             return Response({'error': 'General event not found'}, status=status.HTTP_404_NOT_FOUND)
