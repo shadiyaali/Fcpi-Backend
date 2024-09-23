@@ -1425,7 +1425,7 @@ class Last10DaysUserCountAPIView(APIView):
         
 class EnrolledUserView(APIView):
     def get(self, request, slug):
-        print(f"Slug received: {slug}")  # Log the received slug
+        print(f"Slug received: {slug}")  
         try:
             event = Event.objects.get(slug=slug)
             print(f"Event found: {event.event_name}")  
@@ -1443,18 +1443,74 @@ class EnrolledUserView(APIView):
             return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-# class GeneralEnrolledUserView(APIView):
-#     def get(self, request, slug):
-#         try:
-#             event = GeneralEvent.objects.get(slug=slug)
-#             enrolled_users = GeneralEnrolled.objects.filter(event=event).select_related('user')
-#             user_data = [{
-#                 'id': user.user.id,
-#                 'name': f"{user.user.first_name} {user.user.last_name}",
-#                 'email': user.user.email,
-#                 'phone': user.user.phone,
-#                 'event_name': event.event_name  # Add event name here
-#             } for user in enrolled_users]
-#             return Response({'enrolled_users': user_data}, status=status.HTTP_200_OK)
-#         except GeneralEvent.DoesNotExist:
-#             return Response({'error': 'General event not found'}, status=status.HTTP_404_NOT_FOUND)
+class GeneralEnrolledUserView(APIView):
+    def get(self, request, slug):
+        try:
+            event = GeneralEvent.objects.get(slug=slug)
+            enrolled_users = GeneralEnrolled.objects.filter(event=event).select_related('user')
+            user_data = [{
+                'id': user.user.id,
+                'name': f"{user.user.first_name} {user.user.last_name}",
+                'email': user.user.email,
+                'phone': user.user.phone,
+                'event_name': event.event_name  # Add event name here
+            } for user in enrolled_users]
+            return Response({'enrolled_users': user_data}, status=status.HTTP_200_OK)
+        except GeneralEvent.DoesNotExist:
+            return Response({'error': 'General event not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+class EventFeedbackListView(APIView):
+    def get(self, request, single_event_id):
+        try:
+            single_event = SingleEvent.objects.get(id=single_event_id)
+            feedbacks = Feedback.objects.filter(single_event=single_event)
+
+            feedback_list = []
+            for feedback in feedbacks:
+                feedback_data = FeedbackSerializer(feedback).data
+                user_data = {
+                    'username': feedback.user.username,
+                    'email': feedback.user.email,
+                    'name': f"{feedback.user.first_name} {feedback.user.last_name}",
+                    'phone': feedback.user.phone
+                }
+                feedback_data['user'] = user_data
+                feedback_data['day'] = single_event.day  
+                feedback_list.append(feedback_data)
+
+            return Response({
+                'single_event': single_event.event.event_name,
+                'day': single_event.day,  # Include the day in the response
+                'feedbacks': feedback_list
+            })
+        except SingleEvent.DoesNotExist:
+            return Response({"error": "Single event not found"}, status=404)
+
+
+class EventGeneralFeedbackListView(APIView):
+    def get(self, request, single_event_id):
+        try:
+            single_event = GeneralSingleEvent.objects.get(id=single_event_id)
+            feedbacks = GeneralFeedback.objects.filter(single_event=single_event)
+
+            feedback_list = []
+            for feedback in feedbacks:
+                feedback_data = GeneralFeedbackSerializer(feedback).data
+                user_data = {
+                    'username': feedback.user.username,
+                    'email': feedback.user.email,
+                    'name': f"{feedback.user.first_name} {feedback.user.last_name}",
+                    'phone': feedback.user.phone
+                }
+                feedback_data['user'] = user_data
+                feedback_data['day'] = single_event.day  
+                feedback_list.append(feedback_data)
+
+            return Response({
+                'single_event': single_event.event.event_name,
+                'day': single_event.day,  # Include the day in the response
+                'feedbacks': feedback_list
+            })
+        except GeneralSingleEvent.DoesNotExist:
+            return Response({"error": "Single event not found"}, status=404)
