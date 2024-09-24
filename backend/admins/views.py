@@ -2112,7 +2112,12 @@ class SingleEventListAllView(APIView):
         serializer = SingleAllEventSerializer(single_events, many=True)
         return Response(serializer.data)
     
-    
+class SingleGeneralEventListAllView(APIView):
+    def get(self, request):
+        single_events = GeneralSingleEvent.objects.all()
+        serializer = GeneralSingleAllEventSerializer(single_events, many=True)
+        return Response(serializer.data)
+        
     
 class UploadAttachmentView(APIView):
     parser_classes = [MultiPartParser]
