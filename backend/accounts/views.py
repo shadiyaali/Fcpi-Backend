@@ -410,6 +410,12 @@ from django.urls import reverse
 from django.utils import timezone
 
  
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
+from .models import Feedback, Certificates
+
 class CertificateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -433,21 +439,26 @@ class CertificateView(APIView):
                 if event.days > 1:
                     event_name += f" (Day {single_event.day})"
 
-                forum_name = event.forum.title if event.forum else 'N/A'  # Ensure correct property name
+                forum_name = event.forum.title if event.forum else 'N/A'
+
+                # Add the feedback creation date here
+                feedback_created_at = feedback.created_at
 
                 serialized_certificates.append({
                     "event_name": event_name,
-                    "forum": forum_name,  # Ensure this matches the frontend
+                    "forum": forum_name,
                     "days": event.days,
                     "event_date": single_event.date,
                     "single_event": {
                         "points": single_event.points,
                         "day": single_event.day
                     },
-                    "certificate_image": certificate.image.url
+                    "certificate_image": certificate.image.url,
+                    "feedback_created_at": feedback_created_at  # Include the feedback creation date
                 })
 
         return Response(serialized_certificates, status=status.HTTP_200_OK)
+
 
 
 
@@ -1189,21 +1200,20 @@ class GeneralCertificateView(APIView):
                 if event.days > 1:
                     event_name += f" (Day {single_event.day})"
 
-           
-
                 serialized_certificates.append({
                     "event_name": event_name,
-             
                     "days": event.days,
                     "event_date": single_event.date,
                     "single_event": {
                         "points": single_event.points,
                         "day": single_event.day
                     },
-                    "certificate_image": certificate.image.url
+                    "certificate_image": certificate.image.url,
+                    "feedback_created_at": feedback.created_at  # Add the feedback created at field here
                 })
 
         return Response(serialized_certificates, status=status.HTTP_200_OK)
+
     
     
 class GeneralEventPointsAPIView(APIView):

@@ -510,10 +510,10 @@ class EventListView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
+     
+ 
+ 
 
- 
- 
- 
 
 from datetime import datetime
 

@@ -138,5 +138,6 @@ urlpatterns = [
     path('podcast-count/',  PodcastCountAPIView.as_view(), name='speaker-count-api'),
     path('events/<int:event_id>/attachments/', SingleEventAttachmentsView.as_view(), name='event-attachments'),
     path('general-events/<int:event_id>/attachments/', GeneralSingleEventAttachmentsView.as_view(), name='general-event-attachments'),
+     
 ]     
  

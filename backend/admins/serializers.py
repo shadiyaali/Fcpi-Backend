@@ -701,11 +701,6 @@ class BlogsGeneralFormSerializer(serializers.ModelSerializer):
 
 
 
-
-
-
-
-
 class CertificatesSerializer(serializers.ModelSerializer):
         event_name = serializers.CharField(source='event.event_name', read_only=True)
 
