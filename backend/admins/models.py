@@ -90,7 +90,7 @@ class Event(models.Model):
         # Replace any character that is not alphanumeric with an underscore
         value = re.sub(r'[^\w\s]', '', value).strip().lower()
         # Replace spaces with underscores
-        value = value.replace(' ', '_')
+        value = value.replace(' ', '-')
         # Remove hyphens
         value = value.replace('-', '')
         # Ensure the slug is not empty after processing
@@ -335,7 +335,7 @@ class GeneralEvent(models.Model):
     
     def custom_slugify(self, value):
         value = re.sub(r'[^\w\s]', '', value).strip().lower()
-        value = value.replace(' ', '_')
+        value = value.replace(' ', '-')
         value = value.replace('-', '')
         if not value:
             value = 'default_slug'
@@ -454,6 +454,7 @@ class Podcastfcpi(models.Model):
 class Podcastfcpipodcast(models.Model):
     name = models.CharField(max_length=255)  
     banner = models.ImageField(upload_to='podcastfcpipodcast_banners/', null=True, blank=True)
+    image = models.ImageField(upload_to = 'podcastfcpipodcast_images/',null=True, blank=True)
     hosts = models.ManyToManyField(Speaker, related_name='podcastfcpipodcast_as_host')
     guests = models.ManyToManyField(Speaker, related_name='podcastfcpipodcast_as_guest') 
     date = models.DateField()

@@ -524,26 +524,36 @@ class EnrollEvent(APIView):
         event = get_object_or_404(Event, slug=slug)
         user = request.user
         
-        if Enrolled.objects.filter(user=user, event=event).exists():
-            return Response({"detail": "You are already enrolled in this event."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        enrollment_data = {'user': user.id, 'event': event.id}
-        serializer = EnrolledSerializer(data=enrollment_data)
-        if serializer.is_valid():
-            serializer.save()
+        # Check if the user is already enrolled
+        enrollment = Enrolled.objects.filter(user=user, event=event).first()
+
+        if enrollment:
+            # If the user is already enrolled, remove them from the enrollment
+            enrollment.delete()
             
-            event.is_enrolled = True
+            event.is_enrolled = False
             event.save()
             
-            subject = 'Enrollment Confirmation'
-            message = f'Hello {user.first_name} {user.last_name}\n\nYou have successfully enrolled in the event: {event.event_name}.\n\nThank you!'
-            from_email = settings.EMAIL_HOST_USER   
-            to_email = [user.email]
-            send_mail(subject, message, from_email, to_email)
-            
-            return Response({"detail": "Successfully enrolled in the event."}, status=status.HTTP_201_CREATED)
+            return Response({"detail": "Successfully unenrolled from the event."}, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # If the user is not enrolled, proceed to enroll them
+            enrollment_data = {'user': user.id, 'event': event.id}
+            serializer = EnrolledSerializer(data=enrollment_data)
+            if serializer.is_valid():
+                serializer.save()
+                
+                event.is_enrolled = True
+                event.save()
+                
+                subject = 'Enrollment Confirmation'
+                message = f'Hello {user.first_name} {user.last_name}\n\nYou have successfully enrolled in the event: {event.event_name}.\n\nThank you!'
+                from_email = settings.EMAIL_HOST_USER   
+                to_email = [user.email]
+                send_mail(subject, message, from_email, to_email)
+                
+                return Response({"detail": "Successfully enrolled in the event."}, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -1032,26 +1042,36 @@ class GeneralEnrollEvent(APIView):
         event = get_object_or_404(GeneralEvent, slug=slug)
         user = request.user
         
-        if GeneralEnrolled.objects.filter(user=user, event=event).exists():
-            return Response({"detail": "You are already enrolled in this event."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        enrollment_data = {'user': user.id, 'event': event.id}
-        serializer = GeneralEnrolledSerializer(data=enrollment_data)
-        if serializer.is_valid():
-            serializer.save()
+        # Check if the user is already enrolled
+        enrollment = GeneralEnrolled.objects.filter(user=user, event=event).first()
+
+        if enrollment:
+            # If the user is already enrolled, remove them from the enrollment
+            enrollment.delete()
             
-            event.is_enrolled = True
+            event.is_enrolled = False
             event.save()
             
-            subject = 'Enrollment Confirmation'
-            message = f'Hello {user.first_name} {user.last_name}\n\nYou have successfully enrolled in the event: {event.event_name}.\n\nThank you!'
-            from_email = settings.EMAIL_HOST_USER   
-            to_email = [user.email]
-            send_mail(subject, message, from_email, to_email)
-            
-            return Response({"detail": "Successfully enrolled in the event."}, status=status.HTTP_201_CREATED)
+            return Response({"detail": "Successfully unenrolled from the event."}, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # If the user is not enrolled, proceed to enroll them
+            enrollment_data = {'user': user.id, 'event': event.id}
+            serializer = GeneralEnrolledSerializer(data=enrollment_data)
+            if serializer.is_valid():
+                serializer.save()
+                
+                event.is_enrolled = True
+                event.save()
+                
+                subject = 'Enrollment Confirmation'
+                message = f'Hello {user.first_name} {user.last_name}\n\nYou have successfully enrolled in the event: {event.event_name}.\n\nThank you!'
+                from_email = settings.EMAIL_HOST_USER   
+                to_email = [user.email]
+                send_mail(subject, message, from_email, to_email)
+                
+                return Response({"detail": "Successfully enrolled in the event."}, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GeneralEnrolledUserCountView(APIView):
     def get(self, request, slug):
@@ -1524,3 +1544,5 @@ class EventGeneralFeedbackListView(APIView):
             })
         except GeneralSingleEvent.DoesNotExist:
             return Response({"error": "Single event not found"}, status=404)
+
+

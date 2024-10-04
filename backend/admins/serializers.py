@@ -1162,10 +1162,11 @@ class PodcastSerializer(serializers.ModelSerializer):
     hosts = SpeakerSerializer(many=True, required=False, allow_null=True)
     guests = SpeakerSerializer(many=True, required=False, allow_null=True)
     banner = serializers.ImageField(required=False, allow_null=True)
+    image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Podcastfcpipodcast
-        fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'hosts', 'guests', 'banner']
+        fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'hosts', 'guests', 'banner','image']
     
     def create(self, validated_data):
         hosts_data = validated_data.pop('hosts', [])
@@ -1231,7 +1232,7 @@ class PodcastUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Podcastfcpipodcast 
-        fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'hosts', 'guests', 'banner']
+        fields = ['id', 'name', 'date', 'starting_time', 'ending_time', 'youtube_url', 'hosts', 'guests', 'banner','image']
 
     def update(self, instance, validated_data):
         instance.name = validated_data.get('name', instance.name)
@@ -1251,5 +1252,6 @@ class PodcastUpdateSerializer(serializers.ModelSerializer):
             instance.guests.set(guests_data)
 
         instance.banner = validated_data.get('banner', instance.banner)
+        instance.image = validated_data.get('image', instance.image)
         instance.save()
         return instance

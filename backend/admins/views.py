@@ -385,89 +385,102 @@ class EventDetailView(APIView):
 
 from datetime import datetime, timedelta
 
-from datetime import datetime
-
-from datetime import datetime
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Event
-from .serializers import EventListSerializer
+ 
+ 
 
 from django.utils import timezone
-from datetime import datetime
-
-from datetime import timedelta
-from django.utils import timezone
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from datetime import datetime, timedelta
 
 class EventListView(APIView):
-    def calculate_end_date(self, event):
+    def calculate_event_times(self, event):
         """
-        Calculates the start and end dates of the event based on its single events.
+        Calculates the start date, end date, earliest start time, and latest end time
+        for an event based on its single and multi events.
         """
         single_events = event.single_events.all()
-        if single_events.exists():
-            start_date = single_events.first().date
-            end_date = single_events.last().date
-            return start_date, end_date
-        return None, None
 
-    def calculate_multi_event_times(self, event):
-        """
-        Calculates the earliest starting time and latest ending time for all MultiEvents
-        across all SingleEvents in the event.
-        """
+        if not single_events.exists():
+            return None, None, None, None
+
+        # Get first and last single event for start/end dates
+        start_date = single_events.first().date
+        end_date = single_events.last().date
+
         earliest_start_time = None
         latest_end_time = None
 
-        # Iterate over all single events
-        for single_event in event.single_events.all():
-            # Get all multi events for the current single event
+        # Loop through all single events to get multi-event times
+        for single_event in single_events:
             multi_events = single_event.multi_events.all()
+
             for multi_event in multi_events:
-                # Compare and track the earliest start time
+                # Find the earliest starting time
                 if earliest_start_time is None or multi_event.starting_time < earliest_start_time:
                     earliest_start_time = multi_event.starting_time
-                # Compare and track the latest end time
+                
+                # Find the latest ending time
                 if latest_end_time is None or multi_event.ending_time > latest_end_time:
                     latest_end_time = multi_event.ending_time
 
-        return earliest_start_time, latest_end_time
+        return start_date, end_date, earliest_start_time, latest_end_time
+
+    def calculate_last_single_event_end_time(self, event):
+        """
+        Calculates the ending time of the last multi-event in the last single event.
+        """
+        single_events = event.single_events.all()
+
+        if not single_events.exists():
+            return None
+
+        # Get the last single event
+        last_single_event = single_events.last()
+
+        # Get the last multi-event in the last single event
+        last_multi_event = last_single_event.multi_events.last()
+
+        # Return the ending time of the last multi-event if it exists
+        if last_multi_event:
+            return last_multi_event.ending_time
+        return None
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current datetime and multi-event times,
-        with a 15-minute buffer for live status.
+        Determines the status of the event based on the current datetime and the last multi-event's
+        ending time in the last single event.
         """
-        current_datetime = timezone.now()  # Get the current time
-        start_date, end_date = self.calculate_end_date(event)
-        start_time, end_time = self.calculate_multi_event_times(event)
+        current_datetime = timezone.now()
+        start_date, end_date, start_time, _ = self.calculate_event_times(event)
 
-        if start_date and end_date and start_time and end_time:
-            # Combine date and time to get the full datetime for start and end
+        # Get the ending time of the last multi-event in the last single event
+        last_multi_event_end_time = self.calculate_last_single_event_end_time(event)
+
+        if start_date and end_date and start_time and last_multi_event_end_time:
+            # Make the event start datetime timezone-aware
             event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
-            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
 
-            # Adding the 15-minute buffer before the start and after the end
+            # Use the end date and the ending time of the last multi-event for event completion
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, last_multi_event_end_time))
+
+            # Add 15-minute buffers for live status
             live_start_datetime = event_start_datetime - timedelta(minutes=15)
             live_end_datetime = event_end_datetime + timedelta(minutes=15)
 
-            # Debugging: Print relevant times to the console
             print(f"Current Time: {current_datetime}")
             print(f"Event Start Time: {event_start_datetime}")
-            print(f"Event End Time: {event_end_datetime}")
+            print(f"Event End Time (based on last multi-event): {event_end_datetime}")
             print(f"Fifteen Minutes Before Start: {live_start_datetime}")
             print(f"Fifteen Minutes After End: {live_end_datetime}")
 
-            # Determine event status based on the current time and the time buffers
+            # Determine the event status
             if current_datetime < live_start_datetime:
-                return "Upcoming"  # Before 15 minutes of the first multi-event's start time
+                return "Upcoming"   
             elif live_start_datetime <= current_datetime <= live_end_datetime:
-                return "Live"  # Within the 15 minutes before start and 15 minutes after the last end time
+                return "Live"   
             elif current_datetime > live_end_datetime:
-                return "Completed"  # After 15 minutes of the last multi-event's end time
-        return "Upcoming"
+                return "Completed"
+
+        return "Upcoming"  # Default to upcoming if dates are missing
 
     def get(self, request):
         """
@@ -479,16 +492,13 @@ class EventListView(APIView):
         completed_events_data = []
 
         for event in events:
-            # Determine event status
+            # Calculate event status
             status = self.get_event_status(event)
 
-            # Calculate start and end dates
-            start_date, end_date = self.calculate_end_date(event)
+            # Calculate event dates and times
+            start_date, end_date, start_time, end_time = self.calculate_event_times(event)
 
-            # Calculate start and end times of MultiEvent for all days
-            start_time, end_time = self.calculate_multi_event_times(event)
-
-            # Serialize event data
+            # Serialize event data and add start/end times
             event_data = EventListSerializer(event).data
             event_data['start_date'] = start_date
             event_data['end_date'] = end_date
@@ -497,7 +507,7 @@ class EventListView(APIView):
                 'end_time': end_time
             }
 
-            # Append to appropriate list based on status
+            # Categorize events based on their status
             if status == "Live":
                 live_events_data.append(event_data)
             elif status == "Upcoming":
@@ -510,7 +520,7 @@ class EventListView(APIView):
             'upcoming_events': upcoming_events_data,
             'completed_events': completed_events_data,
         })
-     
+
  
  
 
@@ -2502,10 +2512,13 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from django.utils import timezone
+from datetime import datetime, timedelta
+
 class GeneralEventListView(APIView):
     def calculate_end_date(self, event):
         """
-        Calculates the start and end dates of the event based on its general single events.
+        Calculates the start and end dates of the event based on its single events.
         """
         single_events = event.general_single_events.all()
         if single_events.exists():
@@ -2516,51 +2529,80 @@ class GeneralEventListView(APIView):
 
     def calculate_multi_event_times(self, event):
         """
-        Calculates the starting time of the first MultiEvent and ending time of the last MultiEvent
-        when days = 1 for the given event.
+        Calculates the earliest starting time and latest ending time for all MultiEvents
+        across all SingleEvents in the event.
         """
-        single_event = event.general_single_events.filter(day=1).first()
-        if single_event:
+        earliest_start_time = None
+        latest_end_time = None
+
+        for single_event in event.general_single_events.all():
             multi_events = single_event.general_multi_events.all()
-            if multi_events.exists():
-                start_time = multi_events.first().starting_time
-                end_time = multi_events.last().ending_time
-                return start_time, end_time
-        return None, None
+            for multi_event in multi_events:
+                if earliest_start_time is None or multi_event.starting_time < earliest_start_time:
+                    earliest_start_time = multi_event.starting_time
+                if latest_end_time is None or multi_event.ending_time > latest_end_time:
+                    latest_end_time = multi_event.ending_time
+
+        return earliest_start_time, latest_end_time
+
+    def calculate_last_single_event_end_time(self, event):
+        """
+        Calculates the ending time of the last multi-event in the last single event.
+        """
+        single_events = event.general_single_events.all()
+
+        if not single_events.exists():
+            return None
+
+        # Get the last single event
+        last_single_event = single_events.last()
+
+        # Get the last multi-event in the last single event
+        last_multi_event = last_single_event.general_multi_events.last()
+
+        # Return the ending time of the last multi-event if it exists
+        if last_multi_event:
+            return last_multi_event.ending_time
+        return None
 
     def get_event_status(self, event):
         """
-        Determines the status of the event based on current datetime and event dates,
-        with a 15-minute buffer for live status.
+        Determines the status of the event based on current datetime and the ending time of the 
+        last multi-event in the last single event.
         """
-        current_datetime = timezone.now()  # Use timezone-aware current datetime
+        current_datetime = timezone.now()
         start_date, end_date = self.calculate_end_date(event)
-        start_time, end_time = self.calculate_multi_event_times(event)
+        start_time, _ = self.calculate_multi_event_times(event)
 
-        if start_date and end_date and start_time and end_time:
-            # Combine date and time to get the full datetime for start and end
+        # Get the ending time of the last multi-event in the last single event
+        last_multi_event_end_time = self.calculate_last_single_event_end_time(event)
+
+        if start_date and end_date and start_time and last_multi_event_end_time:
+            # Make the event start datetime timezone-aware
             event_start_datetime = timezone.make_aware(datetime.combine(start_date, start_time))
-            event_end_datetime = timezone.make_aware(datetime.combine(end_date, end_time))
 
-            # Adding the 15-minute buffer before the start and after the end
+            # Use the end date and the ending time of the last multi-event for event completion
+            event_end_datetime = timezone.make_aware(datetime.combine(end_date, last_multi_event_end_time))
+
+            # Add 15-minute buffers for live status
             live_start_datetime = event_start_datetime - timedelta(minutes=15)
             live_end_datetime = event_end_datetime + timedelta(minutes=15)
 
-            # Debugging: Print relevant times to the console
             print(f"Current Time: {current_datetime}")
             print(f"Event Start Time: {event_start_datetime}")
-            print(f"Event End Time: {event_end_datetime}")
+            print(f"Event End Time (based on last multi-event): {event_end_datetime}")
             print(f"Fifteen Minutes Before Start: {live_start_datetime}")
             print(f"Fifteen Minutes After End: {live_end_datetime}")
 
-            # Determine event status based on the current time and the time buffers
+            # Determine the event status
             if current_datetime < live_start_datetime:
-                return "Upcoming"  # Before 15 minutes of the first multi-event's start time
+                return "Upcoming"
             elif live_start_datetime <= current_datetime <= live_end_datetime:
-                return "Live"  # Within the 15 minutes before start and 15 minutes after the last end time
+                return "Live"
             elif current_datetime > live_end_datetime:
-                return "Completed"  # After 15 minutes of the last multi-event's end time
-        return "Upcoming"
+                return "Completed"
+
+        return "Upcoming"  # Default to upcoming if dates are missing
 
     def get(self, request):
         """
@@ -2572,30 +2614,28 @@ class GeneralEventListView(APIView):
         completed_events_data = []
 
         for event in events:
-            # Determine event status
+            # Calculate event status
             status = self.get_event_status(event)
 
-            # Calculate start and end dates
+            # Calculate event dates and times
             start_date, end_date = self.calculate_end_date(event)
+            start_time, _ = self.calculate_multi_event_times(event)
 
-            # Calculate start and end times of MultiEvent for days = 1
-            start_time, end_time = self.calculate_multi_event_times(event)
-
-            # Serialize event data
+            # Serialize event data and add start/end times
             event_data = GeneralEventListSerializer(event).data
             event_data['start_date'] = start_date
             event_data['end_date'] = end_date
             event_data['times'] = {
                 'start_time': start_time,
-                'end_time': end_time
+                'end_time': self.calculate_last_single_event_end_time(event)  # Updated to use the last multi-event's end time
             }
 
-            # Append to appropriate list based on status
+            # Categorize events based on their status
             if status == "Live":
                 live_events_data.append(event_data)
             elif status == "Upcoming":
                 upcoming_events_data.append(event_data)
-            elif status == "Completed":
+            else:
                 completed_events_data.append(event_data)
 
         return Response({
@@ -2604,6 +2644,8 @@ class GeneralEventListView(APIView):
             'completed_events': completed_events_data,
         })
 
+ 
+ 
 
 class GeneralSingleEventDetailView(APIView):
     def get(self, request, slug):
@@ -3138,7 +3180,7 @@ class CreatePodcast(APIView):
                 ending_time = request.data.get('ending_time')
                 youtube_url = request.data.get('youtube_url')
                 banner = request.FILES.get('banner')
-
+                image = request.FILES.get('image')
                 # Extract host and guest IDs manually
                 host_ids = [value for key, value in request.data.items() if key.startswith('host')]
                 guest_ids = [value for key, value in request.data.items() if key.startswith('guest')]
@@ -3150,9 +3192,9 @@ class CreatePodcast(APIView):
                     starting_time=starting_time,
                     ending_time=ending_time,
                     youtube_url=youtube_url,
-                    banner=banner
+                    banner=banner,
+                    image = image 
                 )
-
                 # Fetch and set the ManyToMany relationships
                 if host_ids:
                     hosts = Speaker.objects.filter(id__in=host_ids)
@@ -3207,7 +3249,7 @@ class PodcastUpdateView(APIView):
             ending_time = request.data.get('ending_time')
             youtube_url = request.data.get('youtube_url')
             banner = request.FILES.get('banner') 
-
+            image = request.FILES.get('image') 
        
             host_ids = [value for key, value in request.data.items() if key.startswith('host')]
             guest_ids = [value for key, value in request.data.items() if key.startswith('guest')]
@@ -3223,7 +3265,8 @@ class PodcastUpdateView(APIView):
             if banner:
                 data['banner'] = banner
 
-          
+            if image:
+                data['image'] = image
             serializer = PodcastUpdateSerializer(podcast, data=data, partial=True)
             if serializer.is_valid():
                 serializer.save()
