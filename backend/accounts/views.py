@@ -180,12 +180,12 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             )
 
        
-        # if user.status == 'Inactive':
-        #     logger.warning(f"Inactive account attempted to log in with email {email}.")
-        #     raise serializers.ValidationError(
-        #         {"error": _("This account is inactive.")},
-        #         code='inactive_account'
-        #     )
+        if user.status == 'Inactive':
+            logger.warning(f"Inactive account attempted to log in with email {email}.")
+            raise serializers.ValidationError(
+                {"error": _("This account is inactive.")},
+                code='inactive_account'
+            )
 
         if user.is_staff:  
             logger.warning(f"Attempted admin login with user {email}.")
