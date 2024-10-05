@@ -3370,20 +3370,19 @@ class PodcastListView(APIView):
 import urllib.parse       
 class PodcastDetailView(APIView):
     def get(self, request, name, *args, **kwargs):
-        # Decode the URL-encoded name
-        decoded_name = urllib.parse.unquote(name)
+        # Convert hyphens back to spaces
+        decoded_name = name.replace('-', ' ')
         
         try:
-            # Fetch the podcast using the decoded name
+           
             podcast = Podcastfcpipodcast.objects.get(name=decoded_name)
         except Podcastfcpipodcast.DoesNotExist:
             return Response({'error': 'Podcast not found'}, status=404)
-        
+
         # Serialize the podcast data
         serializer = PodcastSerializer(podcast)
         
         return Response(serializer.data)
-    
     
     
 class TotalEventCountView(APIView):

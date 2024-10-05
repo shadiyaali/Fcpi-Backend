@@ -4,11 +4,7 @@ from .manager import UserManager
 from django.utils import timezone
 from admins.models import Event ,SingleEvent,Certificates,GeneralEvent,GeneralSingleEvent
 
-class UserRole(models.Model):
-    name = models.CharField(max_length=200)
-
-    def __str__(self):
-        return self.name
+ 
 
 
 class User(AbstractUser):
@@ -20,8 +16,14 @@ class User(AbstractUser):
     otp = models.CharField(max_length=4, null=True, blank=True)
     email_verification_token = models.CharField(max_length=191, null=True, blank=True)
     forget_password_token = models.CharField(max_length=191, null=True, blank=True)
-    userrole = models.ForeignKey(UserRole, on_delete=models.SET_NULL, null=True, blank=True)
+    userrole = models.CharField(max_length=150, blank=True ,null = True)
     password_is_null = models.BooleanField(default=False)
+    STATUS_CHOICES = [
+        ('Active', 'Active'),
+        ('Inactive', 'Inactive'),
+    ]
+    
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Active')
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['phone']

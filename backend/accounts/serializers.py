@@ -1,18 +1,15 @@
 from rest_framework import serializers
-from .models import User,UserRole,UserProfile,Feedback,Enrolled,ContactMessage,GeneralEnrolled,GeneralFeedback
+from .models import User,UserProfile,Feedback,Enrolled,ContactMessage,GeneralEnrolled,GeneralFeedback
 from admins.models import Event,Certificates,SingleEvent,GeneralSingleEvent
 from admins.serializers import EventSerializer,SingleEventlistSerializer
     
-class UserRoleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserRole
-        fields = ['id', 'name'] 
+ 
         
         
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'password', 'phone']
+        fields = ['id', 'first_name', 'last_name', 'email', 'password', 'phone','userrole','status']
 
     def create(self, validated_data):
         user = User.objects.create(
@@ -24,6 +21,9 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+
+ 
 
 class UserAllSerializer(serializers.ModelSerializer):
     date_joined = serializers.DateTimeField()
@@ -68,7 +68,7 @@ class UsersprofileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'phone', 'profile']
+        fields = ['id', 'first_name', 'last_name', 'email', 'phone', 'profile','status']
  
  
 
@@ -214,3 +214,29 @@ class ContactMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactMessage
         fields = ['name', 'email', 'phone', 'message', 'created_at']
+class UserProfiletypeSerializer(serializers.ModelSerializer):
+    userrole = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'image', 'date_of_birth', 'primary_position', 'state', 
+            'city', 'country', 'primary_pharmacy_degree', 
+            'secondary_pharmacy_degree', 'additional_degrees', 
+            'pharmacy_college_name', 'pharmacy_college_degree', 
+            'pincode', 'current_work_institution', 'userrole'
+        ]
+
+    def update(self, instance, validated_data):
+        # Check if userrole is included in the validated data
+        userrole_data = validated_data.pop('userrole', None)
+
+        # Update UserProfile fields
+        instance = super().update(instance, validated_data)
+
+        # Update userrole if provided
+        if userrole_data is not None:
+            instance.user.userrole = userrole_data  # Set the user role directly
+            instance.user.save()
+
+        return instance

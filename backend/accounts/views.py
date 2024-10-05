@@ -157,6 +157,14 @@ class ResendOtp(APIView):
 from django.utils.translation import gettext_lazy as _ 
 import logging
 logger = logging.getLogger(__name__)
+from django.utils.translation import gettext_lazy as _
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from .models import User   
+ 
+
+ 
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email = attrs.get('email')
@@ -167,11 +175,19 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         except User.DoesNotExist:
             logger.warning(f"No active account found with the given credentials for user {email}.")
             raise serializers.ValidationError(
-                {"error": _("No active account found with the given credentials")},
+                {"error": _("No active account found with the given credentials.")},
                 code='authentication'
             )
 
-        if user.is_staff:  # Check if the user is an admin
+       
+        if user.status == 'Inactive':
+            logger.warning(f"Inactive account attempted to log in with email {email}.")
+            raise serializers.ValidationError(
+                {"error": _("This account is inactive.")},
+                code='inactive_account'
+            )
+
+        if user.is_staff:  
             logger.warning(f"Attempted admin login with user {email}.")
             raise serializers.ValidationError(
                 {"error": _("Admin login is not allowed on this page.")},
@@ -197,10 +213,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['user_id'] = user.id
         data['username'] = user.first_name
         return data
-    
+
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
- 
+
 
  
 class AddUser(APIView):
@@ -217,20 +233,20 @@ class AddUser(APIView):
             return Response({'status': 500, 'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-class UserRoleCreateView(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = UserRoleSerializer(data=request.data)
-        print(request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# class UserRoleCreateView(APIView):
+#     def post(self, request, *args, **kwargs):
+#         serializer = UserRoleSerializer(data=request.data)
+#         print(request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         else:
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         
-class UserRoleListView(ListAPIView):
-    queryset = UserRole.objects.all()
-    serializer_class = UserRoleSerializer        
+# class UserRoleListView(ListAPIView):
+#     queryset = UserRole.objects.all()
+#     serializer_class = UserRoleSerializer        
     
 class UserListView(APIView):
     def get(self, request):
@@ -721,34 +737,42 @@ class UserProfileUpdateView(APIView):
 
         try:
             user_profile = UserProfile.objects.get(user__id=user_id)
-            print("user_profile", user_profile)
+            print("User profile found:", user_profile)
         except UserProfile.DoesNotExist:
             return Response({'error': 'User profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-        
         user_data = request.data.get('user', None)
         print("Extracted user_data:", user_data)
 
-     
+        # Create a copy of the request data
         data = request.data.copy()
-        if isinstance(data, QueryDict):
-            data = data.dict()  
-
         
+        if isinstance(data, QueryDict):
+            data = data.dict()  # Convert QueryDict to a regular dictionary if necessary
+
+        # Optional: Set empty values to None
+        if 'date_of_birth' in data and data['date_of_birth'] == '':
+            data['date_of_birth'] = None
+        if 'pincode' in data and data['pincode'] == '':
+            data['pincode'] = None
+        if 'image' in data and data['image'] == '':
+            data['image'] = None
+
         if user_data:
             data['user'] = user_data
 
         print("Prepared data for serializer:", data)
 
+        # Use partial=True to allow partial updates
         serializer = UserProfileSerializer(user_profile, data=data, partial=True)
-        if serializer.is_valid():
+        
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             print("Updated serializer data:", serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             print("Serializer errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 
@@ -1546,3 +1570,55 @@ class EventGeneralFeedbackListView(APIView):
             return Response({"error": "Single event not found"}, status=404)
 
 
+class UserProfileDetailAPIView(APIView):
+    def get(self, request, user_id, *args, **kwargs):
+        try:
+            user_profile = UserProfile.objects.get(user__id=user_id)
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'User profile not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = UserProfiletypeSerializer(user_profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, user_id, *args, **kwargs):
+        try:
+            user_profile = UserProfile.objects.get(user__id=user_id)
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'User profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+       
+        userrole = request.data.get('userrole')  
+
+       
+        request_data_combined = {
+            **request.data,
+            'userrole': userrole   
+        }
+
+        serializer = UserProfiletypeSerializer(user_profile, data=request_data_combined, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserStatusAPIView(APIView):
+    def put(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)  # Get the user by ID
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the new status from the request data
+        new_status = request.data.get('status')
+
+        if new_status not in ['Active', 'Inactive']:
+            return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update the user's status
+        user.status = new_status
+        user.save()
+
+        # Return the updated user data
+        serializer = UserSerializer(user)   
+        return Response(serializer.data, status=status.HTTP_200_OK)

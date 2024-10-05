@@ -9,8 +9,7 @@ urlpatterns = [
     # path('login/', LoginView.as_view(), name='login'),
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('add_user/', AddUser.as_view(), name='add_user'),
-    path('user-roles/', UserRoleListView.as_view(), name='user_roles_list'),
-    path('create-roles/', UserRoleCreateView.as_view(), name='create_roles_create'),
+
     path('userlist/', UserListView.as_view(), name='user-list'),
     path('useralllist/', UserAllListView.as_view(), name='user-list'),
     path('userprofile/', UserProfileCreateView.as_view(), name='user_profile'),
@@ -55,5 +54,6 @@ urlpatterns = [
     path('feedbacks/<int:single_event_id>/', EventFeedbackListView.as_view(), name='feedback-list'),
     path('general-feedbacks/<int:single_event_id>/', EventGeneralFeedbackListView.as_view(), name='feedback-list'),
     path('general-events/<slug:slug>/enrolled-users/', GeneralEnrolledUserView.as_view(), name='general_enrolled_user_list'),
- 
+    path('singleusertype/<int:user_id>/', UserProfileDetailAPIView.as_view(), name='user-profile-detail'),
+    path('users/<int:user_id>/status/', UserStatusAPIView.as_view(), name='user-status'),
 ]
