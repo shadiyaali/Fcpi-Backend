@@ -56,4 +56,5 @@ urlpatterns = [
     path('general-events/<slug:slug>/enrolled-users/', GeneralEnrolledUserView.as_view(), name='general_enrolled_user_list'),
     path('singleusertype/<int:user_id>/', UserProfileDetailAPIView.as_view(), name='user-profile-detail'),
     path('users/<int:user_id>/status/', UserStatusAPIView.as_view(), name='user-status'),
+     
 ]

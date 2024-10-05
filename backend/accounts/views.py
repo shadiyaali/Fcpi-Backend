@@ -23,7 +23,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from admins.models import Certificates,Event,SingleEvent,GeneralEvent,GeneralCertificates
-from admins.serializers import EventListSerializer,SingleEventsSerializer ,GeneralEventListSerializer, GeneralSingleEventsSerializer
+from admins.serializers import EventListSerializer,SingleEventsSerializer ,AdminSerializer,GeneralEventListSerializer, GeneralSingleEventsSerializer
  
  
  
@@ -1605,20 +1605,23 @@ class UserProfileDetailAPIView(APIView):
 class UserStatusAPIView(APIView):
     def put(self, request, user_id):
         try:
-            user = User.objects.get(id=user_id)  # Get the user by ID
+            user = User.objects.get(id=user_id)  
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Get the new status from the request data
+        
         new_status = request.data.get('status')
 
         if new_status not in ['Active', 'Inactive']:
             return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Update the user's status
+      
         user.status = new_status
         user.save()
 
-        # Return the updated user data
+    
         serializer = UserSerializer(user)   
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+ 

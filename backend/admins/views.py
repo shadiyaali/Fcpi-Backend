@@ -5,7 +5,7 @@ from rest_framework import status
 from .serializers import AdminSerializer,ForumSerializer,GeneralMultiEventSerializer,PodcastUpdateSerializer,MultiEventupppSerializer,SingleEventupppSerializer, SingleEventuppSerializer, MultiEventuppSerializer,PodcastSerializer ,NewsletterSerializer,GeneralCertificatesSerializer,GeneralAttachmentSerializer,GeneralEventBannerSerializer,GeneralEventSpeakerSerializer,GeneralRetrieveSingleEventSerializer, GeneralSingleAllEventSerializer,GeneralEventListSerializer,GeneralEventSerializer,GeneralSingleEventSerializer, GalleryUpdateSerializer,MemeberAddSerializer,GeneralBlogSerializer,BlogsGeneralFormSerializer, AttachmentSerializerss,GeneralBlogsSerializer,SingleAllEventSerializer,AttachmentSerializer,EventSerializerss,SingleEventSerializerss,GallerySerializer,BlogSerializer,GalleryImageSerializer,BoardSerializer,SpeakerSerializer,BoardMemberSerializer,EventSingleSerializer,CertificatesListSerializer,BannerSerializer,NewsSerializer,BlogsFormSerializer,EventSerializer,CertificatesSerializer,BlogsSerializer,BlogsContentsSerializer,SingleEventSerializer,ForumMemberSerializer,MemeberSerializer,EventListSerializer,EventSpeakerSerializer,MultiEventSerializer,RetrieveSingleEventSerializer,EventBannerSerializer
 from rest_framework import generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from.models import Forum,Speaker,Event,SingleEvent,Gallery,GeneralAttachment,Podcastfcpipodcast ,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
+from.models import Forum,Speaker,Event,SingleEvent,Gallery,Admin,GeneralAttachment,Podcastfcpipodcast ,GeneralEvent,GeneralUserFileAssociation,Newsletter,GeneralCertificates,GeneralSingleEvent,GeneralMultiEvent,Attachment,GeneralBlogsContents,GeneralBlogs,UserFileAssociation,MultiEvent,Member,ForumMember,BlogsContents,Blogs,Certificates,Banner,News,BoardMember,Board
 from datetime import datetime, timedelta
 from rest_framework.exceptions import APIException 
 from rest_framework.exceptions import NotFound
@@ -19,25 +19,45 @@ import logging
 from rest_framework.generics import UpdateAPIView 
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
 class AdminLogin(APIView):
     def post(self, request):
         data = request.data
         email = data.get('email')
         password = data.get('password')
         
+        # Check if email and password are provided
         if email is None or password is None:
             return Response({'error': 'Email and password must be provided'}, status=status.HTTP_400_BAD_REQUEST)
         
-        user = authenticate(request, email=email, password=password)
+        # Authenticate the user
+        user = authenticate(request, username=email, password=password)
         
-        if user is not None and user.is_staff and user.is_superuser:
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-            }, status=status.HTTP_200_OK)
+        if user is None:
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
+        # Check if the user is active and has the required permissions
+        if not user.is_active:
+            return Response({'error': 'User account is disabled'}, status=status.HTTP_403_FORBIDDEN)
+        
+        if not user.is_staff:
+            return Response({'error': 'User does not have staff permissions'}, status=status.HTTP_403_FORBIDDEN)
+        
+        if not user.is_superuser:
+            return Response({'error': 'User is not a superuser'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Generate tokens if authentication is successful
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        }, status=status.HTTP_200_OK)
+
 
 
  
@@ -3457,3 +3477,5 @@ class GeneralSingleEventAttachmentsView(generics.GenericAPIView):
         serializer = self.get_serializer(attachments, many=True)
         print("serializer.data general_attachments", serializer.data)
         return Response(serializer.data)
+
+
