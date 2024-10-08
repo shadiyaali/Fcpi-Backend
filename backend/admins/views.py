@@ -19,45 +19,25 @@ import logging
 from rest_framework.generics import UpdateAPIView 
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
-
 class AdminLogin(APIView):
     def post(self, request):
         data = request.data
         email = data.get('email')
         password = data.get('password')
         
-        # Check if email and password are provided
         if email is None or password is None:
             return Response({'error': 'Email and password must be provided'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Authenticate the user
-        user = authenticate(request, username=email, password=password)
+        user = authenticate(request, email=email, password=password)
         
-        if user is None:
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
+        if user is not None and user.is_staff and user.is_superuser:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }, status=status.HTTP_200_OK)
         
-        # Check if the user is active and has the required permissions
-        if not user.is_active:
-            return Response({'error': 'User account is disabled'}, status=status.HTTP_403_FORBIDDEN)
-        
-        if not user.is_staff:
-            return Response({'error': 'User does not have staff permissions'}, status=status.HTTP_403_FORBIDDEN)
-        
-        if not user.is_superuser:
-            return Response({'error': 'User is not a superuser'}, status=status.HTTP_403_FORBIDDEN)
-
-        # Generate tokens if authentication is successful
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-        }, status=status.HTTP_200_OK)
-
+        return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
 
 
  
@@ -255,26 +235,7 @@ class GeneralSingleEventListAllView(APIView):
 
  
 
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
-from django.db import transaction
-import json
-from datetime import datetime, timedelta
-from .models import Event, SingleEvent, MultiEvent, Forum
-from .serializers import EventSerializer, SingleEventSerializer, MultiEventSerializer
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.shortcuts import get_object_or_404
-from django.db import transaction
-import json
-from datetime import datetime, timedelta
-from .models import Event, SingleEvent, MultiEvent, Forum
-from .serializers import EventSerializer, SingleEventSerializer, MultiEventSerializer
-from django.utils.dateparse import parse_date
+ 
 
 # views.py
 from django.shortcuts import get_object_or_404
@@ -316,6 +277,7 @@ class EventUpdateAPIView(APIView):
             if 'banner' in request.FILES:
                 event.banner = request.FILES['banner']  # Use request.FILES to get the uploaded file
 
+            # Validate and parse the date
             if date_str:
                 try:
                     event_date = parse_date(date_str)
@@ -336,29 +298,46 @@ class EventUpdateAPIView(APIView):
             event.forum_id = forum_id
             event.save()  # Save the updated event before updating related data
             
+            # Update the speakers associated with the event
             event.speakers.set(speakers_list)
 
-            SingleEvent.objects.filter(event=event).delete()
+            # **Key Change**: Remove deletion of all SingleEvents
             single_events_data = json.loads(request.data.get('single_events', '[]'))
             print("Single Events Data:", single_events_data)
 
+            # Create dates for the single events
             dates = [event_date + timedelta(days=i) for i in range(days)] if event_date else []
             if len(single_events_data) < len(dates):
                 return Response({'error': 'Insufficient single events data.'}, status=status.HTTP_400_BAD_REQUEST)
 
             for date_index, date in enumerate(dates):
                 single_event_data = single_events_data[date_index]
-                single_event = SingleEvent.objects.create(
+
+                # **Key Change**: Update or create SingleEvent instead of deleting all
+                single_event, created = SingleEvent.objects.update_or_create(
                     event=event,
-                    date=date.strftime('%Y-%m-%d'),
                     day=date_index + 1,
-                    youtube_link=single_event_data.get('youtube_link'),
-                    points=single_event_data.get('points'),
-                    highlights=single_event_data.get('highlights', []),
+                    defaults={
+                        'date': date.strftime('%Y-%m-%d'),
+                        'youtube_link': single_event_data.get('youtube_link'),
+                        'points': single_event_data.get('points'),
+                        'highlights': single_event_data.get('highlights', []),
+                    }
                 )
 
-                MultiEvent.objects.filter(single_event=single_event).delete()
+                # **Key Change**: Update attachments if necessary
+                # Assuming attachment management is needed here
+                if 'attachments' in single_event_data:
+                    for attachment in single_event_data['attachments']:
+                        if 'id' in attachment:  # If an ID exists, update the existing attachment
+                            existing_attachment = get_object_or_404(Attachment, id=attachment['id'])
+                            existing_attachment.file = attachment['file']  # Update the file
+                            existing_attachment.save()
+                        else:  # Otherwise, create a new attachment
+                            Attachment.objects.create(single_event=single_event, file=attachment['file'])
 
+                # Update MultiEvents for the single event
+                MultiEvent.objects.filter(single_event=single_event).delete()  # You may want to handle this more carefully
                 for multi_event_data in single_event_data.get('multi_events', []):
                     single_speaker_id = multi_event_data.get('single_speaker')
                     if isinstance(single_speaker_id, dict):
@@ -377,7 +356,6 @@ class EventUpdateAPIView(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 
@@ -422,14 +400,14 @@ class EventListView(APIView):
         if not single_events.exists():
             return None, None, None, None
 
-        # Get first and last single event for start/end dates
+      
         start_date = single_events.first().date
         end_date = single_events.last().date
 
         earliest_start_time = None
         latest_end_time = None
 
-        # Loop through all single events to get multi-event times
+        
         for single_event in single_events:
             multi_events = single_event.multi_events.all()
 
@@ -2450,12 +2428,13 @@ class GeneralEventUpdateAPIView(APIView):
             event_name = request.data.get('event_name')
             date_str = request.data.get('date')
             days = int(request.data.get('days', 1))
-            forum_id = request.data.get('forum')
+            
             
             # Handle file upload for banner
             if 'banner' in request.FILES:
                 event.banner = request.FILES['banner']  # Use request.FILES to get the uploaded file
 
+            # Validate and parse the date
             if date_str:
                 try:
                     event_date = parse_date(date_str)
@@ -2466,39 +2445,54 @@ class GeneralEventUpdateAPIView(APIView):
             else:
                 event_date = None
 
-            if forum_id and not Forum.objects.filter(id=forum_id).exists():
-                return Response({'error': 'Invalid forum ID'}, status=status.HTTP_400_BAD_REQUEST)
+            
 
             # Update event fields
             event.event_name = event_name
             event.date = event_date
             event.days = days
-            event.forum_id = forum_id
+            
             event.save()  # Save the updated event before updating related data
             
+            # Update the speakers associated with the event
             event.speakers.set(speakers_list)
 
-            GeneralSingleEvent.objects.filter(event=event).delete()
+            # **Key Change**: Remove deletion of all SingleEvents
             single_events_data = json.loads(request.data.get('single_events', '[]'))
             print("Single Events Data:", single_events_data)
 
+            # Create dates for the single events
             dates = [event_date + timedelta(days=i) for i in range(days)] if event_date else []
             if len(single_events_data) < len(dates):
                 return Response({'error': 'Insufficient single events data.'}, status=status.HTTP_400_BAD_REQUEST)
 
             for date_index, date in enumerate(dates):
                 single_event_data = single_events_data[date_index]
-                single_event = GeneralSingleEvent.objects.create(
+
+                # **Key Change**: Update or create SingleEvent instead of deleting all
+                single_event, created = GeneralSingleEvent.objects.update_or_create(
                     event=event,
-                    date=date.strftime('%Y-%m-%d'),
                     day=date_index + 1,
-                    youtube_link=single_event_data.get('youtube_link'),
-                    points=single_event_data.get('points'),
-                    highlights=single_event_data.get('highlights', []),
+                    defaults={
+                        'date': date.strftime('%Y-%m-%d'),
+                        'youtube_link': single_event_data.get('youtube_link'),
+                        'points': single_event_data.get('points'),
+                        'highlights': single_event_data.get('highlights', []),
+                    }
                 )
 
-                GeneralMultiEvent.objects.filter(single_event=single_event).delete()
+             
+                if 'attachments' in single_event_data:
+                    for attachment in single_event_data['attachments']:
+                        if 'id' in attachment:   
+                            existing_attachment = get_object_or_404(GeneralAttachment, id=attachment['id'])
+                            existing_attachment.file = attachment['file']  
+                            existing_attachment.save()
+                        else:  
+                            GeneralAttachment.objects.create(single_event=single_event, file=attachment['file'])
 
+               
+                GeneralMultiEvent.objects.filter(single_event=single_event).delete()  # You may want to handle this more carefully
                 for multi_event_data in single_event_data.get('multi_events', []):
                     single_speaker_id = multi_event_data.get('single_speaker')
                     if isinstance(single_speaker_id, dict):
@@ -2517,6 +2511,7 @@ class GeneralEventUpdateAPIView(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
