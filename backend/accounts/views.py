@@ -248,14 +248,27 @@ class AddUser(APIView):
 #     queryset = UserRole.objects.all()
 #     serializer_class = UserRoleSerializer        
     
+# class UserListView(APIView):
+#     def get(self, request):
+#         users = User.objects.filter(is_staff=False)
+#         serializer = UsersprofileSerializer(users, many=True)
+#         return Response(serializer.data)
+
+
+
+from rest_framework.pagination import PageNumberPagination
 class UserListView(APIView):
+    class CustomPagination(PageNumberPagination):
+        page_size = 100   
+
     def get(self, request):
         users = User.objects.filter(is_staff=False)
-        serializer = UsersprofileSerializer(users, many=True)
-        return Response(serializer.data)
+        paginator = self.CustomPagination()
+        result_page = paginator.paginate_queryset(users, request)
+        serializer = UsersprofileSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
- 
-    
+
     
 class UserALLListView(APIView):
     def get(self, request):

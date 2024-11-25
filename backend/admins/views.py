@@ -301,7 +301,7 @@ class EventUpdateAPIView(APIView):
             # Update the speakers associated with the event
             event.speakers.set(speakers_list)
 
-            # **Key Change**: Remove deletion of all SingleEvents
+            # **Key Change**: Don't delete all SingleEvents, update or create new ones
             single_events_data = json.loads(request.data.get('single_events', '[]'))
             print("Single Events Data:", single_events_data)
 
@@ -310,10 +310,11 @@ class EventUpdateAPIView(APIView):
             if len(single_events_data) < len(dates):
                 return Response({'error': 'Insufficient single events data.'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Loop through the dates and single events
             for date_index, date in enumerate(dates):
                 single_event_data = single_events_data[date_index]
 
-                # **Key Change**: Update or create SingleEvent instead of deleting all
+                # Update or create SingleEvent based on event and day
                 single_event, created = SingleEvent.objects.update_or_create(
                     event=event,
                     day=date_index + 1,
@@ -325,18 +326,7 @@ class EventUpdateAPIView(APIView):
                     }
                 )
 
-                # **Key Change**: Update attachments if necessary
-                # Assuming attachment management is needed here
-                if 'attachments' in single_event_data:
-                    for attachment in single_event_data['attachments']:
-                        if 'id' in attachment:  # If an ID exists, update the existing attachment
-                            existing_attachment = get_object_or_404(Attachment, id=attachment['id'])
-                            existing_attachment.file = attachment['file']  # Update the file
-                            existing_attachment.save()
-                        else:  # Otherwise, create a new attachment
-                            Attachment.objects.create(single_event=single_event, file=attachment['file'])
-
-                # Update MultiEvents for the single event
+                # Handle MultiEvent for each SingleEvent
                 MultiEvent.objects.filter(single_event=single_event).delete()  # You may want to handle this more carefully
                 for multi_event_data in single_event_data.get('multi_events', []):
                     single_speaker_id = multi_event_data.get('single_speaker')
@@ -356,6 +346,7 @@ class EventUpdateAPIView(APIView):
         except Exception as e:
             print("Error:", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
@@ -2428,8 +2419,7 @@ class GeneralEventUpdateAPIView(APIView):
             event_name = request.data.get('event_name')
             date_str = request.data.get('date')
             days = int(request.data.get('days', 1))
-            
-            
+
             # Handle file upload for banner
             if 'banner' in request.FILES:
                 event.banner = request.FILES['banner']  # Use request.FILES to get the uploaded file
@@ -2445,15 +2435,13 @@ class GeneralEventUpdateAPIView(APIView):
             else:
                 event_date = None
 
-            
-
             # Update event fields
             event.event_name = event_name
             event.date = event_date
             event.days = days
-            
+
             event.save()  # Save the updated event before updating related data
-            
+
             # Update the speakers associated with the event
             event.speakers.set(speakers_list)
 
@@ -2481,17 +2469,9 @@ class GeneralEventUpdateAPIView(APIView):
                     }
                 )
 
-             
-                if 'attachments' in single_event_data:
-                    for attachment in single_event_data['attachments']:
-                        if 'id' in attachment:   
-                            existing_attachment = get_object_or_404(GeneralAttachment, id=attachment['id'])
-                            existing_attachment.file = attachment['file']  
-                            existing_attachment.save()
-                        else:  
-                            GeneralAttachment.objects.create(single_event=single_event, file=attachment['file'])
+                # Remove attachment handling from this section
 
-               
+                # Handle MultiEvent for each SingleEvent
                 GeneralMultiEvent.objects.filter(single_event=single_event).delete()  # You may want to handle this more carefully
                 for multi_event_data in single_event_data.get('multi_events', []):
                     single_speaker_id = multi_event_data.get('single_speaker')
